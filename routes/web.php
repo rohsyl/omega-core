@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 
-Route::prefix('admin')->group(function(){
+Route::middleware(['auth'])->group(function() {
+    Route::prefix('admin')->group(function(){
 
-    Route::get('dashboard', [\rohsyl\OmegaCore\Http\Controllers\Admin\Dashboard\DashboardController::class, 'index'])->name('omega.admin.dashboard');
+        Route::get('dashboard', [\rohsyl\OmegaCore\Http\Controllers\Admin\Dashboard\DashboardController::class, 'index'])->name('omega.admin.dashboard');
+    });
 });
