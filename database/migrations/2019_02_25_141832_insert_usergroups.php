@@ -15,8 +15,8 @@ class InsertUsergroups extends Migration
     public function up()
     {
         // insert every user in the admin group by default
-        $users = \Omega\Models\User::all();
-        $group = \Omega\Models\Group::where('name', 'administrator')->first();
+        $users = \rohsyl\OmegaCore\Models\User::all();
+        $group = \rohsyl\OmegaCore\Models\Group::where('name', 'administrator')->first();
 
         foreach($users as $user){
             if(!DB::table('usergroups')

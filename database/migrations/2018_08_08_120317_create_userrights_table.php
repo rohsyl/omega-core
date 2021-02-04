@@ -17,14 +17,6 @@ class CreateUserrightsTable extends Migration
 
             $table->integer('fkRight')->unsigned();
             $table->integer('fkUser')->unsigned();
-
-            $table->foreign('fkRight')
-                ->references('id')->on('rights')
-                ->onDelete('cascade');
-
-            $table->foreign('fkUser')
-                ->references('id')->on('users')
-                ->onDelete('cascade');
         });
     }
 

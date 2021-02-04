@@ -33,18 +33,6 @@ class CreatePagesTable extends Migration
 
             $table->timestamps();
             $table->softDeletes();
-
-            $table->foreign('fkPageParent')
-                ->references('id')->on('pages')
-                ->onDelete('cascade');
-
-            $table->foreign('fkUser')
-                ->references('id')->on('users')
-                ->onDelete('set null');
-
-            $table->foreign('fkMenu')
-                ->references('id')->on('menus')
-                ->onDelete('set null');
         });
     }
 
