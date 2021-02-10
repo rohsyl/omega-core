@@ -1,7 +1,13 @@
 <?php
 namespace rohsyl\OmegaCore;
 
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider as SP;
+use rohsyl\OmegaCore\Http\Middleware\AdminLocale;
+use rohsyl\OmegaCore\Http\Middleware\OmegaIsInstalled;
+use rohsyl\OmegaCore\Http\Middleware\OmegaLoadConfiguration;
+use rohsyl\OmegaCore\Http\Middleware\OmegaLoadEntity;
+use rohsyl\OmegaCore\Http\Middleware\OmegaNotInstalled;
 use rohsyl\OmegaCore\Utils\Entity\OmegaConfig;
 
 class ServiceProvider extends SP
@@ -43,6 +49,13 @@ class ServiceProvider extends SP
 
         // load views
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'omega');
+
+        $router = $this->app->make(Router::class);
+        $router->aliasMiddleware('om_not_installed', OmegaNotInstalled::class);
+        $router->aliasMiddleware('om_is_installed', OmegaIsInstalled::class);
+        $router->aliasMiddleware('om_backoffice_lang', AdminLocale::class);
+        $router->aliasMiddleware('om_load_config', OmegaLoadConfiguration::class);
+        $router->aliasMiddleware('om_load_entity', OmegaLoadEntity::class);
     }
 
     private function registerFacades() {

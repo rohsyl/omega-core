@@ -1,12 +1,12 @@
 <?php
 
-namespace OmegaCore\Utils\Common;
+namespace rohsyl\OmegaCore\Utils\Common;
 
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use OmegaCore\Utils\Overt\HtmlRequire;
+use rohsyl\OmegaCore\Utils\Overt\HtmlRequire;
 use rohsyl\OmegaCore\Models\User;
 
 class OmegaUtils{

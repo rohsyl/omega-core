@@ -16,7 +16,7 @@ use rohsyl\OmegaCore\Models\User;
  * @method static string renderDependencies()
  * @method static string renderOmegaAssets()
  *
- * @see \OmegaCore\Utils\Common\OmegaUtils
+ * @see rohsyl\OmegaCore\Utils\Common\OmegaUtils
  */
 class OmegaUtils extends Facade
 {

@@ -3,9 +3,9 @@
 namespace rohsyl\OmegaCore\Http\Middleware;
 
 use Closure;
-use Omega\Facades\OmegaUtils;
+use Illuminate\Support\Facades\App;
 
-class OmegaNotInstalled
+class AdminLocale
 {
     /**
      * Handle an incoming request.
@@ -16,10 +16,13 @@ class OmegaNotInstalled
      */
     public function handle($request, Closure $next)
     {
-        // if omega is not installed, redirect to installation
-        if(!OmegaUtils::isInstalled()){
-            return redirect(route('install.index'));
+        if(session()->has('admin.lang')){
+            $locale = session('admin.lang');
         }
+        else{
+            $locale = om_config('om_lang');
+        }
+        App::setLocale($locale);
 
         return $next($request);
     }

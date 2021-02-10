@@ -1,5 +1,5 @@
 <?php
-namespace OmegaCore\Utils\Overt;
+namespace rohsyl\OmegaCore\Utils\Overt;
 
 class HtmlRequire{
 

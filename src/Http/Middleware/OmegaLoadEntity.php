@@ -3,22 +3,25 @@
 namespace rohsyl\OmegaCore\Http\Middleware;
 
 use Closure;
-use Omega\Facades\OmegaUtils;
+use Illuminate\Http\Request;
+use Omega\Facades\Entity;
+use rohsyl\OmegaCore\Utils\Common\Facades\OmegaUtils;
+use Omega\Utils\Entity\Site;
 
-class OmegaIsInstalled
+class OmegaLoadEntity
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
+     * @param  Request  $request
+     * @param  Closure $next
      * @return mixed
      */
     public function handle($request, Closure $next)
     {
-        // if omega is installed, return a 404
+
         if(OmegaUtils::isInstalled()){
-            return abort(404);
+            Entity::setSite(new Site());
         }
 
         return $next($request);
