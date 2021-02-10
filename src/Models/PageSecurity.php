@@ -10,10 +10,10 @@ class PageSecurity extends Model
     public $timestamps = false;
 
     public function pages(){
-        return $this->hasMany('Omega\Models\Page', 'fkPage', 'id');
+        return $this->hasMany(Page::class, 'fkPage', 'id');
     }
 
     public function type(){
-        return $this->belongsTo('Omega\Models\PageSecurityType', 'fkType', 'id');
+        return $this->belongsTo(PageSecurityType::class, 'fkType', 'id');
     }
 }

@@ -12,14 +12,14 @@ class Module extends Model
     protected $dates = ['created_at', 'updated_at', 'deleted_at'];
 
     public function plugin(){
-        return $this->belongsTo('Omega\Models\Plugin', 'fkPlugin', 'id');
+        return $this->belongsTo(Plugin::class, 'fkPlugin', 'id');
     }
 
     public function page(){
-        return $this->belongsTo('Omega\Models\Page', 'fkPage', 'id');
+        return $this->belongsTo(Page::class, 'fkPage', 'id');
     }
 
     public function positions(){
-        return $this->hasMany('Omega\Models\Position', 'fkModule', 'id');
+        return $this->hasMany(Position::class, 'fkModule', 'id');
     }
 }

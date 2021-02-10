@@ -9,20 +9,23 @@
             "email": "syzin12@gmail.com"
         }
     ],
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "require": {
         "php": "^7.4",
         "illuminate/auth": "^8.0",
         "illuminate/container": "^8.0",
         "illuminate/contracts": "^8.0",
         "illuminate/database": "^8.0",
-        "laravel/jetstream": "1.x-dev"
+        "laravelcollective/html": "^6.0"
     },
     "require-dev": {
         "orchestra/testbench": "^6.0",
         "phpunit/phpunit": "^8.0"
     },
     "autoload": {
+        "files": [
+            "helpers/helpers.php"
+        ],
         "psr-4": {
             "rohsyl\\OmegaCore\\": "src"
         }
@@ -36,7 +39,10 @@
         "laravel": {
             "providers": [
                 "rohsyl\\OmegaCore\\ServiceProvider"
-            ]
+            ],
+            "aliases": {
+                "Form": "Collective\\Html\\FormFacade"
+            }
         }
     }
 }

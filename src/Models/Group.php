@@ -12,11 +12,11 @@ class Group extends Model
     }
 
     public function users(){
-        return $this->belongsToMany('Omega\Models\User', 'usergroups', 'fkGroup', 'fkUser' );
+        return $this->belongsToMany(User::class, 'usergroups', 'fkGroup', 'fkUser' );
     }
 
     public function rights(){
-        return $this->belongsToMany('Omega\Models\Right', 'grouprights', 'fkGroup', 'fkRight');
+        return $this->belongsToMany(Right::class, 'grouprights', 'fkGroup', 'fkRight');
     }
 
 }

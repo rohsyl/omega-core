@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class Membergroup extends Model
 {
     public function menus(){
-        return $this->hasMany('Omega\Models\Menu', 'fkMemberGroup');
+        return $this->hasMany(Menu::class, 'fkMemberGroup');
     }
 
 
     public function members(){
-        return $this->belongsToMany('Omega\Models\Member', 'membergrouping', 'fkMemberGroup', 'fkMember' );
+        return $this->belongsToMany(Member::class, 'membergrouping', 'fkMemberGroup', 'fkMember' );
     }
 }

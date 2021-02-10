@@ -12,19 +12,19 @@ class Page extends Model
     protected $dates = ['created_at', 'updated_at', 'deleted_at'];
 
     public function owner(){
-        return $this->belongsTo('Omega\Models\User', 'fkUser', 'id');
+        return $this->belongsTo(User::class, 'fkUser', 'id');
     }
 
     public function parent(){
-        return $this->belongsTo('Omega\Models\Page', 'fkPageParent', 'id');
+        return $this->belongsTo(Page::class, 'fkPageParent', 'id');
     }
 
     public function children(){
-        return $this->hasMany('Omega\Models\Page', 'fkPageParent', 'id');
+        return $this->hasMany(Page::class, 'fkPageParent', 'id');
     }
 
     public function modules(){
-        return $this->hasMany('Omega\Models\Module', 'fkPage', 'id');
+        return $this->hasMany(Module::class, 'fkPage', 'id');
     }
 
     public function modulesonly(){
@@ -36,6 +36,6 @@ class Page extends Model
     }
 
     public function security(){
-        return $this->hasOne('Omega\Models\PageSecurity', 'fkPage', 'id');
+        return $this->hasOne(PageSecurity::class, 'fkPage', 'id');
     }
 }

@@ -30,11 +30,11 @@ class User extends Authenticatable
 
 
     public function rights(){
-        return $this->belongsToMany('Omega\Models\Right', 'userrights', 'fkUser', 'fkRight');
+        return $this->belongsToMany(Right::class, 'userrights', 'fkUser', 'fkRight');
     }
 
     public function groups(){
-        return $this->belongsToMany('Omega\Models\Group', 'usergroups', 'fkUser', 'fkGroup');
+        return $this->belongsToMany(Group::class, 'usergroups', 'fkUser', 'fkGroup');
     }
 
     public function getAvatarMedia(){

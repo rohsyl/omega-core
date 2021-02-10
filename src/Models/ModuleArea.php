@@ -9,6 +9,6 @@ class ModuleArea extends Model
     public $timestamps = false;
 
     public function positions(){
-        return $this->hasMany('Omega\Models\Position', 'fkModuleArea', 'id')->orderBy('order');
+        return $this->hasMany(Position::class, 'fkModuleArea', 'id')->orderBy('order');
     }
 }

@@ -2,6 +2,7 @@
 namespace rohsyl\OmegaCore;
 
 use Illuminate\Support\ServiceProvider as SP;
+use rohsyl\OmegaCore\Utils\Entity\OmegaConfig;
 
 class ServiceProvider extends SP
 {
@@ -10,6 +11,8 @@ class ServiceProvider extends SP
         $this->mergeConfigFrom(
             __DIR__.'/../config/omega.php', 'omega'
         );
+
+        $this->registerFacades();
     }
 
     public function boot() {
@@ -40,5 +43,12 @@ class ServiceProvider extends SP
 
         // load views
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'omega');
+    }
+
+    private function registerFacades() {
+
+        $this->app->bind('omega:config', function () {
+            return new OmegaConfig();
+        });
     }
 }

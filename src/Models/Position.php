@@ -9,10 +9,10 @@ class Position extends Model
     public $timestamps = false;
 
     public function page(){
-        return $this->belongsTo('Omega\Models\Page', 'fkPage', 'id');
+        return $this->belongsTo(Page::class, 'fkPage', 'id');
     }
 
     public function module(){
-        return $this->belongsTo('Omega\Models\Module', 'fkModule', 'id');
+        return $this->belongsTo(Module::class, 'fkModule', 'id');
     }
 }

@@ -73,7 +73,7 @@ class InstallController extends Controller
         try {
             DB::connection()->getPdo();
 
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             die("Could not connect to the database.  Please check your configuration.");
 
             //return an error
@@ -86,9 +86,9 @@ class InstallController extends Controller
 
 
         // create migrations table if not exists
-        if(!Schema::hasTable('migrations_plugins')){
+        /*if(!Schema::hasTable('migrations_plugins')){
             Artisan::call('omega:plugin:migrate:install');
-        }
+        }*/
 
         // create omega tables and fill with data
         Artisan::call('migrate');

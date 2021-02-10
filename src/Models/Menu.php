@@ -10,7 +10,7 @@ class Menu extends Model
 
 
     public function membergroup(){
-        return $this->belongsTo('Omega\Models\Membergroup', 'fkMemberGroup', 'id');
+        return $this->belongsTo(Membergroup::class, 'fkMemberGroup', 'id');
     }
 
 }

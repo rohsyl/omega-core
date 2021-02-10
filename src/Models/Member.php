@@ -9,6 +9,6 @@ class Member extends Model
 
 
     public function membergroups(){
-        return $this->belongsToMany('Omega\Models\Membergroup', 'membergrouping', 'fkMember', 'fkMemberGroup' );
+        return $this->belongsToMany(Membergroup::class, 'membergrouping', 'fkMember', 'fkMemberGroup' );
     }
 }

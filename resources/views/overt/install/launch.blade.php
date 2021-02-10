@@ -48,7 +48,7 @@
                 {{ Form::open(['route' => 'omega.install.do', 'method' => 'POST', 'class' => 'form-horizontal main-form']) }}
                     <div class="d-flex justify-content-between">
                         <a class="btn btn-default" href="{{ route('omega.install.siteanduser') }}">{{ __('Back') }}</a>
-                        {{ Form::submit(__('Do the installation'), ['class' => 'btn btn-primary']) }}
+                        {{ Form::submit(__('Install'), ['class' => 'btn btn-primary']) }}
                     </div>
                 {{ Form::close() }}
             </div>
