@@ -1,6 +1,5 @@
 <?php
-
-namespace rohsyl\OmegaCore\Utils\Facades\Common;
+namespace rohsyl\OmegaCore\Utils\Common\Facades;
 
 use Illuminate\Support\Facades\Facade;
 use rohsyl\OmegaCore\Models\Config;
