@@ -1,6 +1,6 @@
 <?php
 use rohsyl\OmegaCore\Models\Config;
-use rohsyl\OmegaCore\Utils\Facades\Common\OmegaConfig;
+use rohsyl\OmegaCore\Utils\Common\Facades\OmegaConfig;
 
 if (!function_exists('om_config')) {
     /**

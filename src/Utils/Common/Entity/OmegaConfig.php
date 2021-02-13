@@ -1,5 +1,5 @@
 <?php
-namespace rohsyl\OmegaCore\Utils\Entity;
+namespace rohsyl\OmegaCore\Utils\Common\Entity;
 
 
 use rohsyl\OmegaCore\Models\Config;
@@ -11,10 +11,12 @@ class OmegaConfig
 
     private $config = [];
 
-    public function load(array $configKeys){
-        $configs = Config::whereIn('key', $configKeys)->get();
-        foreach ($configs as $config) {
-            $this->config[$config->key] = $config->value;
+    public function load(array $configKeys = null){
+        if(isset($configKeys)) {
+            $configs = Config::whereIn('key', $configKeys)->get();
+            foreach ($configs as $config) {
+                $this->config[$config->key] = $config->value;
+            }
         }
     }
 

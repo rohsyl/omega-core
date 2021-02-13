@@ -2,13 +2,15 @@
 namespace rohsyl\OmegaCore;
 
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider as SP;
 use rohsyl\OmegaCore\Http\Middleware\AdminLocale;
 use rohsyl\OmegaCore\Http\Middleware\OmegaIsInstalled;
 use rohsyl\OmegaCore\Http\Middleware\OmegaLoadConfiguration;
 use rohsyl\OmegaCore\Http\Middleware\OmegaLoadEntity;
 use rohsyl\OmegaCore\Http\Middleware\OmegaNotInstalled;
-use rohsyl\OmegaCore\Utils\Entity\OmegaConfig;
+use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
+use rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig;
 
 class ServiceProvider extends SP
 {
@@ -50,10 +52,13 @@ class ServiceProvider extends SP
         // load views
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'omega');
 
+
+        Blade::componentNamespace('rohsyl\\OmegaCore\\Views\\Components', 'omega');
+
         $router = $this->app->make(Router::class);
         $router->aliasMiddleware('om_not_installed', OmegaNotInstalled::class);
         $router->aliasMiddleware('om_is_installed', OmegaIsInstalled::class);
-        $router->aliasMiddleware('om_backoffice_lang', AdminLocale::class);
+        $router->aliasMiddleware('om_admin_locale', AdminLocale::class);
         $router->aliasMiddleware('om_load_config', OmegaLoadConfiguration::class);
         $router->aliasMiddleware('om_load_entity', OmegaLoadEntity::class);
     }
@@ -62,6 +67,10 @@ class ServiceProvider extends SP
 
         $this->app->bind('omega:config', function () {
             return new OmegaConfig();
+        });
+
+        $this->app->bind('omega:utils', function () {
+            return new OmegaUtils();
         });
     }
 }
