@@ -15,18 +15,9 @@ class CreatePagesecuritiesTable extends Migration
     {
         Schema::create('page_securities', function (Blueprint $table) {
             $table->increments('id');
-
-            $table->integer('fkType')->unsigned();
-            $table->integer('fkPage')->unsigned();
-            $table->longText('data')->nullable();
-
-            $table->foreign('fkType')
-                ->references('id')->on('page_security_types')
-                ->onDelete('cascade');
-
-            $table->foreign('fkPage')
-                ->references('id')->on('pages')
-                ->onDelete('cascade');
+            $table->unsignedBigInteger('page_id');
+            $table->string('type');
+            $table->longText('param')->nullable();
         });
     }
 

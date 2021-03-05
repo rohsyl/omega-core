@@ -13,17 +13,12 @@ class CreateLangsTable extends Migration
      */
     public function up()
     {
-        Schema::create('langs', function (Blueprint $table) {
+        Schema::create('locales', function (Blueprint $table) {
             $table->increments('id');
+            $table->unsignedBigInteger('flag_id')->nullable();
             $table->string('slug', 2)->unique();
             $table->string('name');
-            $table->boolean('isEnabled')->default(true);
-
-            $table->integer('fkMediaFlag')->unsigned()->nullable();
-
-            $table->foreign('fkMediaFlag')
-                ->references('id')->on('medias')
-                ->onDelete('set null');
+            $table->boolean('is_enabled')->default(1);
         });
     }
 

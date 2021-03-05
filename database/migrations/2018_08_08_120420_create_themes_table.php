@@ -19,9 +19,9 @@ class CreateThemesTable extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('website')->nullable();
-            $table->longText('colors')->nullable();
+            $table->longText('param')->nullable();
             $table->timestamps();
-            //
+            $table->softDeletes();
         });
     }
 

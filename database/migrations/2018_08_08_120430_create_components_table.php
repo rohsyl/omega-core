@@ -13,27 +13,17 @@ class CreateModulesTable extends Migration
      */
     public function up()
     {
-        Schema::create('modules', function (Blueprint $table) {
+        Schema::create('components', function (Blueprint $table) {
             $table->increments('id');
+            $table->unsignedBigInteger('plugin_id');
+            $table->unsignedBigInteger('page_id')->nullable();
             $table->string('name');
             $table->longText('param');
-            $table->boolean('isEnabled');
-            $table->boolean('isComponent');
+            $table->boolean('is_enabled')->default(true);
+            $table->boolean('is_widget')->default(false);
             $table->integer('order' );
-
-            $table->integer('fkPlugin')->unsigned();
-            $table->integer('fkPage')->unsigned()->nullable();
-
             $table->timestamps();
             $table->softDeletes();
-
-            $table->foreign('fkPlugin')
-                ->references('id')->on('plugins')
-                ->onDelete('cascade');
-
-            $table->foreign('fkPage')
-                ->references('id')->on('pages')
-                ->onDelete('set null');
         });
     }
 
@@ -44,6 +34,6 @@ class CreateModulesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('modules');
+        Schema::dropIfExists('components');
     }
 }

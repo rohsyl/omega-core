@@ -13,10 +13,10 @@ class CreateUsergroupsTable extends Migration
      */
     public function up()
     {
-        Schema::create('usergroups', function (Blueprint $table) {
+        Schema::create('group_user', function (Blueprint $table) {
 
-            $table->integer('fkGroup')->unsigned();
-            $table->integer('fkUser')->unsigned();
+            $table->integer('group_id')->unsigned();
+            $table->integer('user_id')->unsigned();
 
         });
     }

@@ -9,33 +9,46 @@ class Page extends Model
 {
     use SoftDeletes;
 
-    protected $dates = ['created_at', 'updated_at', 'deleted_at'];
+    protected $fillable = [
+        'parent_id',
+        'author_id',
+        'menu_id',
+        'slug',
+        'title',
+        'subtitle',
+        'show_title',
+        'show_subtitle',
+        'keywords',
+        'model',
+        'order',
+        'published_at',
+    ];
 
-    public function owner(){
-        return $this->belongsTo(User::class, 'fkUser', 'id');
+    protected $casts = [
+        'published_at' => 'datetime'
+    ];
+
+    public function author(){
+        return $this->belongsTo(User::class, 'author_id');
     }
 
     public function parent(){
-        return $this->belongsTo(Page::class, 'fkPageParent', 'id');
+        return $this->belongsTo(Page::class, 'parent_id');
     }
 
     public function children(){
-        return $this->hasMany(Page::class, 'fkPageParent', 'id');
-    }
-
-    public function modules(){
-        return $this->hasMany(Module::class, 'fkPage', 'id');
-    }
-
-    public function modulesonly(){
-        return $this->modules()->where('isComponent', 0);
+        return $this->hasMany(Page::class, 'parent_id');
     }
 
     public function components(){
-        return $this->modules()->where('isComponent', 1);
+        return $this->hasMany(Component::class)->where('is_widget', false);
+    }
+
+    public function widgets(){
+        return $this->hasMany(Component::class)->where('is_widget', false);
     }
 
     public function security(){
-        return $this->hasOne(PageSecurity::class, 'fkPage', 'id');
+        return $this->hasOne(PageSecurity::class);
     }
 }

@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateModuleareasTable extends Migration
+class CreateRightsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,11 +13,10 @@ class CreateModuleareasTable extends Migration
      */
     public function up()
     {
-        Schema::create('module_areas', function (Blueprint $table) {
-
+        Schema::create('permissions', function (Blueprint $table) {
             $table->increments('id');
             $table->string('name');
-            $table->string('theme');
+            $table->text('description')->nullable();
         });
     }
 
@@ -28,6 +27,6 @@ class CreateModuleareasTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('module_areas');
+        Schema::dropIfExists('rights');
     }
 }

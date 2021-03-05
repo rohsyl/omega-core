@@ -3,15 +3,19 @@
 namespace rohsyl\OmegaCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Omega\Utils\Plugin\PluginMeta;
 
-class Plugin extends Model
+class Locale extends Model
 {
     public $timestamps = false;
 
     protected $fillable = [
-        'parent_id',
+        'flag_id',
+        'slug',
         'name',
         'is_enabled',
     ];
+
+    public function flag(){
+        return $this->belongsTo(Media::class, 'flag_id');
+    }
 }

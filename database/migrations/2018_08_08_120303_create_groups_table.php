@@ -17,8 +17,8 @@ class CreateGroupsTable extends Migration
             $table->increments('id');
             $table->string('name');
             $table->text('description')->nullable();
-            $table->boolean('isEnabled')->default(true);
-            $table->boolean('isSystem')->default(false);
+            $table->boolean('is_enabled')->default(true);
+            $table->boolean('is_system')->default(false);
             $table->timestamps();
             $table->softDeletes();
         });

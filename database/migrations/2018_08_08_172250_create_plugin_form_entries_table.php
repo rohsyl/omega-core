@@ -13,23 +13,17 @@ class CreateFormentriesTable extends Migration
      */
     public function up()
     {
-        Schema::create('form_entries', function (Blueprint $table) {
+        Schema::create('plugin_form_entries', function (Blueprint $table) {
             $table->increments('id');
+            $table->unsignedBigInteger('plugin_form_id');
             $table->string('name');
             $table->string('type');
             $table->longText('param');
             $table->string('title');
             $table->string('heading')->nullable();
-            $table->text('description');
+            $table->text('description')->nullable();
             $table->boolean('mandatory');
             $table->integer('order')->nullable();
-
-            $table->integer('fkForm')->unsigned();
-
-            $table->foreign('fkForm')
-                ->references('id')->on('forms')
-                ->onDelete('cascade');
-
         });
     }
 

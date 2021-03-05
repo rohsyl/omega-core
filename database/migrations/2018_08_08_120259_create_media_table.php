@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateMediaMetasTable extends Migration
+class CreateMediasTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,17 +13,18 @@ class CreateMediaMetasTable extends Migration
      */
     public function up()
     {
-        Schema::create('media_metas', function (Blueprint $table) {
+        Schema::create('media', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('fkMedia')->unsigned();
-            $table->string('lang', 2);
+            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->string('type');
+            $table->string('name');
+            $table->string('ext')->nullable();
+            $table->string('path')->nullable();
             $table->string('title')->nullable();
             $table->text('description')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
-            $table->foreign('fkMedia')
-                ->references('id')->on('medias')
-                ->onDelete('cascade');
         });
     }
 
@@ -34,6 +35,6 @@ class CreateMediaMetasTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('media_metas');
+        Schema::dropIfExists('medias');
     }
 }

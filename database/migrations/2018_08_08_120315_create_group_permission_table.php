@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateUserrightsTable extends Migration
+class CreateGrouprightsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,10 +13,9 @@ class CreateUserrightsTable extends Migration
      */
     public function up()
     {
-        Schema::create('userrights', function (Blueprint $table) {
-
-            $table->integer('fkRight')->unsigned();
-            $table->integer('fkUser')->unsigned();
+        Schema::create('group_permission', function (Blueprint $table) {
+            $table->integer('group_id')->unsigned();
+            $table->integer('permission_id')->unsigned();
         });
     }
 
@@ -27,6 +26,6 @@ class CreateUserrightsTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('userrights');
+        Schema::dropIfExists('grouprights');
     }
 }

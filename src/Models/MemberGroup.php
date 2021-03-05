@@ -3,9 +3,11 @@
 namespace rohsyl\OmegaCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Member extends Model
+class MemberGroup extends Model
 {
+    use SoftDeletes;
 
     protected $fillable = [
         'username',
@@ -17,8 +19,11 @@ class Member extends Model
         'validated_at',
     ];
 
+    public function menus(){
+        return $this->hasMany(Menu::class);
+    }
 
-    public function membergroups(){
-        return $this->belongsToMany(MemberGroup::class, 'membergrouping', 'fkMember', 'fkMemberGroup' );
+    public function members(){
+        return $this->belongsToMany(Member::class);
     }
 }

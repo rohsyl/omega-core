@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class UpdatePositionsTable extends Migration
+class CreateMembergroupsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,8 +13,12 @@ class UpdatePositionsTable extends Migration
      */
     public function up()
     {
-        Schema::table('positions', function (Blueprint $table) {
-            $table->string('lang')->after('order')->nullable();
+        Schema::create('member_groups', function (Blueprint $table) {
+            $table->increments('id');
+            $table->string('name')->unique();
+            $table->timestamps();
+            $table->softDeletes();
+            //
         });
     }
 
@@ -25,8 +29,6 @@ class UpdatePositionsTable extends Migration
      */
     public function down()
     {
-        Schema::table('positions', function (Blueprint $table) {
-            $table->dropColumn('lang');
-        });
+        Schema::dropIfExists('membergroups');
     }
 }

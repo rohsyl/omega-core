@@ -18,12 +18,13 @@ class CreateMembersTable extends Migration
             $table->string('username')->unique();
             $table->string('email');
             $table->string('password');
-            $table->string('validationHash')->nullable();
-            $table->string('lostPasswordHash')->nullable();
-            $table->boolean('isValid')->default(false);
-            $table->boolean('isEnabled')->default(true);
+            $table->string('validation_hash')->nullable();
+            $table->string('lost_password_hash')->nullable();
+            $table->boolean('is_enabled')->default(true);
+            $table->dateTime('validated_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

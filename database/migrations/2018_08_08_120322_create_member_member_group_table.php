@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreatePagesecuritytypesTable extends Migration
+class CreateMembergroupingTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,10 +13,10 @@ class CreatePagesecuritytypesTable extends Migration
      */
     public function up()
     {
-        Schema::create('page_security_types', function (Blueprint $table) {
-            $table->increments('id');
-            $table->string('name')->unique();
-            $table->string('title');
+        Schema::create('member_member_group', function (Blueprint $table) {
+            $table->integer('member_id')->unsigned();
+            $table->integer('member_group_id')->unsigned();
+
         });
     }
 
@@ -27,6 +27,6 @@ class CreatePagesecuritytypesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('page_security_types');
+        Schema::dropIfExists('membergrouping');
     }
 }

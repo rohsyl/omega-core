@@ -37,12 +37,12 @@ class InsertGrouprights extends Migration
      */
     public function up()
     {
-        foreach($this->grouprights as $right => $group){
+        /*foreach($this->grouprights as $right => $group){
             DB::statement('CALL om_AssignRightToGroup(:right, :group);', [
                 $right,
                 $group
             ]);
-        }
+        }*/
     }
 
     /**

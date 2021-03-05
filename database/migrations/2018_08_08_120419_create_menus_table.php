@@ -15,20 +15,14 @@ class CreateMenusTable extends Migration
     {
         Schema::create('menus', function (Blueprint $table) {
             $table->increments('id');
+            $table->unsignedBigInteger('member_group_id')->nullable();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->string('path')->nullable();
-            $table->longText('json')->nullable();
-            $table->boolean('isEnabled')->default(true);
-            $table->boolean('isMain')->default(false);
-            $table->string('lang', 2)->nullable();
-
-            $table->integer('fkMemberGroup')->unsigned()->nullable();
+            $table->longText('structure')->nullable();
+            $table->boolean('is_enabled')->default(true);
+            $table->boolean('is_main')->default(false);
             $table->timestamps();
-
-            $table->foreign('fkMemberGroup')
-                ->references('id')->on('membergroups')
-                ->onDelete('set null');
+            $table->softDeletes();
         });
     }
 

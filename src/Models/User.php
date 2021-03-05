@@ -2,13 +2,14 @@
 
 namespace rohsyl\OmegaCore\Models;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\DB;
 
 class User extends Authenticatable
 {
-    use Notifiable;
+    use Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -16,7 +17,10 @@ class User extends Authenticatable
      * @var array
      */
     protected $fillable = [
-        'username', 'fullname', 'email', 'password',
+        'email',
+        'fullname',
+        'is_disabled',
+        'avatar_id',
     ];
 
     /**
@@ -28,24 +32,19 @@ class User extends Authenticatable
         'password', 'remember_token',
     ];
 
-
-    public function rights(){
-        return $this->belongsToMany(Right::class, 'userrights', 'fkUser', 'fkRight');
-    }
-
     public function groups(){
-        return $this->belongsToMany(Group::class, 'usergroups', 'fkUser', 'fkGroup');
+        return $this->belongsToMany(Group::class, 'user_groups', 'user_id', 'group_id');
     }
 
-    public function getAvatarMedia(){
-        if(isset($this->avatar)){
-            return asset(Media::Get($this->avatar)->path);
+    public function getAvatar(){
+        if(isset($this->avatar_id)){
+            return asset(Media::Get($this->avatar_id)->path);
         }
         return null;
     }
 
     public function displayName(){
-        return isset($this->fullname) ? $this->fullname : $this->username;
+        return isset($this->fullname) ? $this->fullname : $this->email;
     }
 
     /**

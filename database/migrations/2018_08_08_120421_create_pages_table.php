@@ -15,22 +15,18 @@ class CreatePagesTable extends Migration
     {
         Schema::create('pages', function (Blueprint $table) {
             $table->increments('id');
+            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->unsignedBigInteger('author_id')->nullable();
+            $table->unsignedBigInteger('menu_id')->nullable();
             $table->string('slug')->unique();
-            $table->string('name');
+            $table->string('title');
             $table->string('subtitle')->nullable();
-            $table->boolean('showName')->default(true);
-            $table->boolean('showSubtitle')->default(true);
-            $table->text('keyWords')->nullable();
+            $table->boolean('show_title')->default(true);
+            $table->boolean('show_subtitle')->default(true);
+            $table->text('keywords')->nullable();
             $table->string('model')->nullable();
-            $table->string('cssTheme')->nullable();
             $table->integer('order')->default(0);
-            $table->boolean('isEnabled')->default(true);
-            $table->string('lang', 2)->nullable();
-
-            $table->integer('fkPageParent')->unsigned()->nullable();
-            $table->integer('fkUser')->unsigned()->nullable();
-            $table->integer('fkMenu')->unsigned()->nullable();
-
+            $table->dateTime('published_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

@@ -26,6 +26,8 @@ Route::group(['middleware' => ['web']], function () {
 
 
 
+        Route::get('', [rohsyl\OmegaCore\Http\Controllers\Overt\Site\SiteController::class, 'index'])->name('omega.site');
+
         /********************************************************************
          * Public admin routes
          ********************************************************************/

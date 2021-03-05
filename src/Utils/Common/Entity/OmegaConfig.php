@@ -3,7 +3,7 @@ namespace rohsyl\OmegaCore\Utils\Common\Entity;
 
 
 use rohsyl\OmegaCore\Models\Config;
-use rohsyl\OmegaCore\Models\Right;
+use rohsyl\OmegaCore\Models\Permission;
 use rohsyl\OmegaCore\Models\User;
 
 class OmegaConfig
@@ -39,7 +39,7 @@ class OmegaConfig
      */
     public function loadUserPermissionsInSession($user){
         // load all right
-        $rights = Right::all()->pluck('name');
+        $rights = Permission::all()->pluck('name');
         $max = $rights->count();
         $userMask = '';
         $rightMasks = [];

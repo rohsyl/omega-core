@@ -3,6 +3,7 @@
 namespace rohsyl\OmegaCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Omega\Repositories\MediaMetaRepository;
 use Omega\Repositories\MediaRepository;
 use Omega\Facades\Entity;
@@ -13,9 +14,19 @@ use Omega\Utils\Url;
 
 class Media extends Model implements InterfaceMediaConstant
 {
+    use SoftDeletes;
+
     const IMG_404 = 'images/image-not-found.png';
 
-    protected $table = 'medias';
+    protected $fillable = [
+        'parent_id',
+        'type',
+        'name',
+        'ext',
+        'path',
+        'title',
+        'description',
+    ];
 
     private static $mediaRepository;
     private static $mediaMetaRepository;
@@ -52,16 +63,6 @@ class Media extends Model implements InterfaceMediaConstant
     }
 
     private $metas = array();
-
-        /*
-        public function __construct(array $attributes = [])
-        {
-            parent::__construct($attributes);
-
-            if(!file_exists($this->getRealpath())){
-                $this->path = self::Get404Placeholder();
-            }
-        }*/
 
     public function getTitle($lang = null){
         return $this->getMeta($lang, 'title') ?? $this->title;
