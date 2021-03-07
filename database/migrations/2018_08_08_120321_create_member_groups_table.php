@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateMembergroupsTable extends Migration
+class CreateMemberGroupsTable extends Migration
 {
     /**
      * Run the migrations.

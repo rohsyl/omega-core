@@ -20,7 +20,7 @@ class InsertGroups extends Migration
      */
     public function up()
     {
-        /*DB::table('groups')->where('name', 'public')->delete();
+        DB::table('groups')->where('name', 'public')->delete();
         DB::table('groups')->where('name', 'user')->delete();
         DB::table('groups')->where('name', 'administrator')->delete();
 
@@ -32,7 +32,7 @@ class InsertGroups extends Migration
                 'is_enabled' => true,
                 'is_system' => true
             ]);
-        }*/
+        }
     }
 
     /**
@@ -42,6 +42,8 @@ class InsertGroups extends Migration
      */
     public function down()
     {
-        //
+        DB::table('groups')->where('name', 'public')->delete();
+        DB::table('groups')->where('name', 'user')->delete();
+        DB::table('groups')->where('name', 'administrator')->delete();
     }
 }

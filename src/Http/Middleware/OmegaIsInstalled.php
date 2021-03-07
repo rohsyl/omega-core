@@ -3,7 +3,7 @@
 namespace rohsyl\OmegaCore\Http\Middleware;
 
 use Closure;
-use Omega\Facades\OmegaUtils;
+use rohsyl\OmegaCore\Utils\Common\Facades\OmegaUtils;
 
 class OmegaIsInstalled
 {

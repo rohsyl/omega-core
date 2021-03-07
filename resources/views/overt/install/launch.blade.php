@@ -35,8 +35,6 @@
                         <dl class="dl-horizontal">
                             <dt>{{ __('E-mail') }}</dt>
                             <dd>{{ $email }}</dd>
-                            <dt>{{ __('Username') }}</dt>
-                            <dd>{{ $username }}</dd>
                             <dt>{{ __('Password') }}</dt>
                             <dd>{{ __('Hidden') }}</dd>
                         </dl>

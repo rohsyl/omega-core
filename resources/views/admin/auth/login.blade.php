@@ -27,9 +27,9 @@
 
             <!-- Email Address -->
                 <div>
-                    {{ Form::label('username', __('Username'), ['label' => 'block font-medium text-sm text-gray-700']) }}
+                    {{ Form::label('email', __('E-Mail'), ['label' => 'block font-medium text-sm text-gray-700']) }}
 
-                    {{ Form::text('username', old('username'), ['class' => 'block mt-1 w-full rounded-md shadow-sm border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50', 'required', 'autofocus']) }}
+                    {{ Form::text('email', old('email'), ['class' => 'block mt-1 w-full rounded-md shadow-sm border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50', 'required', 'autofocus']) }}
                 </div>
 
                 <!-- Password -->

@@ -38,7 +38,6 @@ class InstallController extends Controller
             'title' => session()->has('install.title') ? session('install.title') : '',
             'slogan' => session()->has('install.slogan') ? session('install.slogan') : '',
             'email' => session()->has('install.email') ? session('install.email') : '',
-            'username' => session()->has('install.username') ? session('install.username') : ''
         ];
 
         return view('omega::overt.install.siteanduser', $data);
@@ -49,7 +48,6 @@ class InstallController extends Controller
         session(['install.title' => $request->input('title')]);
         session(['install.slogan' => $request->input('slogan')]);
         session(['install.email' => $request->input('email')]);
-        session(['install.username' => $request->input('username')]);
         session(['install.password' => Hash::make($request->input('password'))]);
 
         return redirect(route('omega.install.launch'));
@@ -62,7 +60,6 @@ class InstallController extends Controller
             'title' => session('install.title'),
             'slogan' => session('install.slogan'),
             'email' => session('install.email'),
-            'username' => session('install.username')
         ];
 
         return view('omega::overt.install.launch', $data);
@@ -103,7 +100,6 @@ class InstallController extends Controller
 
         // create the admin user
         $admin = new User();
-        $admin->username = session('install.username');
         $admin->email = session('install.email');
         $admin->password = session('install.password');
         $admin->fullname = 'Administrator';
@@ -113,7 +109,7 @@ class InstallController extends Controller
         $group = Group::where('name', 'administrator')->first();
         $group->users()->attach($admin);
 
-        return redirect(route('admin.home'));
+        return redirect(route('omega.admin.dashboard'));
     }
 
 }

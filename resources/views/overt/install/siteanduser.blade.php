@@ -56,16 +56,6 @@
                                     </span>
                             @endif
                         </div>
-
-                        <div class="form-group">
-                            {{ Form::label('username', __('Administrator username :'), ['class' => 'control-label']) }}
-                            {{ Form::text('username', $username, ['class' => 'form-control']) }}
-                            @if ($errors->has('username'))
-                                <span class="text-danger" role="alert">
-                                    <strong>{{ $errors->first('user') }}</strong>
-                                </span>
-                            @endif
-                        </div>
                         <div class="form-group">
                             {{ Form::label('password', __('Password :'), ['class' => 'control-label']) }}
                             {{ Form::password('password', ['class' => 'form-control']) }}
