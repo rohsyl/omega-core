@@ -8,7 +8,9 @@
 						<div class="peers ai-c fxw-nw">
 							<div class="peer">
 								<div class="logo">
-									<img src="/images/logo.png" alt="">
+									<!--
+                                            <img src="/images/logo.png" alt="">
+                                    -->
 								</div>
 							</div>
 							<div class="peer peer-greed">

@@ -15,6 +15,8 @@ use rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig;
 class ServiceProvider extends SP
 {
 
+    public const DASHBOARD = '/admin/dashboard';
+
     public function register() {
         $this->mergeConfigFrom(
             __DIR__.'/../config/omega.php', 'omega'

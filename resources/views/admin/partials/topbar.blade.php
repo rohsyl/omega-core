@@ -12,9 +12,7 @@
         </ul>
         <ul class="nav-right">
             <li class="nav-item dropdown">
-                <a id="dropdown-user-menu" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"
-
-                   href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                <a id="dropdown-user-menu" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
 
                     {{ Auth::user()->fullname }}
                 </a>
@@ -33,6 +31,17 @@
                     </form>
                 </ul>
             </li>
+            <li>
+                <a class="dropdown-item" href="{{ route('logout') }}"
+                   onclick="event.preventDefault();
+                                             document.getElementById('logout-form').submit();">
+                    {{ __('Logout') }}
+                </a>
+            </li>
+
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                @csrf
+            </form>
         </ul>
     </div>
 </div>
