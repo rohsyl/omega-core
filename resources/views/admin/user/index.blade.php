@@ -9,13 +9,13 @@
 
             <ul class="nav nav-tabs card-header-tabs" id="users-mgmt-tabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="users-mgmt-users-tab" data-bs-toggle="tab" data-bs-target="#users-mgmt-users" type="button" role="tab" aria-controls="users-mgmt-users" aria-selected="true">Users</button>
+                    <button class="nav-link active" id="users-mgmt-users-tab" data-toggle="tab" data-bs-target="#users-mgmt-users" type="button" role="tab" aria-controls="users-mgmt-users" aria-selected="true">Users</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="users-mgmt-roles-tab" data-bs-toggle="tab" data-bs-target="#users-mgmt-roles" type="button" role="tab" aria-controls="users-mgmt-roles" aria-selected="true">Roles</button>
+                    <button class="nav-link" id="users-mgmt-roles-tab" data-toggle="tab" data-bs-target="#users-mgmt-roles" type="button" role="tab" aria-controls="users-mgmt-roles" aria-selected="true">Roles</button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="users-mgmt-permissions-tab" data-bs-toggle="tab" data-bs-target="#users-mgmt-permissions" type="button" role="tab" aria-controls="users-mgmt-permissions" aria-selected="true">Permissions</button>
+                    <button class="nav-link" id="users-mgmt-permissions-tab" data-toggle="tab" data-bs-target="#users-mgmt-permissions" type="button" role="tab" aria-controls="users-mgmt-permissions" aria-selected="true">Permissions</button>
                 </li>
             </ul>
 
