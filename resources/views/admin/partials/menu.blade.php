@@ -6,7 +6,7 @@
 <li class="nav-item mT-30">
     <a class="sidebar-link {{ Str::startsWith($route, 'omega.admin.dashboard') ? 'active' : '' }}" href="{{ route('omega.admin.dashboard') }}">
         <span class="icon-holder">
-            <i class="c-blue-500 far fa-home"></i>
+            <i class="c-blue-500 fas fa-home"></i>
         </span>
         <span class="title">Dashboard</span>
     </a>
@@ -14,8 +14,8 @@
 <li class="nav-item">
     <a class="sidebar-link {{ Str::startsWith($route, '') ? 'active' : '' }}" href="{{ route('omega.admin.users.index') }}">
         <span class="icon-holder">
-            <i class="c-brown-500 far fa-user"></i>
+            <i class="c-brown-500 fas fa-user"></i>
         </span>
-        <span class="title">Users</span>
+        <span class="title">{{ __('Users & Groups') }}</span>
     </a>
 </li>
