@@ -12,7 +12,7 @@
     </a>
 </li>
 <li class="nav-item">
-    <a class="sidebar-link {{ Str::startsWith($route, '') ? 'active' : '' }}" href="{{ route('omega.admin.users') }}">
+    <a class="sidebar-link {{ Str::startsWith($route, '') ? 'active' : '' }}" href="{{ route('omega.admin.users.index') }}">
         <span class="icon-holder">
             <i class="c-brown-500 far fa-user"></i>
         </span>

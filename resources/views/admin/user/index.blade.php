@@ -23,13 +23,13 @@
         <div class="card-body tab-content text-left" id="users-mgmt-tab-contents">
 
             <div class="tab-pane fade show active" id="users-mgmt-users" role="tabpanel" aria-labelledby="users-mgmt-users-tab">
-                @include('omega::admin.users.partials.users-tab')
+                @include('omega::admin.user.partials.user-tab')
             </div>
             <div class="tab-pane fade" id="users-mgmt-roles" role="tabpanel" aria-labelledby="users-mgmt-roles-tab">
-                @include('omega::admin.users.partials.users-tab')
+                @include('omega::admin.user.partials.role-tab')
             </div>
             <div class="tab-pane fade" id="users-mgmt-permissions" role="tabpanel" aria-labelledby="users-mgmt-permissions-tab">
-                @include('omega::admin.users.partials.users-tab')
+                @include('omega::admin.user.partials.permission-tab')
             </div>
 
         </div>

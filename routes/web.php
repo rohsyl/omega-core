@@ -44,9 +44,8 @@ Route::group(['middleware' => ['web']], function () {
 
                 Route::get('dashboard', [\rohsyl\OmegaCore\Http\Controllers\Admin\Dashboard\DashboardController::class, 'index'])->name('omega.admin.dashboard');
 
+                Route::resource('users', \rohsyl\OmegaCore\Http\Controllers\Admin\User\UserController::class, ['as' => 'omega.admin']);
                 Route::prefix('users')->group(function () {
-                    Route::get('users', [\rohsyl\OmegaCore\Http\Controllers\Admin\Users\UsersController::class, 'index'])->name('omega.admin.users');
-
                 });
 
             });
