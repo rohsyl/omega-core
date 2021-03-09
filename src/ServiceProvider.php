@@ -54,7 +54,6 @@ class ServiceProvider extends SP
         // load views
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'omega');
 
-
         Blade::componentNamespace('rohsyl\\OmegaCore\\Views\\Components', 'omega');
 
         $router = $this->app->make(Router::class);

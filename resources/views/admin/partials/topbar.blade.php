@@ -12,7 +12,7 @@
         </ul>
         <ul class="nav-right">
             <li class="nav-item dropdown">
-                <a id="dropdown-user-menu" class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <a id="dropdown-user-menu" class="nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown" aria-expanded="false">
 
                     {{ Auth::user()->fullname }}
                 </a>
