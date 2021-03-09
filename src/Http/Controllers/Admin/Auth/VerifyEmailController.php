@@ -4,7 +4,7 @@
 namespace rohsyl\OmegaCore\Http\Controllers\Admin\Auth;
 
 use Illuminate\Routing\Controller;
-use App\Providers\RouteServiceProvider;
+use rohsyl\OmegaCore\ServiceProvider;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 
@@ -19,13 +19,13 @@ class VerifyEmailController extends Controller
     public function __invoke(EmailVerificationRequest $request)
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(RouteServiceProvider::DASHBOARD.'?verified=1');
+            return redirect()->intended(ServiceProvider::DASHBOARD.'?verified=1');
         }
 
         if ($request->user()->markEmailAsVerified()) {
             event(new Verified($request->user()));
         }
 
-        return redirect()->intended(RouteServiceProvider::DASHBOARD.'?verified=1');
+        return redirect()->intended(ServiceProvider::DASHBOARD.'?verified=1');
     }
 }

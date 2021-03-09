@@ -4,7 +4,7 @@
 namespace rohsyl\OmegaCore\Http\Controllers\Admin\Auth;
 
 use Illuminate\Routing\Controller;
-use App\Providers\RouteServiceProvider;
+use rohsyl\OmegaCore\ServiceProvider;
 use Illuminate\Http\Request;
 
 class EmailVerificationPromptController extends Controller
@@ -18,7 +18,7 @@ class EmailVerificationPromptController extends Controller
     public function __invoke(Request $request)
     {
         return $request->user()->hasVerifiedEmail()
-            ? redirect()->intended(RouteServiceProvider::DASHBOARD)
+            ? redirect()->intended(ServiceProvider::DASHBOARD)
             : view('omega::admin.auth.verify-email');
     }
 }

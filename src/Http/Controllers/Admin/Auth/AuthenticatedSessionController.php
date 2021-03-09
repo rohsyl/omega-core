@@ -4,7 +4,7 @@ namespace rohsyl\OmegaCore\Http\Controllers\Admin\Auth;
 
 use Illuminate\Routing\Controller;
 use rohsyl\OmegaCore\Http\Requests\Admin\Auth\LoginRequest;
-use App\Providers\RouteServiceProvider;
+use rohsyl\OmegaCore\ServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 

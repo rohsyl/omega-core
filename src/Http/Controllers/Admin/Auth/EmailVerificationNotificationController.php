@@ -4,7 +4,7 @@
 namespace rohsyl\OmegaCore\Http\Controllers\Admin\Auth;
 
 use Illuminate\Routing\Controller;
-use App\Providers\RouteServiceProvider;
+use rohsyl\OmegaCore\ServiceProvider;
 use Illuminate\Http\Request;
 
 class EmailVerificationNotificationController extends Controller
@@ -18,7 +18,7 @@ class EmailVerificationNotificationController extends Controller
     public function store(Request $request)
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(RouteServiceProvider::DASHBOARD);
+            return redirect()->intended(ServiceProvider::DASHBOARD);
         }
 
         $request->user()->sendEmailVerificationNotification();

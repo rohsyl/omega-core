@@ -4,7 +4,7 @@
 namespace rohsyl\OmegaCore\Http\Controllers\Admin\Auth;
 
 use Illuminate\Routing\Controller;
-use App\Providers\RouteServiceProvider;
+use rohsyl\OmegaCore\ServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -41,6 +41,6 @@ class ConfirmablePasswordController extends Controller
 
         $request->session()->put('auth.password_confirmed_at', time());
 
-        return redirect()->intended(RouteServiceProvider::DASHBOARD);
+        return redirect()->intended(ServiceProvider::DASHBOARD);
     }
 }
