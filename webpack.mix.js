@@ -10,7 +10,7 @@ const mix = require('laravel-mix');
  | file for the application as well as bundling up all the JS files.
  |
  */
-
+/*
 mix.webpackConfig(webpack => {
     return {
         plugins: [
@@ -27,13 +27,19 @@ mix.webpackConfig(webpack => {
             }
         }
     };
-});
+});*/
 
 
-mix.js('resources/js/app.js', 'public/js')
+mix
+    .js('resources/js/app.js', 'public/js')
     .sass('resources/sass/app.scss', 'public/css')
-    .sass('resources/sass/rtl.scss', 'public/css')
-    .copyDirectory('resources/sass/static/images','public/images')
-    .browserSync(process.env.APP_URL)
-    .version()
-    .sourceMaps();
+    //.sass('resources/sass/rtl.scss', 'public/css')
+    .copy('node_modules/@fortawesome/fontawesome-free/webfonts', 'public/webfonts')
+    .copy('resources/sass/static/images','public/images')
+    //.browserSync(process.env.APP_URL)
+    //.version()
+    //.sourceMaps()
+    .options({
+        processCssUrls: false
+    })
+    ;
