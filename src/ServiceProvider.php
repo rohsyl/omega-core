@@ -16,6 +16,7 @@ class ServiceProvider extends SP
 {
 
     public const DASHBOARD = '/admin/dashboard';
+    public const LOGIN = '/admin/login';
 
     public function register() {
         $this->mergeConfigFrom(

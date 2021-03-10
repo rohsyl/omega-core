@@ -22,7 +22,7 @@
 				<div class="peer">
 					<div class="mobile-toggle sidebar-toggle">
 						<a href="" class="td-n">
-							<i class="ti-arrow-circle-left"></i>
+							<i class="fas fa-times color-red-dark"></i>
 						</a>
 					</div>
 				</div>

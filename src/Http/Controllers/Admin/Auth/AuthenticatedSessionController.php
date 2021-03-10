@@ -49,6 +49,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return $this->create();
+        return redirect()->intended(ServiceProvider::LOGIN);
     }
 }

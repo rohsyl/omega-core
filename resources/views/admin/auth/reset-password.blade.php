@@ -2,12 +2,6 @@
 
 @section('content')
 
-    <!-- Session Status -->
-    <div class="mb-4">
-        @include('omega::admin.components.auth.auth-session-status', ['status' => session('status')])
-    </div>
-
-
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-8">
@@ -15,6 +9,9 @@
                     <div class="card-header">{{ __('Reset Password') }}</div>
 
                     <div class="card-body">
+
+                        @include('omega::layouts.partials.session-alert', ['type' => 'info'])
+
                         <form method="POST" action="{{ route('password.update') }}">
                             @csrf
 

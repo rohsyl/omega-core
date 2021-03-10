@@ -4,6 +4,7 @@
 @import "~bootstrap/scss/bootstrap";
 @import 'spec/index';
 @import 'vendor/index';
+@import 'colors';
 
 #loader {
     transition: all 0.3s ease-in-out;
@@ -104,3 +105,4 @@ img {
     margin-top: 15px !important;
     margin-bottom: 15px !important;
 }
+

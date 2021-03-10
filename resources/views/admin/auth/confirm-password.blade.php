@@ -9,11 +9,7 @@
                     <div class="card-header">{{ __('This is a secure area of the application. Please confirm your password before continuing.') }}</div>
 
                     <div class="card-body">
-                        @if (session('status'))
-                            <div class="alert alert-success" role="alert">
-                                {{ session('status') }}
-                            </div>
-                        @endif
+                        @include('omega::layouts.partials.session-alert', ['type' => 'warning'])
 
                         <form method="POST" action="{{ route('password.confirm') }}">
                             @csrf
