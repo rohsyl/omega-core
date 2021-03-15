@@ -61,7 +61,7 @@
 @section('right-small-card-content')
     <div class="row">
         <div class="col">
-            <a class="btn btn-outline-danger col" href="{{ route('omega.admin.users.destroy', $user) }}">{{ __('Delete user') }}</a>
+            {{ Form::odelete(route('omega.admin.users.destroy', $user), ['class' => 'btn btn-outline-danger col', 'label' => __('Delete user')]) }}
         </div>
     </div>
 @endsection

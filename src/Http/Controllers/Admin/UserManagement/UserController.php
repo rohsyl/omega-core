@@ -26,7 +26,7 @@ class UserController extends Controller
         $user->is_disabled = !$request->input('is-enabled');
         $user->save();
 
-        return $this->show($user);
+        return redirect()->route('omega.admin.users.show', $user);
     }
 
     public function show(User $user) {
@@ -42,10 +42,11 @@ class UserController extends Controller
         $user->fullname = $request->input('fullname');
         $user->is_disabled = !$request->input('is-enabled');
         $user->save();
-        return $this->show($user);
+        return redirect()->route('omega.admin.users.show', $user);
     }
 
     public function destroy(User $user) {
-        //$user->destroy();
+        $user->delete();
+        return redirect()->route('omega.admin.users.index');
     }
 }

@@ -5,8 +5,6 @@
 
 <body class="app">
 
-    @include('omega::admin.partials.spinner')
-
     <div>
         <!-- #Left Sidebar ==================== -->
         @include('omega::admin.partials.sidebar')
