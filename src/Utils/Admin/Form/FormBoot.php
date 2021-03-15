@@ -24,7 +24,7 @@ class FormBoot
         \Form::component('odaterangepicker', 'ops.components.form.daterangepicker', ['name', 'from', 'to', 'value' => null, 'attributes' => []]);*/
 
         \Form::component('oback', 'omega::admin.components.form.back', ['name', 'attributes' => []]);
-        \Form::component('osubmit', 'omega::admin.components.form.submit', ['name' => __('action.submit'), 'attributes' => []]);
+        \Form::component('osubmit', 'omega::admin.components.form.submit', ['name' => __('Submit'), 'attributes' => []]);
         \Form::component('odelete', 'omega::admin.components.form.delete', ['url', 'attributes' => []]);
     }
 }

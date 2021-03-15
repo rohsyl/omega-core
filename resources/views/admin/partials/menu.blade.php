@@ -12,6 +12,14 @@
     </a>
 </li>
 <li class="nav-item">
+    <a class="sidebar-link {{ Str::startsWith($route, 'omega.admin.content.pages.index') ? 'active' : '' }}" href="{{ route('omega.admin.content.pages.index') }}">
+        <span class="icon-holder">
+            <i class="c-blue-500 fas fa-file-alt color-gray-dark"></i>
+        </span>
+        <span class="title">{{ __('Pages')}}</span>
+    </a>
+</li>
+<li class="nav-item">
     <a class="sidebar-link {{ Str::startsWith($route, 'omega.admin.users') ? 'active' : '' }}" href="{{ route('omega.admin.users.index') }}">
         <span class="icon-holder">
             <i class="c-brown-500 fas fa-user color-gray-dark"></i>

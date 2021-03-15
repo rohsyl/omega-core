@@ -44,6 +44,11 @@ Route::group(['middleware' => ['web']], function () {
 
                 Route::get('dashboard', [\rohsyl\OmegaCore\Http\Controllers\Admin\Dashboard\DashboardController::class, 'index'])->name('omega.admin.dashboard');
 
+
+                require __DIR__ . '/admin/content.php';
+
+                Route::resource('users', \rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement\UserController::class, ['as' => 'omega.admin']);
+
                 Route::resource('users', \rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement\UserController::class, ['as' => 'omega.admin']);
                 Route::prefix('users')->group(function () {
                 });

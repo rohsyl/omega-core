@@ -1,7 +1,4 @@
 @extends('omega::admin.default')
-@section('page-header')
-    @yield('page-header')
-@endsection
 @section('content')
     <div class="row">
         @hasSection('large-card-content')
