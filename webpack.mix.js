@@ -10,7 +10,7 @@ const mix = require('laravel-mix');
  | file for the application as well as bundling up all the JS files.
  |
  */
-/*
+
 mix.webpackConfig(webpack => {
     return {
         plugins: [
@@ -19,15 +19,17 @@ mix.webpackConfig(webpack => {
                 jQuery: 'jquery',
                 'window.jQuery': 'jquery',
                 Popper: ['popper.js', 'default'],
+                Swal: 'swal'
             })
         ],
         resolve: {
             alias: {
                 'jquery': path.join(__dirname, 'node_modules/jquery/dist/jquery'),
+                'swal': path.join(__dirname, 'node_modules/sweetalert2/dist/sweetalert2'),
             }
         }
     };
-});*/
+});
 
 
 mix

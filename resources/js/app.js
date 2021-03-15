@@ -6,6 +6,7 @@
  */
 
 require('./bootstrap');
+require('./omega/admin/index')
 //import './bootstrap';
 
 // window.Vue = require('vue');
