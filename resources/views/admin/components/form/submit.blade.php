@@ -1,0 +1,1 @@
+{{ Form::submit($name, array_merge_recursive($attributes, ['class'=>'btn btn-primary'])) }}
