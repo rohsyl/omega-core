@@ -25,7 +25,13 @@
                         <td>
                             {{ $page->title }}
                         </td>
-                        <td></td>
+                        <td>
+                            @if(isset($page->author))
+                                {{ $page->author->fullname }}
+                            @else
+                                -
+                            @endif
+                        </td>
                         <td></td>
                         <td></td>
                         <td></td>
@@ -38,6 +44,9 @@
                     </tr>
                 @endforelse
             </table>
+        </div>
+        <div class="card-footer">
+            {{ $pages->links() }}
         </div>
     </div>
 
