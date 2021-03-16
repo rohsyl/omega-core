@@ -47,7 +47,7 @@ Route::group(['middleware' => ['web']], function () {
 
                 require __DIR__ . '/admin/content.php';
 
-                Route::resource('users', \rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement\UserController::class, ['as' => 'omega.admin']);
+                Route::resource('plugins', \rohsyl\OmegaCore\Http\Controllers\Admin\Plugin\PluginController::class, ['as' => 'omega.admin'])->only(['index']);
 
                 Route::resource('users', \rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement\UserController::class, ['as' => 'omega.admin']);
                 Route::prefix('users')->group(function () {
