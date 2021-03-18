@@ -12,7 +12,7 @@ use rohsyl\OmegaCore\Http\Middleware\OmegaNotInstalled;
 use rohsyl\OmegaCore\Utils\Admin\Form\FormBoot;
 use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
 use rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig;
-use rohsyl\OmegaCore\Utils\Common\Plugin\Plugin;
+use rohsyl\OmegaCore\Utils\Common\Plugin\PluginManager;
 
 class ServiceProvider extends SP
 {
@@ -79,7 +79,7 @@ class ServiceProvider extends SP
         });
 
         $this->app->bind('omega:plugin', function () {
-            return new Plugin();
+            return new PluginManager();
         });
     }
 }

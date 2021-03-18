@@ -4,27 +4,24 @@
 namespace rohsyl\OmegaCore\Utils\Common\Plugin;
 
 
-class Plugin
+use rohsyl\OmegaCore\Utils\Common\Plugin\Form\PluginFormFactory;
+
+abstract class Plugin
 {
-    /**
-     * @var array
-     */
-    private $plugins;
 
-    public function __construct()
-    {
-        $this->plugins = [];
+    public function install() : bool {
+        return true;
     }
 
-    public function register($name, $plugin) {
-        $this->plugins[$name] = $plugin;
+    public function uninstall() : bool {
+        return true;
     }
 
-    public function all() {
-        return $this->plugins;
-    }
+    abstract function name() : string;
 
-    public function get($name) {
-        return $this->plugins[$name] ?? null;
+    public function makeForm($callback) {
+        $builder = new PluginFormFactory($this->name());
+        call_user_func_array($callback, [$builder]);
+        $builder->make();
     }
 }

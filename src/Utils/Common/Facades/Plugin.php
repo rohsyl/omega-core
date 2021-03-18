@@ -11,7 +11,7 @@ use rohsyl\OmegaCore\Models\User;
  * @method static array all()
  * @method static mixed get(string $name)
  *
- * @see rohsyl\OmegaCore\Utils\Common\Plugin\Plugin
+ * @see rohsyl\OmegaCore\Utils\Common\Plugin\PluginManager
  */
 class Plugin extends Facade
 {
