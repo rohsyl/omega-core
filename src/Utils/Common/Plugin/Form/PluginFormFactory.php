@@ -6,15 +6,13 @@ namespace rohsyl\OmegaCore\Utils\Common\Plugin\Form;
 
 use rohsyl\OmegaCore\Models\PluginForm;
 use rohsyl\OmegaCore\Models\PluginFormEntry;
+use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
 
 class PluginFormFactory
 {
     private $pluginName;
 
     private $form;
-    private $formComponentable;
-    private $formWidgetable;
-    private $formTitle;
 
     private $entries;
 
@@ -25,18 +23,25 @@ class PluginFormFactory
         $this->entries = [];
     }
 
-    public function form($name, $componentable, $widgetable, $title) {
+    public function form($title, $componentable = true, $widgetable = false) {
         $this->form = [
-            'name' => $name,
+            'plugin_id' => Plugin::getModel($this->pluginName, true)->id,
+            'name' => $this->pluginName,
             'componentable' => $componentable,
             'widgetable' => $widgetable,
             'title' => $title
         ];
     }
 
-    public function entry($name, $type, $param, $title, $description, $order, $mandatory) {
+    public function entry($name, $type, $param = null, $title = '', $description = '', $order = 0, $mandatory = false) {
         $this->entries[$name] = [
-
+            'name' => $name,
+            'type' => $type,
+            'param' => $param,
+            'title' => $title,
+            'description' => $description,
+            'order' => $order,
+            'mandatory' => $mandatory
         ];
     }
 

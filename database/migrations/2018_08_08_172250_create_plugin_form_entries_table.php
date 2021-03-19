@@ -18,11 +18,11 @@ class CreatePluginFormEntriesTable extends Migration
             $table->unsignedBigInteger('plugin_form_id');
             $table->string('name');
             $table->string('type');
-            $table->longText('param');
-            $table->string('title');
+            $table->longText('param')->nullable();
+            $table->string('title')->nullable();
             $table->string('heading')->nullable();
             $table->text('description')->nullable();
-            $table->boolean('mandatory');
+            $table->boolean('mandatory')->default(0);
             $table->integer('order')->nullable();
         });
     }

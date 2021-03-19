@@ -11,6 +11,7 @@ class PluginController extends Controller
 {
     public function index() {
         $plugins = Plugin::all();
-        dd($plugins);
+
+        return view('omega::admin.plugin.index', compact('plugins'));
     }
 }

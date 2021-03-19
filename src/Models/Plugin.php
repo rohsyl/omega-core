@@ -7,8 +7,6 @@ use Omega\Utils\Plugin\PluginMeta;
 
 class Plugin extends Model
 {
-    public $timestamps = false;
-
     protected $fillable = [
         'parent_id',
         'name',

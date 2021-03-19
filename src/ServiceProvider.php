@@ -12,6 +12,7 @@ use rohsyl\OmegaCore\Http\Middleware\OmegaNotInstalled;
 use rohsyl\OmegaCore\Utils\Admin\Form\FormBoot;
 use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
 use rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig;
+use rohsyl\OmegaCore\Utils\Common\Plugin\Commands\PluginInstallCommand;
 use rohsyl\OmegaCore\Utils\Common\Plugin\PluginManager;
 
 class ServiceProvider extends SP
@@ -32,7 +33,7 @@ class ServiceProvider extends SP
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                // register here omega command
+                PluginInstallCommand::class,
             ]);
         }
 

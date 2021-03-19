@@ -27,3 +27,11 @@
         <span class="title">{{ __('Users & Groups') }}</span>
     </a>
 </li>
+<li class="nav-item">
+    <a class="sidebar-link {{ Str::startsWith($route, 'omega.admin.plugins') ? 'active' : '' }}" href="{{ route('omega.admin.plugins.index') }}">
+        <span class="icon-holder">
+            <i class="c-brown-500 fas fa-cubes color-gray-dark"></i>
+        </span>
+        <span class="title">{{ __('Plugins') }}</span>
+    </a>
+</li>
