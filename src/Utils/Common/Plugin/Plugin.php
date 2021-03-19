@@ -24,4 +24,13 @@ abstract class Plugin
         call_user_func_array($callback, [$builder]);
         $builder->make();
     }
+
+    public function getId() {
+        $model = \rohsyl\OmegaCore\Utils\Common\Facades\Plugin::getModel($this->name());
+        return isset($model) ? $model->id : null;
+    }
+
+    public function isInstalled() {
+        return $this->getId() !== null;
+    }
 }

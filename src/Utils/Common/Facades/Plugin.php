@@ -10,7 +10,7 @@ use rohsyl\OmegaCore\Models\User;
  * @method static void register(string $name, $plugin)
  * @method static array all()
  * @method static \rohsyl\OmegaCore\Utils\Common\Plugin\Plugin getPlugin(string $name)
- * @method static \rohsyl\OmegaCore\Models\Plugin getModel(string $name)
+ * @method static \rohsyl\OmegaCore\Models\Plugin getModel(string $name, boolean $force = false)
  *
  * @see rohsyl\OmegaCore\Utils\Common\Plugin\PluginManager
  */
