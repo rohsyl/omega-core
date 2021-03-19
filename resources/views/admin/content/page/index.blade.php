@@ -23,7 +23,7 @@
                 @forelse($pages as $page)
                     <tr>
                         <td>
-                            {{ $page->title }}
+                            <a href="{{ route('omega.admin.content.pages.edit', $page) }}">{{ $page->title }}</a>
                         </td>
                         <td>
                             @if(isset($page->author))
@@ -34,7 +34,9 @@
                         </td>
                         <td></td>
                         <td></td>
-                        <td></td>
+                        <td class="text-right">
+                            <a href="{{ route('omega.admin.content.pages.edit', $page) }}"><i class="fas fa-edit"></i></a>
+                        </td>
                     </tr>
                 @empty
                     <tr>

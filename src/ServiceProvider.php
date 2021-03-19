@@ -10,6 +10,7 @@ use rohsyl\OmegaCore\Http\Middleware\OmegaLoadConfiguration;
 use rohsyl\OmegaCore\Http\Middleware\OmegaLoadEntity;
 use rohsyl\OmegaCore\Http\Middleware\OmegaNotInstalled;
 use rohsyl\OmegaCore\Utils\Admin\Form\FormBoot;
+use rohsyl\OmegaCore\Utils\Admin\Livewire\LivewireBoot;
 use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
 use rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Commands\PluginInstallCommand;
@@ -59,7 +60,9 @@ class ServiceProvider extends SP
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'omega');
 
         Blade::componentNamespace('rohsyl\\OmegaCore\\Views\\Components', 'omega');
+
         FormBoot::boot();
+        LivewireBoot::boot();
 
         $router = $this->app->make(Router::class);
         $router->aliasMiddleware('om_not_installed', OmegaNotInstalled::class);

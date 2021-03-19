@@ -31,4 +31,8 @@ class PageController extends Controller
 
         return redirect()->route('omega.admin.content.pages.index');
     }
+
+    public function edit(Page $page) {
+        return view('omega::admin.content.page.edit', compact('page'));
+    }
 }
