@@ -3,6 +3,7 @@ namespace rohsyl\OmegaCore\Utils\Common\Facades;
 
 use Illuminate\Support\Facades\Facade;
 use rohsyl\OmegaCore\Models\User;
+use rohsyl\OmegaCore\Utils\Common\Plugin\PluginManager;
 
 /**
  * Class PluginRegister
@@ -12,7 +13,7 @@ use rohsyl\OmegaCore\Models\User;
  * @method static \rohsyl\OmegaCore\Utils\Common\Plugin\Plugin getPlugin(string $name)
  * @method static \rohsyl\OmegaCore\Models\Plugin getModel(string $name, boolean $force = false)
  *
- * @see rohsyl\OmegaCore\Utils\Common\Plugin\PluginManager
+ * @see PluginManager
  */
 class Plugin extends Facade
 {

@@ -5,9 +5,14 @@ namespace rohsyl\OmegaCore\Utils\Common\Plugin;
 
 
 use rohsyl\OmegaCore\Utils\Common\Plugin\Form\PluginFormFactory;
+use rohsyl\OmegaCore\Utils\Common\Plugin\Form\Renderer\PluginFormRenderer;
 
 abstract class Plugin
 {
+    /**
+     * @var null|PluginFormRenderer
+     */
+    private $formRendererComponent = null;
 
     public function install() : bool {
         return true;
@@ -32,5 +37,17 @@ abstract class Plugin
 
     public function isInstalled() {
         return $this->getId() !== null;
+    }
+
+    public function getFormRendererComponent() {
+        return $this->formRendererComponent;
+    }
+
+    /**
+     * @param PluginFormRenderer $formRendererComponent
+     */
+    public function setFormRendererComponent(PluginFormRenderer $formRendererComponent)
+    {
+        $this->formRendererComponent = $formRendererComponent;
     }
 }

@@ -1,7 +1,9 @@
 @extends('omega::admin.default')
 
 @section('page-header')
-    {{ __('Pages') }}
+    {{ __('Edit page') }}
+    -
+    {{ $page->title }}
 @endsection
 
 @section('actions')
@@ -9,18 +11,7 @@
 
 @section('content')
 
-    {{ Form::oback() }}
-
-    <div class="card">
-        <div class="card-header">
-            {{ $page->title  }}
-        </div>
-        <div class="card-body">
-
-            <livewire:omega_edit-page />
-        </div>
-    </div>
-
+    <livewire:omega_edit-page :page="$page" />
 
 @endsection
 

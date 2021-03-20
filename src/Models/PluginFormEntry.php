@@ -27,4 +27,5 @@ class PluginFormEntry extends Model
     public function plugin_form_entry_values() {
         return $this->hasMany(PluginFormEntryValue::class);
     }
+
 }

@@ -18,5 +18,6 @@
 
     <!-- Specific css content placeholder -->
     @stack('css')
+    @livewireStyles()
     <!-- End of specific css content placeholder --> 
 </head>

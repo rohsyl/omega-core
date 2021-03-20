@@ -45,7 +45,7 @@ class Page extends Model
     }
 
     public function widgets(){
-        return $this->hasMany(Component::class)->where('is_widget', false);
+        return $this->hasMany(Component::class)->where('is_widget', true);
     }
 
     public function security(){

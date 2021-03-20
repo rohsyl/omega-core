@@ -10,7 +10,7 @@ class Component extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'plugin_id',
+        'plugin_form_id',
         'page_id',
         'name',
         'param',
@@ -23,8 +23,8 @@ class Component extends Model
         'param' => 'array',
     ];
 
-    public function plugin(){
-        return $this->belongsTo(Plugin::class);
+    public function plugin_form(){
+        return $this->belongsTo(PluginForm::class, 'plugin_form_id');
     }
 
     public function page(){

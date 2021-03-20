@@ -17,6 +17,10 @@ class PluginForm extends Model
         'componentable',
     ];
 
+    public function plugin() {
+        return $this->belongsTo(Plugin::class);
+    }
+
     public function plugin_form_entries() {
         return $this->hasMany(PluginFormEntry::class)->orderBy('order');
     }

@@ -49,6 +49,7 @@
 
     <!-- Specific js content placeholder -->
     @stack('js')
+    @livewireScripts()
     <!-- End of specific js content placeholder -->
 
 </body>
