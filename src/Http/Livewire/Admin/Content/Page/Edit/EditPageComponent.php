@@ -5,6 +5,7 @@ namespace rohsyl\OmegaCore\Http\Livewire\Admin\Content\Page\Edit;
 
 
 use Livewire\Component as LivewireComponent;
+use rohsyl\OmegaCore\Models\Page;
 use rohsyl\OmegaCore\Models\PluginForm;
 use rohsyl\OmegaCore\Models\Component;
 use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
@@ -13,8 +14,10 @@ use rohsyl\OmegaCore\Utils\Common\Plugin\Type\Type;
 class EditPageComponent extends LivewireComponent
 {
 
+    /**
+     * @var Page
+     */
     public $page;
-
 
     public function mount() {
 
