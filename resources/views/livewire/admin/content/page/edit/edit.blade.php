@@ -20,7 +20,19 @@
                 <div class="col-md-8">
 
                     @foreach($componentsForms as $form)
-                        {!! $form['html'] !!}
+                        <div class="card">
+                            <div class="card-header p-10 d-flex justify-content-between">
+                                <div>
+                                    {{ $form['name'] }}
+                                </div>
+                                <div>
+                                    <a class="text-danger" href="#" wire:click="deleteComponent({{ $form['id'] }})"><i class="fas fa-trash"></i></a>
+                                </div>
+                            </div>
+                            <div class="card-body p-10">
+                                {!! $form['html'] !!}
+                            </div>
+                        </div>
                     @endforeach
 
                 </div>

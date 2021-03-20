@@ -34,6 +34,8 @@ class EditPageComponent extends LivewireComponent
             $plugin = Plugin::getPlugin($component->plugin_form->plugin->name);
             $formRenderer = $plugin->getFormRendererComponent();
             $components[] = [
+                'id' => $component->id,
+                'name' => $component->plugin_form->plugin->name,
                 'html' => Type::FormRender($component->plugin_form_id, $component->id, $component->page_id, $formRenderer),
             ];
         }
@@ -72,5 +74,10 @@ class EditPageComponent extends LivewireComponent
 
         $this->page->load('components');
         $this->hideAddComponentForm();
+    }
+
+    public function deleteComponent($component_id) {
+        Component::destroy($component_id);
+        $this->page->load('components');
     }
 }
