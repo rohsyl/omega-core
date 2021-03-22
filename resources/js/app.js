@@ -7,6 +7,7 @@
 
 require('./bootstrap');
 require('./omega/admin/index')
+require('bs4-summernote/src/js/summernote')
 //import './bootstrap';
 
 // window.Vue = require('vue');

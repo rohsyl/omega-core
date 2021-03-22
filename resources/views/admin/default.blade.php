@@ -41,16 +41,6 @@
         </div>
     </div>
 
-    <script src="/vendor/omega/js/app.js"></script>
-
-    <!-- Global js content -->
-
-    <!-- End of global js content-->
-
-    <!-- Specific js content placeholder -->
-    @stack('js')
-    @livewireScripts()
-    <!-- End of specific js content placeholder -->
 
 </body>
 

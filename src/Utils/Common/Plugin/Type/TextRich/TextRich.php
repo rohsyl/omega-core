@@ -11,7 +11,9 @@ class TextRich extends TypeEntry {
         $value = $this->getObjectValue();
         $html = '<textarea class="form-control '.$uid.'" name="'.$uid.'">'.$value.'</textarea>
             <script>
-                omega.initSummerNote(\'.'.$uid.'\');
+                $(function() {
+                    $(\'.'.$uid.'\').summernote();
+                });
             </script>';
         return $html;
     }

@@ -19,5 +19,16 @@
     <!-- Specific css content placeholder -->
     @stack('css')
     @livewireStyles()
-    <!-- End of specific css content placeholder --> 
+    <!-- End of specific css content placeholder -->
+
+    <script src="/vendor/omega/js/app.js"></script>
+
+    <!-- Global js content -->
+
+    <!-- End of global js content-->
+
+    <!-- Specific js content placeholder -->
+    @stack('js')
+    @livewireScripts()
+    <!-- End of specific js content placeholder -->
 </head>

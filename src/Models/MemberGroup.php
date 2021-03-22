@@ -10,13 +10,7 @@ class MemberGroup extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'username',
-        'email',
-        'password',
-        'validation_hash',
-        'lost_password_hash',
-        'is_enabled',
-        'validated_at',
+        'name',
     ];
 
     public function menus(){
