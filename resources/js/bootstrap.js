@@ -75,3 +75,5 @@ import './sweetalert2';
 
 import './sweetalert2';
 import './select2';
+import Sortable from 'sortablejs';
+window.Sortable = Sortable;

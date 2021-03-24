@@ -32,7 +32,9 @@ class MenuController extends Controller
     }
 
     public function update(Request $request, Menu $menu) {
+        $menu->update($request->all());
 
+        return redirect()->route('omega.admin.appearance.menus.edit', $menu);
     }
 
     public function destroy(Menu $menu) {

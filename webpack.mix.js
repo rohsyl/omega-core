@@ -25,7 +25,7 @@ mix.webpackConfig(webpack => {
         resolve: {
             alias: {
                 'jquery': path.join(__dirname, 'node_modules/jquery/dist/jquery'),
-                'swal': path.join(__dirname, 'node_modules/sweetalert2/dist/sweetalert2'),
+                'swal': path.join(__dirname, 'node_modules/sweetalert2/dist/sweetalert2')
             }
         }
     };
@@ -35,12 +35,8 @@ mix.webpackConfig(webpack => {
 mix
     .js('resources/js/app.js', 'public/js')
     .sass('resources/sass/app.scss', 'public/css')
-    //.sass('resources/sass/rtl.scss', 'public/css')
     .copy('node_modules/@fortawesome/fontawesome-free/webfonts', 'public/webfonts')
     .copy('resources/sass/static/images','public/images')
-    //.browserSync(process.env.APP_URL)
-    //.version()
-    //.sourceMaps()
     .options({
         processCssUrls: false
     })

@@ -15,14 +15,16 @@
     "bs4-summernote": "^0.8.10",
     "codemirror": "^5.60.0",
     "jquery-datetimepicker": "^2.5.21",
-    "select2": "^4.0.11"
+    "jquery-nestable": "^0.8.0",
+    "select2": "^4.0.11",
+    "sortablejs": "^1.13.0"
   },
   "devDependencies": {
-    "axios": "^0.19",
+    "axios": "^0.21.1",
     "babel-polyfill": "^6.26.0",
     "bootstrap": "^4.3.1",
     "bootstrap-datepicker": "^1.9.0",
-    "browser-sync": "^2.26.13",
+    "browser-sync": "^2.26.14",
     "browser-sync-webpack-plugin": "^2.0.1",
     "chart.js": "^2.8.0",
     "cross-env": "^7.0",
@@ -30,7 +32,7 @@
     "easy-pie-chart": "^2.1.7",
     "file-loader": "^1.1.11",
     "fullcalendar": "^3.10.1",
-    "jquery": "3.4.1",
+    "jquery": "^3.6.0",
     "jquery-sparkline": "^2.4.0",
     "jvectormap": "^2.0.4",
     "laravel-mix": "^5.0.1",

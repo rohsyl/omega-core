@@ -9,7 +9,8 @@
             "email": "syzin12@gmail.com"
         }
     ],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "require": {
         "php": "^7.4|^8.0",
         "illuminate/auth": "^8.0",
@@ -17,7 +18,8 @@
         "illuminate/contracts": "^8.0",
         "illuminate/database": "^8.0",
         "laravelcollective/html": "^6.0",
-        "livewire/livewire": "^2.4"
+        "livewire/livewire": "^2.4",
+        "tightenco/ziggy": "^1.0"
     },
     "require-dev": {
         "orchestra/testbench": "^6.0",

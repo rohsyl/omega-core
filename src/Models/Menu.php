@@ -22,4 +22,8 @@ class Menu extends Model
         return $this->belongsTo(MemberGroup::class);
     }
 
+    public function items() {
+        return $this->hasMany(MenuItem::class, 'menu_id')
+            ->orderBy('sort', 'ASC');
+    }
 }
