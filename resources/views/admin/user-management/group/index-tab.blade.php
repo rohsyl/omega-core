@@ -30,7 +30,7 @@
             <td class="text-right">
                 <a href="{{ route('omega.admin.groups.show', $group) }}"><i class="far fa-eye color-green-dark"></i></a>
                 <a href="{{ route('omega.admin.groups.edit', $group) }}"><i class="far fa-edit color-blue"></i></a>
-                <a href="{{ route('omega.admin.groups.destroy', $group) }}" @if($group->is_system)style="cursor: not-allowed;"@endif><i class="far fa-trash-alt color-red"></i></a>
+                {{ Form::odelete(route('omega.admin.groups.destroy', $group), ['class' => 'btn btn-link m-0 pt-0 px-0 pb-1 color-red', 'icon' => 'far fa-trash-alt']) }}
             </td>
         </tr>
     @endforeach

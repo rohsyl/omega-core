@@ -1,14 +1,14 @@
-@extends('omega::admin.default')
+@extends('omega::admin.layouts.admin')
 
 @section('page-header')
     {{ __('Menus') }}
 @endsection
 
-@section('actions')
+@section('left-small-card-content')
     <a href="{{ route('omega.admin.appearance.menus.create') }}" class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> {{ __('Create menu') }}</a>
 @endsection
 
-@section('content')
+@section('large-card-content')
 
     <div class="card">
         <div class="card-body p-0">

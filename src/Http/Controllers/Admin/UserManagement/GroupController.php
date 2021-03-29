@@ -24,7 +24,7 @@ class GroupController extends Controller
         $group->is_enabled = (bool)$request->input('is-enabled');
         $group->save();
 
-        return $this->show($group);
+        return redirect()->route('omega.admin.group.show', $group);
     }
 
     public function show(Group $group) {
@@ -40,10 +40,11 @@ class GroupController extends Controller
         $group->description = $request->input('description');
         $group->is_enabled = (bool)$request->input('is-enabled');
         $group->save();
-        return $this->show($group);
+        return redirect()->route('omega.admin.group.show', $group);
     }
 
     public function destroy(Group $group) {
-        //$group->destroy();
+        $group->delete();
+        return redirect()->route('omega.admin.groups.index');
     }
 }

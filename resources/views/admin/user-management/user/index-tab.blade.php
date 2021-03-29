@@ -30,9 +30,10 @@
             <td class="text-right">
                 <a href="{{ route('omega.admin.users.show', $user) }}"><i class="far fa-eye color-green-dark"></i></a>
                 <a href="{{ route('omega.admin.users.edit', $user) }}"><i class="far fa-edit color-blue"></i></a>
-                <a href="{{ route('omega.admin.users.destroy', $user) }}"><i class="far fa-trash-alt color-red"></i></a>
+                {{ Form::odelete(route('omega.admin.users.destroy', $user), ['class' => 'btn btn-link m-0 pt-0 px-0 pb-1 color-red', 'icon' => 'far fa-trash-alt']) }}
             </td>
         </tr>
     @endforeach
+
     </tbody>
 </table>

@@ -1,4 +1,4 @@
-@extends('omega::admin.default')
+@extends('omega::admin.layouts.admin')
 
 @section('page-header')
     {{ __('Edit page') }}
@@ -6,10 +6,10 @@
     {{ $page->title }}
 @endsection
 
-@section('actions')
+@section('left-small-card-content')
 @endsection
 
-@section('content')
+@section('large-card-content')
 
     <livewire:omega_edit-page :page="$page" />
 

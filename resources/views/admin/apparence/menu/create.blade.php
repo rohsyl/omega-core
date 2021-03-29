@@ -1,13 +1,13 @@
-@extends('omega::admin.default')
+@extends('omega::admin.layouts.admin')
 
 @section('page-header')
     {{ __('Menus') }}
 @endsection
 
-@section('actions')
+@section('left-small-card-content')
 @endsection
 
-@section('content')
+@section('large-card-content')
 
     {{ Form::oback() }}
 
