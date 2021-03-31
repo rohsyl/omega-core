@@ -3,7 +3,7 @@
         {{ Form::label($name, $attributes['label'] ?? $name) }}
     @endif
     <select id="{{ $name }}" name="{{ $name }}"
-            class="{{ isset($errors) && $errors->has($name) ? 'is-invalid' : '' }} {{ isset($attributes['class']) ? $attributes['class'] : '' }}">
+            class="{{ isset($errors) && $errors->has($name) ? 'is-invalid' : '' }} {{ isset($attributes['class']) ? $attributes['class'] : 'form-control' }}">
         <option
             data-placeholder="true">{{ isset($attributes['placeholder']) ? $attributes['placeholder'] : '' }}</option>
         @foreach($data as $key=>$line)

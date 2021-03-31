@@ -19,6 +19,13 @@ class EditPageComponent extends LivewireComponent
      */
     public $page;
 
+    /**
+     * TODO:
+     */
+    public $pages = [];
+    public $models = [];
+    public $menus = [];
+
     public function mount() {
 
     }
