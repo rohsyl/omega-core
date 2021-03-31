@@ -8,6 +8,8 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use rohsyl\OmegaCore\Models\Page;
+use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
+use rohsyl\OmegaCore\Utils\Common\Plugin\Type\Type;
 
 class PageController extends Controller
 {
@@ -34,5 +36,14 @@ class PageController extends Controller
 
     public function edit(Page $page) {
         return view('omega::admin.content.page.edit', compact('page'));
+    }
+
+    public function update(Request $request, Page $page) {
+
+        foreach($page->components as $component) {
+            Type::FormSave($component->plugin_form_id, $component->id, $component->page_id);
+        }
+
+        return redirect()->route('omega.admin.content.pages.edit', $page);
     }
 }

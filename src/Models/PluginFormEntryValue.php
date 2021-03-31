@@ -23,4 +23,8 @@ class PluginFormEntryValue extends Model
     public function component() {
         $this->belongsTo(Component::class);
     }
+
+    public function getValue() {
+        return $this->value;
+    }
 }
