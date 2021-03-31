@@ -20,7 +20,7 @@
                 <div class="col-md-8">
 
                     @foreach($componentsForms as $form)
-                        <div class="card">
+                        <div class="card" id="{{ $form['id'] }}-{{ $form['name'] }}">
                             <div class="card-header p-10 d-flex justify-content-between">
                                 <div>
                                     {{ $form['name'] }}

@@ -103,4 +103,15 @@ class EditMenuComponent extends LivewireComponent
         MenuItem::destroy($menu_item_id);
         $this->loadMenuItems();
     }
+
+    public function updateOrders($orders) {
+
+        foreach($orders as $order) {
+            $item = MenuItem::find($order['id']);
+            $item->update([
+                'parent_id' => $order['parent'],
+                'sort' => $order['order'],
+            ]);
+        }
+    }
 }

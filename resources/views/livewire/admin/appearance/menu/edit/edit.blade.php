@@ -14,28 +14,7 @@
                         @endif
                         <div id="menu-items" class="items-container">
                             @foreach($menuItems as $item)
-                                <div class="menu-item"
-                                    data-id="{{ $item->id }}">
-                                    <div class="border bg-light py-2 px-3 d-flex justify-content-between mb-2">
-                                        <div class="font-weight-bold">
-                                            {{ $item->label }}
-                                        </div>
-                                        <div>
-                                            <button class="btn btn-link m-0 p-0"
-                                                    wire:click="showEditMenuItemForm({{ $item->id }})">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            &nbsp;
-                                            <button class="btn btn-link m-0 p-0 text-danger"
-                                                    wire:click="deleteMenuItem({{ $item->id }})">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="sub-menu-items ml-4 mb-2">
-
-                                    </div>
-                                </div>
+                                @include('omega::livewire.admin.appearance.menu.edit.sub._menu-item', ['item' => $item])
                             @endforeach()
                         </div>
 
@@ -63,6 +42,7 @@
                                 // Element dragging ended
                                 onEnd: function (/**Event*/evt) {
                                     el.classList.remove("sorting");
+                                    orderUpdated();
                                 },
                             };
                             var sortable = Sortable.create(el, options);
@@ -70,6 +50,38 @@
                             var els = document.getElementsByClassName('sub-menu-items');
                             for(var i = 0; i < els.length; i++) {
                                 Sortable.create(els[i], options);
+                            }
+
+                            function orderUpdated() {
+
+                                let orders = getOrdersArray();
+
+                                console.log(orders);
+
+                                @this.updateOrders(orders);
+                            }
+
+                            function getOrdersArray() {
+                                return getOrdersArrayItem($('#menu-items'), 0, 0);
+                            }
+
+                            function getOrdersArrayItem(item, parent, level) {
+                                level++;
+                                let orders = [];
+                                let i = 0;
+                                item.children('.menu-item').each(function() {
+                                    orders.push({
+                                        id: $(this).data('id'),
+                                        order: i,
+                                        parent: parent
+                                    })
+                                    if(level <= 1) {
+                                        let sub = $(this).find('.sub-menu-items');
+                                        orders = orders.concat(getOrdersArrayItem(sub, $(this).data('id'), level))
+                                    }
+                                    i++;
+                                });
+                                return orders;
                             }
                         </script>
                     @else
