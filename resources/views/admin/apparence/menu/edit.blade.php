@@ -1,10 +1,10 @@
-@extends('omega::admin.default')
+@extends('omega::admin.layouts.admin')
 
 @section('page-header')
     {{ __('Menus') }}
 @endsection
 
-@section('actions')
+@section('left-small-card-content')
 @endsection
 
 
@@ -12,7 +12,7 @@
     $overflow = 150;
 @endphp
 
-@section('content')
+@section('large-card-content')
 
     <div class="row">
         <div class="col-lg-8 col-md-12">

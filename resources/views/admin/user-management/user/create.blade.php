@@ -1,7 +1,7 @@
 @extends('omega::admin.layouts.admin')
 
 @section('page-header')
-    Add user
+    {{ __('Add user') }}
 @endsection
 
 
@@ -11,27 +11,15 @@
 @section('large-card-content')
     {{ Form::open(['route' => 'omega.admin.users.store']) }}
 
-        <div class="mb-3">
-            {{ Form::label('email', __('E-Mail Address'), ['class' => 'form-label']) }}
-            {{ Form::email('email', null, ['class' => 'form-control']) }}
-        </div>
 
-        <div class="mb-3">
-            {{ Form::label('fullname', __('Fullname'), ['class' => 'form-label']) }}
-            {{ Form::text('fullname', null, ['class' => 'form-control']) }}
-        </div>
+        {{ Form::oemail('email', null, ['label' => __('E-Mail Address')]) }}
+        {{ Form::otext('fullname', null, ['label' => __('Fullname')]) }}
+        {{ Form::opassword('password', ['label' => __('Password')]) }}
+        {{ Form::ocheckbox('is-enabled', true, ['label' => __('Enable user?')]) }}
 
-        <div class="mb-3">
-            {{ Form::label('password', __('Password'), ['class' => 'form-label']) }}
-            {{ Form::password('password', ['class' => 'form-control']) }}
-        </div>
-
-        <div class="mb-3 form-check">
-            {{ Form::checkbox('is-enabled', 'value', true, ['class' => 'form-check-input']) }}
-            {{ Form::label('is-enabled', __('Enable user?'), ['class' => 'form-check-label']) }}
-        </div>
-
+        {{ Form::oback() }}
         {{ Form::submit(__('Add user'), ['class' => 'btn btn-primary']) }}
+
 
     {{ Form::close() }}
 @endsection

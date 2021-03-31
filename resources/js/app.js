@@ -5,10 +5,15 @@
  * building robust, powerful web applications using Vue and Laravel.
  */
 
+import * as sweetalert2 from "sweetalert2";
+
 require('./bootstrap');
 require('./omega/admin/index')
 require('bs4-summernote/src/js/summernote')
-//import './bootstrap';
+
+
+import Swal from 'sweetalert2';
+window.Swal = Swal;
 
 // window.Vue = require('vue');
 

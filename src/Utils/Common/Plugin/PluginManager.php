@@ -4,6 +4,8 @@
 namespace rohsyl\OmegaCore\Utils\Common\Plugin;
 
 
+use rohsyl\OmegaCore\Utils\Common\Facades\OmegaUtils;
+
 class PluginManager
 {
     /**
@@ -20,6 +22,8 @@ class PluginManager
     }
 
     private function loadInstalledPlugins() {
+        if(!OmegaUtils::isInstalled()) return;
+
         $plugins = \rohsyl\OmegaCore\Models\Plugin::query()
             ->get();
         $this->installedPlugins = [];
