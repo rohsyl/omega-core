@@ -6,6 +6,7 @@
     {{ $page->title }}
 @endsection
 
+
 @section('content')
 
     <livewire:omega_edit-page :page="$page" />

@@ -1,8 +1,9 @@
 
 
 <div>
+
     <div class="text-right mb-2">
-        <button class="btn btn-primary"
+        <button class="btn btn-primary btn-sm"
                 type="submit">
             <i class="fas fa-save"></i>
             {{ __('Save') }}
