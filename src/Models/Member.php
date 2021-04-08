@@ -21,4 +21,8 @@ class Member extends Model
     public function membergroups(){
         return $this->belongsToMany(MemberGroup::class );
     }
+
+    public function getIsValidatedAttribute() {
+        return isset($this->validated_at);
+    }
 }

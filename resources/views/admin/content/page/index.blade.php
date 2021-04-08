@@ -10,7 +10,10 @@
 
 @section('content')
     <div class="card">
-        <div class="card-body p-0">
+        <div class="card-header">
+            {{ __('Pages') }}
+        </div>
+        <div class="card-body">
             <table class="table">
                 <tr>
                     <th>{{ __('Title') }}</th>
