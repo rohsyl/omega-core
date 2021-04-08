@@ -1,14 +1,10 @@
-@extends('omega::admin.layouts.admin')
+@extends('omega::admin.layouts.default')
 
 @section('page-header')
     {{ __('Pages') }}
 @endsection
 
-@section('left-small-card-content')
-@endsection
-
-@section('large-card-content')
-
+@section('content')
 
     <div class="card">
         <div class="card-header">
@@ -19,13 +15,12 @@
 
                 {{ Form::otext('title', null, ['label' => __('Title')]) }}
 
-                {{ Form::osubmit() }}
                 {{ Form::oback() }}
+                {{ Form::osubmit() }}
 
             {{ Form::close() }}
         </div>
     </div>
-
 
 @endsection
 

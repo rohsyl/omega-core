@@ -1,63 +1,24 @@
-@extends('omega::admin.layouts.admin')
+@extends('omega::admin.layouts.default')
 
 @section('page-header')
-    {{ $group->name }}
+    {{ __('Groups') }}
 @endsection
 
-
-@section('large-card-title')
-    {{ __('Group informations') }}
+@section('actions')
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.users.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+    <a class="btn btn-outline-primary btn-sm" href="{{ route('omega.admin.groups.edit', $group) }}"><i class="fas fa-edit"></i> {{ __('Edit group') }}</a>
+    {{ Form::odelete(route('omega.admin.groups.destroy', $group), ['class' => 'btn btn-outline-danger btn-sm', 'label' => __('Delete group')]) }}
 @endsection
 
-@section('large-card-content')
-    @include('omega::layouts.partials.session-alert', ['type' =>'success'])
-
-    {{ Form::open(['route' => 'omega.admin.users.store']) }}
-
-
-    <div class="mb-3">
-        {{ Form::label('name', __('Name'), ['class' => 'form-label']) }}
-        {{ Form::text('name', $group->name, ['class' => 'form-control', 'readonly']) }}
-    </div>
-
-    <div class="mb-3">
-        {{ Form::label('description', __('Description'), ['class' => 'form-label']) }}
-        {{ Form::text('description', $group->description, ['class' => 'form-control', 'readonly']) }}
-    </div>
-
-    <div class="mb-3 form-check">
-        {{ Form::checkbox('is-enabled', null, $group->is_enabled, ['class' => 'form-check-input', 'onclick="event.preventDefault();"']) }}
-        {{ Form::label('is-enabled', __('Enabled group?'), ['class' => 'form-check-label']) }}
-    </div>
-
-    {{ Form::close() }}
-@endsection
-
-
-@section('left-small-card-title')
-    {{ __('Edit') }}
-@endsection
-
-@section('left-small-card-content')
-    <div class="row">
-        <div class="col">
-            <a class="btn btn-outline-primary col" href="{{ route('omega.admin.groups.edit', $group) }}">{{ __('Edit group') }}</a>
+@section('content')
+    <div class="card">
+        <div class="card-header">
+            {{ $group->name }}
         </div>
-        <div class="col">
-            <a class="btn btn-outline-secondary col">{{ __('Edit group users') }}</a>
-        </div>
-    </div>
-@endsection
-
-
-@section('right-small-card-title')
-    <h5>{{ __('Delete') }}</h5>
-@endsection
-
-@section('right-small-card-content')
-    <div class="row">
-        <div class="col">
-            <a class="btn btn-outline-danger col" href="{{ route('omega.admin.groups.destroy', $group) }}">{{ __('Delete group') }}</a>
+        <div class="card-body">
+            {{ Form::oattribute(__('Name'), $group->name) }}
+            {{ Form::oattribute(__('Description'), $group->description) }}
+            {{ Form::oattribute(__('Group enabled '), $group->is_enabled ? __('Yes') : __('No')) }}
         </div>
     </div>
 @endsection

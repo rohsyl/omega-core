@@ -1,15 +1,10 @@
-@extends('omega::admin.layouts.admin')
+@extends('omega::admin.layouts.default')
 
 @section('page-header')
     {{ __('Menus') }}
 @endsection
 
-@section('left-small-card-content')
-@endsection
-
-@section('large-card-content')
-
-    {{ Form::oback() }}
+@section('content')
 
     <div class="card">
         <div class="card-header">
@@ -21,12 +16,12 @@
                 {{ Form::otext('name', null, ['label' => __('Title')]) }}
                 {{ Form::otextarea('description', null, ['label' => __('Description')]) }}
 
+                {{ Form::oback() }}
                 {{ Form::osubmit() }}
 
             {{ Form::close() }}
         </div>
     </div>
-
 
 @endsection
 

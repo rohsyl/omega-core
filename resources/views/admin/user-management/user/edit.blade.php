@@ -1,52 +1,36 @@
-@extends('omega::admin.layouts.admin')
+@extends('omega::admin.layouts.default')
 
 @section('page-header')
-    {{ __('Edit') . $user->fullname }}
+    {{ __('Users') }}
 @endsection
 
+@section('actions')
 
-@section('large-card-title')
-@endsection
-
-@section('large-card-content')
-    {{ Form::open(['route' => ['omega.admin.users.update', $user], 'method' => 'put']) }}
-
-
-        {{ Form::oemail('email', $user->email, ['label' => __('E-Mail Address')]) }}
-        {{ Form::otext('fullname', $user->fullname, ['label' => __('Fullname')]) }}
-        {{ Form::ocheckbox('is-enabled', !$user->is_disabled, ['label' => __('Enable user?')]) }}
-
-        {{ Form::oback() }}
-        {{ Form::submit(__('Edit user'), ['class' => 'btn btn-primary']) }}
-
-    {{ Form::close() }}
-@endsection
-
-
-@section('left-small-card-title')
-    <h5>{{ __('Password') }}</h5>
-@endsection
-
-@section('left-small-card-content')
-    <div class="row">
-        <div class="col">
-            <a class="btn btn-outline-primary col">{{ __('Send reset link') }}</a>
-        </div>
-        <div class="col">
-            <a class="btn btn-outline-secondary col">{{ __('Edit password') }}</a>
-        </div>
+    <div class="btn-group">
+        <a class="btn btn-outline-primary btn-sm"><i class="fas fa-key"></i> {{ __('Edit password') }}</a>
+        <a class="btn btn-outline-primary btn-sm"><i class="fas fa-envelope"></i> {{ __('Send reset link') }}</a>
     </div>
+
+    <a class="btn btn-outline-primary btn-sm"><i class="fas fa-users"></i> {{ __('Edit groups') }}</a>
 @endsection
 
+@section('content')
+    <div class="card">
+        <div class="card-header">
+            {{ __('Edit') . ' ' . $user->fullname }}
+        </div>
+        <div class="card-body">
+            {{ Form::open(['route' => ['omega.admin.users.update', $user], 'method' => 'put']) }}
 
-@section('right-small-card-title')
-    <h5>{{ __('Groups') }}</h5>
-@endsection
 
-@section('right-small-card-content')
-    <div class="row">
-        <div class="col">
-            <a class="btn btn-outline-primary col">{{ __('Edit groups') }}</a>
+            {{ Form::oemail('email', $user->email, ['label' => __('E-Mail Address')]) }}
+            {{ Form::otext('fullname', $user->fullname, ['label' => __('Fullname')]) }}
+            {{ Form::ocheckbox('is-enabled', !$user->is_disabled, ['label' => __('Enable user?')]) }}
+
+            {{ Form::oback() }}
+            {{ Form::submit(__('Edit user'), ['class' => 'btn btn-primary']) }}
+
+            {{ Form::close() }}
         </div>
     </div>
 @endsection

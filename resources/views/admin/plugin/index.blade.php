@@ -1,4 +1,4 @@
-@extends('omega::admin.default')
+@extends('omega::admin.layouts.default')
 
 @section('page-header')
     {{ __('Plugins') }}

@@ -27,5 +27,8 @@ class FormBoot
         \Form::component('oback', 'omega::admin.components.form.back', ['name', 'attributes' => []]);
         \Form::component('osubmit', 'omega::admin.components.form.submit', ['name' => __('Submit'), 'attributes' => []]);
         \Form::component('odelete', 'omega::admin.components.form.delete', ['url', 'attributes' => []]);
+
+
+        \Form::component('oattribute', 'omega::admin.components.form.attribute', ['label', 'value']);
     }
 }

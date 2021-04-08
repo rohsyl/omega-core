@@ -21,11 +21,14 @@
 
                         <div class="d-flex justify-content-between align-items-center">
                             <h4 class="c-grey-900 mT-10 mB-30">@yield('page-header')</h4>
-                            @yield('actions')
                         </div>
 
 
                         @include('omega::admin.partials.messages')
+
+
+                        @yield('actions')
+
                         @yield('content')
 
                     </div>

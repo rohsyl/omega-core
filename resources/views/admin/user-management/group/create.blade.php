@@ -1,37 +1,27 @@
-@extends('omega::admin.layouts.admin')
+@extends('omega::admin.layouts.default')
 
 @section('page-header')
-    {{ __('Add group') }}
+    {{ __('Groups') }}
 @endsection
 
+@section('content')
+    <div class="card">
+        <div class="card-header">
+            {{ __('Create group') }}
+        </div>
+        <div class="card-body">
 
-@section('large-card-title')
-@endsection
-
-@section('large-card-content')
-    {{ Form::open(['route' => 'omega.admin.groups.store']) }}
-
-
-        {{ Form::otext('name', null, ['label' => __('Name')]) }}
-        {{ Form::otext('description', null, ['label' => __('Description')]) }}
-        {{ Form::ocheckbox('is-enabled', true, ['label' => __('Enable group?')]) }}
-
-        {{ Form::oback() }}
-        {{ Form::submit(__('Add group'), ['class' => 'btn btn-primary']) }}
-
-    {{ Form::close() }}
-@endsection
+            {{ Form::open(['route' => 'omega.admin.groups.store']) }}
 
 
-@section('left-small-card-title')
-@endsection
+            {{ Form::otext('name', null, ['label' => __('Name')]) }}
+            {{ Form::otext('description', null, ['label' => __('Description')]) }}
+            {{ Form::ocheckbox('is-enabled', true, ['label' => __('Enable group?')]) }}
 
-@section('left-small-card-content')
-@endsection
+            {{ Form::oback() }}
+            {{ Form::submit(__('Add group'), ['class' => 'btn btn-primary']) }}
 
-
-@section('right-small-card-title')
-@endsection
-
-@section('right-small-card-content')
+            {{ Form::close() }}
+        </div>
+    </div>
 @endsection
