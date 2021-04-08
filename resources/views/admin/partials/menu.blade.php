@@ -30,9 +30,17 @@
 <li class="nav-item">
     <a class="sidebar-link {{ request()->is(['*/admin/users*', '*/admin/groups*']) ? 'active' : '' }}" href="{{ route('omega.admin.users.index') }}">
         <span class="icon-holder">
-            <i class="c-brown-500 fas fa-user color-gray-dark"></i>
+            <i class="c-brown-500 fas fa-users color-gray-dark"></i>
         </span>
         <span class="title">{{ __('Users & Groups') }}</span>
+    </a>
+</li>
+<li class="nav-item">
+    <a class="sidebar-link {{ request()->is(['*/admin/members*']) ? 'active' : '' }}" href="{{ route('omega.admin.member.members.index') }}">
+        <span class="icon-holder">
+            <i class="c-brown-500 fas fa-address-book color-gray-dark"></i>
+        </span>
+        <span class="title">{{ __('Members') }}</span>
     </a>
 </li>
 <li class="nav-item">

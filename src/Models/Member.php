@@ -19,6 +19,6 @@ class Member extends Model
 
 
     public function membergroups(){
-        return $this->belongsToMany(MemberGroup::class, 'membergrouping', 'fkMember', 'fkMemberGroup' );
+        return $this->belongsToMany(MemberGroup::class );
     }
 }

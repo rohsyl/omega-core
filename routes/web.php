@@ -47,6 +47,7 @@ Route::group(['middleware' => ['web']], function () {
 
                 require __DIR__ . '/admin/content.php';
                 require __DIR__ . '/admin/appearance.php';
+                require __DIR__ . '/admin/member.php';
 
                 Route::resource('plugins', \rohsyl\OmegaCore\Http\Controllers\Admin\Plugin\PluginController::class, ['as' => 'omega.admin'])->only(['index']);
 
