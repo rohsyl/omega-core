@@ -1,4 +1,4 @@
-@extends('omega::admin.guest')
+@extends('omega::admin.layouts.guest')
 
 @section('content')
 
