@@ -29,6 +29,7 @@ class MemberController extends Controller
 
     public function show(Member $member) {
 
+        return view('omega::admin.member.member.show', compact('member'));
     }
 
     public function edit(Member  $member) {

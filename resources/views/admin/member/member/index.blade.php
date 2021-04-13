@@ -9,6 +9,10 @@
         <i class="fas fa-plus"></i>
         {{ __('Add member') }}
     </a>
+    <a href="{{ route('omega.admin.member.groups.create') }}" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-plus"></i>
+        {{ __('Add group') }}
+    </a>
 @endsection
 
 @section('content')
