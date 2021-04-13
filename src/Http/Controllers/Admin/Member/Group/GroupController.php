@@ -32,11 +32,12 @@ class GroupController extends Controller
     }
 
     public function edit(MemberGroup $group) {
-
+        return view('omega::admin.member.group.edit', compact('group'));
     }
 
-    public function update(Request $request, MemberGroup $group) {
-
+    public function update(CreateMemberGroupRequest $request, MemberGroup $group) {
+        $group->update($request->validated());
+        return redirect()->route('omega.admin.member.groups.edit', $group);
     }
 
     public function destroy(MemberGroup $group) {
