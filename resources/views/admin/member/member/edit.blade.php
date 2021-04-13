@@ -15,6 +15,7 @@
 
             {{ Form::otext('username', $member->username, ['label' => __('Username'), 'autocomplete' => 'off']) }}
             {{ Form::otext('email', $member->email, ['label' => __('E-mail'), 'autocomplete' => 'off']) }}
+            {{ Form::ocheckbox('is_enabled', $member->is_enabled, ['label' => __('Is enabled'), 'autocomplete' => 'off']) }}
 
             {{ Form::oback() }}
             {{ Form::osubmit() }}

@@ -25,6 +25,7 @@ class UpdateMemberRequest extends FormRequest
         return [
             'username' => 'required|string',
             'email' => 'required|email|string',
+            'is_enabled' => 'required|boolean',
         ];
     }
 }
