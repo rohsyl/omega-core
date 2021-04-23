@@ -15,7 +15,9 @@ use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
 use rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Commands\PluginInstallCommand;
 use rohsyl\OmegaCore\Utils\Common\Plugin\PluginManager;
+use rohsyl\OmegaCore\Utils\Common\Theme\Command\PublishThemeCommand;
 use rohsyl\OmegaCore\Utils\Overt\EntityManager;
+use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 use rohsyl\OmegaCore\Utils\Overt\Page\PageManager;
 use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
 
@@ -38,6 +40,7 @@ class ServiceProvider extends SP
         if ($this->app->runningInConsole()) {
             $this->commands([
                 PluginInstallCommand::class,
+                PublishThemeCommand::class,
             ]);
         }
 
@@ -66,6 +69,7 @@ class ServiceProvider extends SP
 
         FormBoot::boot();
         LivewireBoot::boot();
+        OmegaTheme::boot($this);
 
         $router = $this->app->make(Router::class);
         $router->aliasMiddleware('om_not_installed', OmegaNotInstalled::class);
@@ -100,5 +104,9 @@ class ServiceProvider extends SP
         $this->app->bind('omega:entity', function () {
             return new EntityManager();
         });
+    }
+
+    public function publishes(array $paths, $groups = null) {
+        parent::publishes($paths, $groups);
     }
 }

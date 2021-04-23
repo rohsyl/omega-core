@@ -3,6 +3,7 @@ namespace rohsyl\OmegaCore\Utils\Overt\Facades;
 
 
 use Illuminate\Support\Facades\Facade;
+use rohsyl\OmegaCore\ServiceProvider;
 use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
 
 /**
@@ -11,7 +12,7 @@ use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
  *
  * @method static void setInstallerPath($path)
  * @method static void setThemePath($path)
- * @method static void register()
+ * @method static void boot(ServiceProvider $provider)
  * @method static string getThemePath()
  *
  * @see ThemeManager
