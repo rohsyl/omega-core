@@ -16,6 +16,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['middleware' => ['web']], function () {
 
+
+
+    include __DIR__ . '/overt/index.php';
+
     /********************************************************************
      * Omega CMS must be installed to acces all these routes
      * The *om_not_installed* middleware check if omega is installed,
@@ -23,10 +27,6 @@ Route::group(['middleware' => ['web']], function () {
      * page.
      ********************************************************************/
     Route::middleware(['om_not_installed', 'om_load_config'])->group(function() {
-
-
-
-        Route::get('', [rohsyl\OmegaCore\Http\Controllers\Overt\Site\SiteController::class, 'index'])->name('omega.site');
 
         /********************************************************************
          * Public admin routes
@@ -44,20 +44,14 @@ Route::group(['middleware' => ['web']], function () {
 
                 Route::get('dashboard', [\rohsyl\OmegaCore\Http\Controllers\Admin\Dashboard\DashboardController::class, 'index'])->name('omega.admin.dashboard');
 
-
                 require __DIR__ . '/admin/content.php';
                 require __DIR__ . '/admin/appearance.php';
                 require __DIR__ . '/admin/member.php';
+                require __DIR__ . '/admin/setting.php';
 
                 Route::resource('plugins', \rohsyl\OmegaCore\Http\Controllers\Admin\Plugin\PluginController::class, ['as' => 'omega.admin'])->only(['index']);
 
-                Route::resource('users', \rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement\UserController::class, ['as' => 'omega.admin']);
-                Route::prefix('users')->group(function () {
-                });
-                Route::resource('groups', \rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement\GroupController::class, ['as' => 'omega.admin']);
-                Route::prefix('groups')->group(function () {
-                });
-
+                require __DIR__ . '/admin/user_management.php';
             });
         });
 
@@ -82,5 +76,6 @@ Route::group(['middleware' => ['web']], function () {
 
         });
     });
+
 
 });

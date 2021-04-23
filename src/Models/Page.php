@@ -4,10 +4,12 @@ namespace rohsyl\OmegaCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use rohsyl\OmegaCore\Utils\Overt\Page\OvertPageTrait;
 
 class Page extends Model
 {
     use SoftDeletes;
+    use OvertPageTrait;
 
     protected $fillable = [
         'parent_id',
@@ -50,5 +52,14 @@ class Page extends Model
 
     public function security(){
         return $this->hasOne(PageSecurity::class);
+    }
+
+    public function scopePublished($query) {
+        // TODO : filter only published page
+        return $query;
+    }
+
+    public function getIsPublishedAttribute() {
+        return isset($this->published_at) && $this->published_at->isBefore(now());
     }
 }

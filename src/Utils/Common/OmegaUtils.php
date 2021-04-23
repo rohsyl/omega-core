@@ -6,6 +6,7 @@ namespace rohsyl\OmegaCore\Utils\Common;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use rohsyl\OmegaCore\Utils\Overt\Facades\Entity;
 use rohsyl\OmegaCore\Utils\Overt\HtmlRequire;
 use rohsyl\OmegaCore\Models\User;
 
@@ -63,9 +64,10 @@ class OmegaUtils{
             ->get();
     }
 
+
     public function renderMeta()
     {
-        return view('public.meta')->with([
+        return view('omega::overt.meta')->with([
             'descr' => om_config('om_seo_description'),
             'keywords' => om_config('om_seo_keyword')
         ]);
@@ -110,10 +112,6 @@ class OmegaUtils{
 
     public function renderDependencies()
     {
-        $this->addDependencies([
-            'css' => Entity::Page()->getCssTheme()
-        ]);
-
         foreach($this->dependencies['css'] as $css)
         {
             $this->htmlRequireHelper->requireCss($css);

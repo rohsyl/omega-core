@@ -4,9 +4,9 @@ namespace rohsyl\OmegaCore\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Omega\Facades\Entity;
 use rohsyl\OmegaCore\Utils\Common\Facades\OmegaUtils;
-use Omega\Utils\Entity\Site;
+use rohsyl\OmegaCore\Utils\Overt\Facades\Entity;
+use rohsyl\OmegaCore\Utils\Overt\Site\SiteManager;
 
 class OmegaLoadEntity
 {
@@ -21,7 +21,7 @@ class OmegaLoadEntity
     {
 
         if(OmegaUtils::isInstalled()){
-            Entity::setSite(new Site());
+            Entity::setSite(new SiteManager());
         }
 
         return $next($request);

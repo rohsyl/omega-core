@@ -31,3 +31,27 @@ if (!function_exists('om_config')) {
         }
     }
 }
+
+
+if(!function_exists('without_ext')) {
+    /**
+     * Remove the extention from a filename
+     * @param $filename
+     * @return mixed
+     */
+    function without_ext($filename){
+        return pathinfo($filename, PATHINFO_FILENAME);
+    }
+}
+
+
+
+if(!function_exists('theme_asset')) {
+    /**
+     * @return string
+     */
+    function theme_asset($path)
+    {
+        return asset('theme/'.$path);
+    }
+}

@@ -15,6 +15,9 @@ use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
 use rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Commands\PluginInstallCommand;
 use rohsyl\OmegaCore\Utils\Common\Plugin\PluginManager;
+use rohsyl\OmegaCore\Utils\Overt\EntityManager;
+use rohsyl\OmegaCore\Utils\Overt\Page\PageManager;
+use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
 
 class ServiceProvider extends SP
 {
@@ -84,6 +87,18 @@ class ServiceProvider extends SP
 
         $this->app->bind('omega:plugin', function () {
             return new PluginManager();
+        });
+
+        $this->app->bind('omega:theme', function () {
+            return new ThemeManager();
+        });
+
+        $this->app->bind('omega:page', function () {
+            return new PageManager();
+        });
+
+        $this->app->bind('omega:entity', function () {
+            return new EntityManager();
         });
     }
 }
