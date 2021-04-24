@@ -23,6 +23,7 @@ use rohsyl\OmegaCore\Utils\Overt\Site\SiteManager;
  * @method static \rohsyl\OmegaCore\Models\Page Page()
  * @method static SiteManager Site()
  * @method static Locale Locale()
+ * @method static string LocaleSlug()
  *
  * @see EntityManager
  */
