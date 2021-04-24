@@ -4,6 +4,11 @@
 namespace rohsyl\OmegaCore\Utils\Overt\Page;
 
 
+use Illuminate\Http\RedirectResponse;
+use rohsyl\OmegaCore\Utils\Common\Facades\OmegaUtils;
+use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
+use rohsyl\OmegaCore\Utils\Common\Plugin\Type\Type;
+
 trait OvertPageTrait
 {
 
@@ -15,6 +20,8 @@ trait OvertPageTrait
 
     public function render()
     {
+        $this->renderComponent();
+
         /*if($this->secure && (session()->has('public.connectedToPage_'.$this->id) || isset($_SESSION['member_connected'])))
         {
             $this->renderComponent();
@@ -24,10 +31,6 @@ trait OvertPageTrait
             $this->renderComponent();
         }
         $this->doSecurityAction();*/
-    }
-
-    public function exists() {
-        return isset($this->page) && $this->page->exists();
     }
 
     public function doSecurityAction() {
@@ -209,24 +212,27 @@ trait OvertPageTrait
 
     private function renderComponent() {
 
-        $components = $this->moduleRepository->getAllComponentsByPage($this->id);
+        $components = $this->components;
 
         foreach($components as $component)
         {
+            $plugin = Plugin::getPlugin($component->plugin_form->plugin->name);
 
-            $instance = Plugin::FInstance($component->plugin->name);
+            $controllerClass = $plugin->overtController();
 
-            $instance->idComponent = $component->id;
+            $instance = app()->make($controllerClass);;
+
+            $instance->component_id = $component->id;
 
             // register css and js of the component
             OmegaUtils::addDependencies($instance->registerDependencies());
 
-            $data = Type::GetValues($component->plugin->id, $component->id, $this->id);
+            $data = Type::GetValues($component->plugin_form->id, $component->id, $this->id);
 
-            $args = json_decode($component->param, true);
+            $args = $component->param;
 
 
-            $defaultComponentView = new ComponentView(
+            /*$defaultComponentView = new ComponentView(
                 $component->plugin->name,
                 'default',
                 '*',
@@ -242,7 +248,7 @@ trait OvertPageTrait
             }
             else if(file_exists($defaultComponentView->buildPath())) {
                 $instance->forceView($defaultComponentView->getViewName(), $defaultComponentView->buildPath());
-            }
+            }*/
 
             $isHidden = isset($args['settings']['isHidden']) ? $args['settings']['isHidden'] : false;
             if(!$isHidden) {
@@ -265,9 +271,9 @@ trait OvertPageTrait
                 }
                 $style = $backgroundColor == 'transparent' ? null : 'style="background-color: ' . $backgroundColor . ';"';
 
-                $this->content .= view()->first(['theme::template.section', 'public.section'])->with([
+                $this->content .= view()->first(['theme::template.section', 'omega::overt.section'])->with([
                     'compId' => $compId,
-                    'plugin' => $component->plugin,
+                    'plugin' => $component->plugin_form,
                     'style' => $style,
                     'isWrapped' => $isWrapped,
                     'content' => $content,
