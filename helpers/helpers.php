@@ -1,6 +1,7 @@
 <?php
 use rohsyl\OmegaCore\Models\Config;
 use rohsyl\OmegaCore\Utils\Common\Facades\OmegaConfig;
+use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 
 if (!function_exists('om_config')) {
     /**
@@ -53,5 +54,55 @@ if(!function_exists('theme_asset')) {
     function theme_asset($path)
     {
         return asset('theme/'.$path);
+    }
+}
+
+if(!function_exists('get_template_register')) {
+
+    function get_template_register()
+    {
+        $registerPath = OmegaTheme::getRegisterPath();
+
+        if(!file_exists($registerPath)){
+            return null;
+        }
+
+        return include($registerPath);
+    }
+}
+
+if(!function_exists('theme_encode_components_template')) {
+    /**
+     * @param $themeName string
+     * @param $newView \rohsyl\OmegaCore\Utils\Overt\Theme\Component\ComponentView
+     * @return string
+     */
+    function theme_encode_components_template($newView)
+    {
+        return $newView->getPluginName() . '.' . $newView->getViewName() . '.' . $newView->getNewViewPath();
+    }
+}
+
+if(!function_exists('theme_decode_components_template')) {
+    /**
+     * @param $componentsTemplateString string
+     * @return \rohsyl\OmegaCore\Utils\Overt\Theme\Component\ComponentView
+     */
+    function theme_decode_components_template($componentsTemplateString)
+    {
+        if(!isset($componentsTemplateString) || $componentsTemplateString == 'null'){
+            return null;
+        }
+
+        $t = explode('.',  $componentsTemplateString);
+        $pluginName = $t[0];
+        $viewName = $t[1];
+        $newViewPath = $t[2];
+
+        $register = get_template_register();
+
+        $cv = $register->getComponentView($pluginName, $viewName, $newViewPath);
+
+        return $cv;
     }
 }

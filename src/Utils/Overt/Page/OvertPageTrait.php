@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use rohsyl\OmegaCore\Utils\Common\Facades\OmegaUtils;
 use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Type\Type;
+use rohsyl\OmegaCore\Utils\Overt\Theme\Component\ComponentView;
 
 trait OvertPageTrait
 {
@@ -232,23 +233,18 @@ trait OvertPageTrait
             $args = $component->param;
 
 
-            /*$defaultComponentView = new ComponentView(
-                $component->plugin->name,
-                'default',
-                '*',
-                Path::Combine($component->plugin->name, 'default'),
-                'Theme Default'
+            $defaultComponentView = new ComponentView(
+                $component->plugin_form->name, 'default', '*', 'theme::template.' . $component->plugin_form->name . '.default', 'Theme Default'
             );
-            $defaultComponentView->setThemeName(\Omega\Facades\Entity::Site()->template_name);
 
             // force using an other view defined in the settings of the component
             if(isset($args['settings']['pluginTemplate']) && $args['settings']['pluginTemplate'] != 'null'){
                 $ct = theme_decode_components_template($args['settings']['pluginTemplate']);
-                $instance->forceView($ct->getViewName(), $ct->buildPath());
+                $instance->forceView($ct->getViewName(), $ct->getNewView());
             }
-            else if(file_exists($defaultComponentView->buildPath())) {
-                $instance->forceView($defaultComponentView->getViewName(), $defaultComponentView->buildPath());
-            }*/
+            else if(view()->exists($defaultComponentView->getNewView())) {
+                $instance->forceView($defaultComponentView->getViewName(), $defaultComponentView->getNewView());
+            }
 
             $isHidden = isset($args['settings']['isHidden']) ? $args['settings']['isHidden'] : false;
             if(!$isHidden) {

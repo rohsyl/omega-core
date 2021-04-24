@@ -10,10 +10,14 @@ abstract class OvertPluginController extends Controller
 {
 
     /**
+     * @var array Force the view to this one.
+     */
+    private $forceView = [];
+
+    /**
      * Register dependecies of the plugin (js and css)
      * @return array|null
      */
-    // TODO : do i need that ?
     public function registerDependencies() {}
 
     /**
@@ -24,4 +28,24 @@ abstract class OvertPluginController extends Controller
      */
     public abstract function display($args, $data);
 
+    protected function view($name, $data = []) {
+
+        if(isset($this->forceView[$name])){
+            $name = $this->forceView[$name];
+        }
+        else if(isset($this->forceView['default'])) {
+            $name = $this->forceView['default'];
+        }
+
+        return view($name, $data);
+    }
+
+
+    /**
+     * Force the view
+     * @param $viewPath string The fill path to the view (blade)
+     */
+	public function forceView($viewName, $viewPath){
+        $this->forceView[$viewName] = $viewPath;
+    }
 }

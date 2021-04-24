@@ -5,6 +5,7 @@ namespace rohsyl\OmegaCore\Utils\Overt\Menu;
 
 
 use Omega\Utils\Url;
+use rohsyl\OmegaCore\Models\Member;
 use rohsyl\OmegaCore\Models\Menu;
 use rohsyl\OmegaCore\Models\Page;
 
@@ -351,7 +352,7 @@ class MenuManager
     private function getMemberGroupOrPublic()
     {
         if(session()->has('member_id')) {
-            $member = $this->memberRepository->get(session('member_id'));
+            $member = Member::find(session('member_id'));
 
             if($member->membergroups->count() == 0){
                 return array(1);

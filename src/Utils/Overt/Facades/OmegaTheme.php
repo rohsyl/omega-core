@@ -11,9 +11,12 @@ use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
  * @package rohsyl\OmegaCore\Utils\Overt\Facades
  *
  * @method static void setInstallerPath($path)
+ * @method static void setTemplateRegisterPath($path)
  * @method static void setThemePath($path)
  * @method static void boot(ServiceProvider $provider)
  * @method static string getThemePath()
+ * @method static string getInstallerPath()
+ * @method static string getRegisterPath()
  *
  * @see ThemeManager
  */
