@@ -4,6 +4,13 @@
 namespace rohsyl\OmegaCore\Utils\Overt\Page;
 
 
+use Illuminate\Http\RedirectResponse;
+use rohsyl\OmegaCore\Utils\Common\Facades\OmegaUtils;
+use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
+use rohsyl\OmegaCore\Utils\Common\Plugin\Type\Type;
+use rohsyl\OmegaCore\Utils\Overt\Facades\Entity;
+use rohsyl\OmegaCore\Utils\Overt\Theme\Component\ComponentView;
+
 trait OvertPageTrait
 {
 
@@ -15,6 +22,10 @@ trait OvertPageTrait
 
     public function render()
     {
+        $this->renderComponent();
+
+        // TODO : page securities
+
         /*if($this->secure && (session()->has('public.connectedToPage_'.$this->id) || isset($_SESSION['member_connected'])))
         {
             $this->renderComponent();
@@ -24,10 +35,6 @@ trait OvertPageTrait
             $this->renderComponent();
         }
         $this->doSecurityAction();*/
-    }
-
-    public function exists() {
-        return isset($this->page) && $this->page->exists();
     }
 
     public function doSecurityAction() {
@@ -110,12 +117,6 @@ trait OvertPageTrait
         $this->redirectTo = redirect(self::GetUrl($this->page->id));
     }
 
-    public static function RenderSpecialContent($content)
-    {
-        $p = new Page();
-        return $p->renderMacroFromContent($p->renderPhpFromContent($content));
-    }
-
     public function renderMacroFromContent($content) {
         $content = preg_replace_callback(
             '#\[macro\=(.+)\]\[\/macro\]#iUs',
@@ -140,41 +141,36 @@ trait OvertPageTrait
 
     public function getComponentsViewArray(){
 
-        $components = $this->moduleRepository->getAllComponentsByPage($this->id);
-
-
         $views = array();
-        foreach($components as $component)
+        foreach($this->components as $component)
         {
+            $plugin = Plugin::getPlugin($component->plugin_form->plugin->name);
 
-            $instance = Plugin::FInstance($component->plugin->name);
+            $controllerClass = $plugin->overtController();
 
-            $instance->idComponent = $component->id;
+            $instance = app()->make($controllerClass);;
+
+            $instance->component_id = $component->id;
 
             // register css and js of the component
             OmegaUtils::addDependencies($instance->registerDependencies());
 
-            $data = Type::GetValues($component->plugin->id, $component->id, $this->id);
+            $data = Type::GetValues($component->plugin_form->id, $component->id, $this->id);
 
-            $args = json_decode($component->param, true);
+            $args = $component->param;
 
 
             $defaultComponentView = new ComponentView(
-                $component->plugin->name,
-                'default',
-                '*',
-                Path::Combine($component->plugin->name, 'default'),
-                'Theme Default'
+                $component->plugin_form->name, 'default', '*', 'theme::template.' . $component->plugin_form->name . '.default', 'Theme Default'
             );
-            $defaultComponentView->setThemeName(\Omega\Facades\Entity::Site()->template_name);
 
             // force using an other view defined in the settings of the component
             if(isset($args['settings']['pluginTemplate']) && $args['settings']['pluginTemplate'] != 'null'){
                 $ct = theme_decode_components_template($args['settings']['pluginTemplate']);
-                $instance->forceView($ct->getViewName(), $ct->buildPath());
+                $instance->forceView($ct->getViewName(), $ct->getNewView());
             }
-            else if(file_exists($defaultComponentView->buildPath())) {
-                $instance->forceView($defaultComponentView->getViewName(), $defaultComponentView->buildPath());
+            else if(view()->exists($defaultComponentView->getNewView())) {
+                $instance->forceView($defaultComponentView->getViewName(), $defaultComponentView->getNewView());
             }
 
             $isHidden = isset($args['settings']['isHidden']) ? $args['settings']['isHidden'] : false;
@@ -209,39 +205,35 @@ trait OvertPageTrait
 
     private function renderComponent() {
 
-        $components = $this->moduleRepository->getAllComponentsByPage($this->id);
-
-        foreach($components as $component)
+        foreach($this->components as $component)
         {
+            $plugin = Plugin::getPlugin($component->plugin_form->plugin->name);
 
-            $instance = Plugin::FInstance($component->plugin->name);
+            $controllerClass = $plugin->overtController();
 
-            $instance->idComponent = $component->id;
+            $instance = app()->make($controllerClass);;
+
+            $instance->component_id = $component->id;
 
             // register css and js of the component
             OmegaUtils::addDependencies($instance->registerDependencies());
 
-            $data = Type::GetValues($component->plugin->id, $component->id, $this->id);
+            $data = Type::GetValues($component->plugin_form->id, $component->id, $this->id);
 
-            $args = json_decode($component->param, true);
+            $args = $component->param;
 
 
             $defaultComponentView = new ComponentView(
-                $component->plugin->name,
-                'default',
-                '*',
-                Path::Combine($component->plugin->name, 'default'),
-                'Theme Default'
+                $component->plugin_form->name, 'default', '*', 'theme::template.' . $component->plugin_form->name . '.default', 'Theme Default'
             );
-            $defaultComponentView->setThemeName(\Omega\Facades\Entity::Site()->template_name);
 
             // force using an other view defined in the settings of the component
             if(isset($args['settings']['pluginTemplate']) && $args['settings']['pluginTemplate'] != 'null'){
                 $ct = theme_decode_components_template($args['settings']['pluginTemplate']);
-                $instance->forceView($ct->getViewName(), $ct->buildPath());
+                $instance->forceView($ct->getViewName(), $ct->getNewView());
             }
-            else if(file_exists($defaultComponentView->buildPath())) {
-                $instance->forceView($defaultComponentView->getViewName(), $defaultComponentView->buildPath());
+            else if(view()->exists($defaultComponentView->getNewView())) {
+                $instance->forceView($defaultComponentView->getViewName(), $defaultComponentView->getNewView());
             }
 
             $isHidden = isset($args['settings']['isHidden']) ? $args['settings']['isHidden'] : false;
@@ -265,9 +257,9 @@ trait OvertPageTrait
                 }
                 $style = $backgroundColor == 'transparent' ? null : 'style="background-color: ' . $backgroundColor . ';"';
 
-                $this->content .= view()->first(['theme::template.section', 'public.section'])->with([
+                $this->content .= view()->first(['theme::template.section', 'omega::overt.section'])->with([
                     'compId' => $compId,
-                    'plugin' => $component->plugin,
+                    'plugin' => $component->plugin_form,
                     'style' => $style,
                     'isWrapped' => $isWrapped,
                     'content' => $content,
@@ -282,5 +274,17 @@ trait OvertPageTrait
 
     public function getRedirect() {
         return $this->redirectTo;
+    }
+
+
+
+    public static function RenderSpecialContent($content)
+    {
+        $p = new self();
+        return $p->renderMacroFromContent($p->renderPhpFromContent($content));
+    }
+
+    public function getUrl(){
+        return url('/' . Entity::LocaleSlug() . '/' . $this->slug);
     }
 }

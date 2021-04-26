@@ -23,6 +23,7 @@ abstract class Plugin
     }
 
     abstract function name() : string;
+    abstract function overtController() : string;
 
     public function makeForm($callback) {
         $builder = new PluginFormFactory($this->name());

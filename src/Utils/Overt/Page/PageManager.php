@@ -141,10 +141,7 @@ class PageManager
      */
     function renderPage($themePath, $page)
     {
-        if($page->exists())
-            $page->render();
-        else
-            $page->content = '404';
+        $page->render();
 
         if($page->needRedirect()){
             return $page->getRedirect();

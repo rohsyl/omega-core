@@ -10,11 +10,17 @@ use Omega\Utils\Path;
 class ThemeManager
 {
     private $installerPath;
+    private $registerPath;
     private $themePath;
 
     public function setInstallerPath(string $installerPath) {
 
         $this->installerPath = $installerPath;
+    }
+
+    public function setTemplateRegisterPath(string $registerPath) {
+
+        $this->registerPath = $registerPath;
     }
 
     public function setThemePath(string $path) {
@@ -28,15 +34,38 @@ class ThemeManager
 
         // register publish current theme assets
         $provider->publishes([
-            $this->themePath . DIRECTORY_SEPARATOR . 'assets' => public_path('theme'),
+            $this->getAssetsPath() => public_path('theme'),
         ], 'theme');
     }
 
     /**
-     * @return mixed
+     * @return string
      */
     public function getThemePath()
     {
         return $this->themePath;
+    }
+
+    /**
+     * @return string
+     */
+    public function getAssetsPath() {
+        return $this->themePath . DIRECTORY_SEPARATOR . 'assets';
+    }
+
+    /**
+     * @return string
+     */
+    public function getInstallerPath()
+    {
+        return $this->themePath . DIRECTORY_SEPARATOR . $this->installerPath;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRegisterPath()
+    {
+        return $this->themePath . DIRECTORY_SEPARATOR . $this->registerPath;
     }
 }
