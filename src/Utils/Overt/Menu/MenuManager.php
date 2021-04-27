@@ -4,10 +4,12 @@
 namespace rohsyl\OmegaCore\Utils\Overt\Menu;
 
 
+use Illuminate\Support\Collection;
 use Omega\Utils\Url;
 use rohsyl\OmegaCore\Models\Member;
 use rohsyl\OmegaCore\Models\Menu;
 use rohsyl\OmegaCore\Models\Page;
+use rohsyl\OmegaCore\Utils\Overt\Facades\Entity;
 
 class MenuManager
 {
@@ -104,9 +106,7 @@ class MenuManager
             return 'No menu';
         }
 
-        $menuJson = $menu->json;
-
-        return $this->getHtmlFromJson($menuJson, $this->menuHtmlStruct);
+        return $this->getHtml($menu, $this->menuHtmlStruct, Entity::LocaleSlug());
     }
 
     /**
@@ -132,6 +132,7 @@ class MenuManager
             foreach ($ids as $id) {
 
                 $menu = Menu::query()
+                    ->with(['items', 'items.children'])
                     ->where('member_group_id', $id)
                     ->where('is_enabled', true)
                     ->where('is_main', true)
@@ -153,37 +154,36 @@ class MenuManager
         ];
     }
 
-    private function getHtmlFromJson($json, $html, $lang = null, $level = -1, &$containesActive = false) {
+    private function getHtml(Menu $menu, $html, $lang = null, $level = -1, &$containesActive = false) {
         $level++;
 
-        if(!is_array($json)) {
+        $z = $this->getHtmlMenuItems($menu->items, $html, $lang, $level, $containesActive);
 
-            $menu = json_decode($json, true);
+        $z .= $this->getMemberPart();
+        //$z .= $this->getLanguagePart();
+        $z = sprintf($html['ul_main'], $z);
 
-        } else {
+        return $z;
+    }
 
-            $menu = $json;
-
-        }
-
-        $z = '';
+    private function getHtmlMenuItems(Collection $menuItems, $html, $lang = null, $level = -1, &$containesActive = false) {
         $current_page = substr(strrchr(strtok($_SERVER["REQUEST_URI"],'?'), "/"), 1);
+        $z = '';
+        foreach($menuItems as $item) {
 
-        foreach($menu as $row) {
-
-            $url = $row['url'];
-            $title = $row['title'];
+            $url = $item->link;
+            $title = $item->label;
             $isNewTab = isset($row['isnewtab']) ? $row['isnewtab'] : false;
 
             $target = $isNewTab ? 'target="_blank"' : '';
 
-            if(array_key_exists('children', $row)) {
+            if($item->children->count() > 0) {
 
-                $children = $row['children'];
+                $children = $item->children;
 
                 $containesActive = false;
 
-                $sub = $this->getHtmlFromJson($children, $html, $lang, $level, $containesActive);
+                $sub = $this->getHtmlMenuItems($children, $html, $lang, $level, $containesActive);
 
 
                 if($url == $current_page || $containesActive){
@@ -216,17 +216,8 @@ class MenuManager
             }
         }
 
-        if($level == 0) {
+        $z = sprintf($html['ul_children'], $z);
 
-            $z .= $this->getMemberPart();
-            $z .= $this->getLanguagePart();
-            $z = sprintf($html['ul_main'], $z);
-
-        } else {
-
-            $z = sprintf($html['ul_children'], $z);
-
-        }
         return $z;
     }
 
@@ -355,11 +346,12 @@ class MenuManager
             $member = Member::find(session('member_id'));
 
             if($member->membergroups->count() == 0){
-                return array(1);
+                return [null];
             }
             return $member->membergroups->pluck('id');
         }
-        else return array(1);
+        else
+            return [null];
     }
 
     /**
@@ -375,27 +367,17 @@ class MenuManager
             return $url;
         }
 
-        // change url in demo mode
-        global $demoMode;
-        if(isset($demoMode) && $demoMode){
-            $path = parse_url($url, PHP_URL_PATH);
-            $queryStrings = array();
-            parse_str(parse_url($url, PHP_URL_QUERY), $queryStrings);
-
-            return Url::CombAndAbs(url('/'), Url::Link('library/demo.php', array_merge(array('theme' => $_SESSION['demoTheme'], 'url' => urlencode($path)), $queryStrings)));
-        }
-
         if(!isset($lang))
-            return Url::CombAndAbs(url('/'), $url);
+            return url($url);
 
 
         $trimedUrl = trim($url, '/');
         // if lang slug already in $url, don't change the $url
         if(strpos($trimedUrl, $lang) === 0){
-            return Url::CombAndAbs(url('/'), $url);
+            return url($url);
         }
         // else add lang slug
-        return Url::CombAndAbs(url('/'), $lang, $url);
+        return url($lang . $url);
 
     }
 }

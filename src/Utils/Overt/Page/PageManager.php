@@ -114,8 +114,6 @@ class PageManager
         }
 
         Entity::setPage(Page::find($this->id));
-        Entity::setLocale(session('front_lang'));
-        Entity::setMenu(new MenuManager());
         Entity::Menu()->setCurrentPage(Entity::Page());
 
         $themePath = OmegaTheme::getThemePath();
