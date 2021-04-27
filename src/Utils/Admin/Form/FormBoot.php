@@ -21,6 +21,7 @@ class FormBoot
 
         // TODO : datepicker
         \Form::component('odatepicker', 'omega::admin.components.form.datepicker', ['name', 'value' => null, 'attributes' => []]);
+        \Form::component('otimepicker', 'omega::admin.components.form.timepicker', ['name', 'value' => null, 'attributes' => []]);
         \Form::component('odatetimepicker', 'omega::admin.components.form.datetimepicker', ['name', 'value' => null, 'attributes' => []]);
         \Form::component('odaterangepicker', 'omega::admin.components.form.daterangepicker', ['name', 'from', 'to', 'value' => null, 'attributes' => []]);
 

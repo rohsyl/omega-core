@@ -3,11 +3,11 @@
         {{ Form::label($name, $attributes['label'] ?? $name) }}
     @endif
     <select id="{{ $name }}" name="{{ $name }}"
-            class="{{ isset($errors) && $errors->has($name) ? 'is-invalid' : '' }} {{ isset($attributes['class']) ? $attributes['class'] : 'form-control' }}">
+            class="{{ isset($errors) && $errors->has($name) ? 'is-invalid' : '' }} {{ isset($attributes['class']) ? $attributes['class'] : '' }}">
         <option disabled {{ ($value != null) ? 'value="' . $value . '"' : 'selected'   }}
             data-placeholder="true">{{ isset($attributes['placeholder']) ? $attributes['placeholder'] : '' }}</option>
         @foreach($data as $key=>$line)
-            @if ($value == $key && (value != null))
+            @if (($value != null) && $value == $key)
                 <option selected value="{{ $key }}">{{ $line }}</option>
             @else
                 <option class="" value="{{ $key }}">{{ $line }}</option>

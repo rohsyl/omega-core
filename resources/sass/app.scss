@@ -5,6 +5,9 @@
 @import 'spec/index';
 @import 'vendor/index';
 @import 'colors';
+@import '~slim-select';
+@import '~daterangepicker';
+
 
 #loader {
     transition: all 0.3s ease-in-out;

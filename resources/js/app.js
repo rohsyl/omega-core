@@ -10,10 +10,16 @@ import * as sweetalert2 from "sweetalert2";
 require('./bootstrap');
 require('./omega/admin/index')
 require('bs4-summernote/src/js/summernote')
-
+require('daterangepicker/daterangepicker');
 
 import Swal from 'sweetalert2';
 window.Swal = Swal;
+
+import SlimSelect from 'slim-select';
+window.SlimSelect = SlimSelect;
+
+import moment from 'moment';
+window.moment = moment;
 
 // window.Vue = require('vue');
 
