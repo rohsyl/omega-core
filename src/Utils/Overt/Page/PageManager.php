@@ -18,6 +18,11 @@ class PageManager
     private $lang = null;
     private $slug = null;
 
+    private $viewName = null;
+    private $viewArray = null;
+
+    private $pageMeta = null;
+
     /**
      * @return $this
      */
@@ -37,6 +42,17 @@ class PageManager
 
     public function withLang($lang){
         $this->lang = $lang;
+        return $this;
+    }
+
+    public function withView($name, $param = []) {
+        $this->viewName = $name;
+        $this->viewArray = $param;
+        return $this;
+    }
+
+    public function withPageMeta($pageMeta) {
+        $this->pageMeta = $pageMeta;
         return $this;
     }
 
@@ -83,6 +99,10 @@ class PageManager
 
     public function render() {
 
+        if(isset($this->viewName)) {
+            return $this->renderByView();
+        }
+
         // if no id and no slug are set, then we will get the id of the homepage
         if($this->id == null && $this->slug == null){
             $res = $this->getHome();
@@ -116,29 +136,40 @@ class PageManager
         Entity::setPage(Page::find($this->id));
         Entity::Menu()->setCurrentPage(Entity::Page());
 
-        $themePath = OmegaTheme::getThemePath();
+        return $this->renderPage(Entity::Page());
+    }
 
-        if( file_exists( $themePath )) {
-            if(Entity::Page()->is_published) {
-                return $this->renderPage($themePath, Entity::Page());
-            }
-            else {
-                return abort(404);
+    private function renderByView() {
+        $page = new Page();
+        $page->published_at = now();
+        $page->content = view($this->viewName, $this->viewArray ?? [])->render();
+
+        if(isset($this->pageMeta)) {
+            foreach($this->pageMeta as $property => $value) {
+                $page->$property = $value;
             }
         }
-        else {
+
+        Entity::setPage($page);
+        Entity::Menu()->setCurrentPage(Entity::Page());
+
+        return $this->renderPage(Entity::Page());
+    }
+
+    /**
+     * @param $page Page The page to render
+     */
+    function renderPage($page)
+    {
+        $themePath = OmegaTheme::getThemePath();
+        if(!file_exists( $themePath )) {
             // throw no theme exception
             return abort(404);
         }
-    }
+        if(!Entity::Page()->is_published) {
+            return abort(404);
+        }
 
-
-    /**
-     * @param $themePath string The path to the theme
-     * @param $page Page The page to render
-     */
-    function renderPage($themePath, $page)
-    {
         $page->render();
 
         if($page->needRedirect()){

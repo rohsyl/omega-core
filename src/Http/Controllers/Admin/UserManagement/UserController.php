@@ -4,6 +4,7 @@ namespace rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Hash;
 use rohsyl\OmegaCore\Models\Group;
 use rohsyl\OmegaCore\Models\User;
 
@@ -22,7 +23,7 @@ class UserController extends Controller
         $user = new User();
         $user->email = $request->input('email');
         $user->fullname = $request->input('fullname');
-        $user->password = $request->input('password');
+        $user->password = Hash::make($request->input('password'));
         $user->is_disabled = !$request->input('is-enabled');
         $user->save();
 

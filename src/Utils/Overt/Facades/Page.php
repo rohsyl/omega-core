@@ -13,6 +13,8 @@ use rohsyl\OmegaCore\Utils\Overt\Page\PageManager;
  *
  * @method static PageManager get()
  * @method static PageManager register()
+ *
+ * @see PageManager
  */
 class Page extends Facade
 {

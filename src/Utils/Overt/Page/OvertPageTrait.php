@@ -17,24 +17,25 @@ trait OvertPageTrait
 
     private $needRedirect = false;
     private $redirectTo = null;
-    private $_content = null;
 
 
     public function render()
     {
-        $this->renderComponent();
-
-        // TODO : page securities
-
-        /*if($this->secure && (session()->has('public.connectedToPage_'.$this->id) || isset($_SESSION['member_connected'])))
-        {
+        if(!isset($this->content)) {
             $this->renderComponent();
+
+            // TODO : page securities
+
+            /*if($this->secure && (session()->has('public.connectedToPage_'.$this->id) || isset($_SESSION['member_connected'])))
+            {
+                $this->renderComponent();
+            }
+            else if($this->securityType == 'none')
+            {
+                $this->renderComponent();
+            }
+            $this->doSecurityAction();*/
         }
-        else if($this->securityType == 'none')
-        {
-            $this->renderComponent();
-        }
-        $this->doSecurityAction();*/
     }
 
     public function doSecurityAction() {

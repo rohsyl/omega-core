@@ -9,6 +9,8 @@ use rohsyl\OmegaCore\Http\Middleware\OmegaIsInstalled;
 use rohsyl\OmegaCore\Http\Middleware\OmegaLoadConfiguration;
 use rohsyl\OmegaCore\Http\Middleware\OmegaLoadEntity;
 use rohsyl\OmegaCore\Http\Middleware\OmegaNotInstalled;
+use rohsyl\OmegaCore\Http\Middleware\Overt\Modules\Member\Authenticate;
+use rohsyl\OmegaCore\Modules\Member\MemberBoot;
 use rohsyl\OmegaCore\Utils\Admin\Form\FormBoot;
 use rohsyl\OmegaCore\Utils\Admin\Livewire\LivewireBoot;
 use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
@@ -70,6 +72,7 @@ class ServiceProvider extends SP
         FormBoot::boot();
         LivewireBoot::boot();
         OmegaTheme::boot($this);
+        MemberBoot::boot($this);
 
         $router = $this->app->make(Router::class);
         $router->aliasMiddleware('om_not_installed', OmegaNotInstalled::class);
@@ -77,6 +80,7 @@ class ServiceProvider extends SP
         $router->aliasMiddleware('om_admin_locale', AdminLocale::class);
         $router->aliasMiddleware('om_load_config', OmegaLoadConfiguration::class);
         $router->aliasMiddleware('om_load_entity', OmegaLoadEntity::class);
+        $router->aliasMiddleware('auth_member', Authenticate::class);
     }
 
     private function registerFacades() {

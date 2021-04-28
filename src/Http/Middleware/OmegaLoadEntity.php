@@ -24,7 +24,7 @@ class OmegaLoadEntity
         if(OmegaUtils::isInstalled()){
             Entity::setSite(new SiteManager());
             Entity::setMenu(new MenuManager());
-            Entity::setLocale(session('front_lang') ?? config('app.locale'));
+            Entity::setLocaleSlug(session('front_lang') ?? config('app.locale'));
         }
 
         return $next($request);

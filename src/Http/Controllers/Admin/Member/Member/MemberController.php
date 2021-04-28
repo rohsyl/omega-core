@@ -5,6 +5,7 @@ namespace rohsyl\OmegaCore\Http\Controllers\Admin\Member\Member;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Hash;
 use rohsyl\OmegaCore\Http\Requests\Admin\Member\Member\CreateMemberRequest;
 use rohsyl\OmegaCore\Http\Requests\Admin\Member\Member\UpdateMemberRequest;
 use rohsyl\OmegaCore\Models\Member;
@@ -23,7 +24,9 @@ class MemberController extends Controller
 
     public function store(CreateMemberRequest $request) {
 
-        Member::create($request->all());
+        $inputs = $request->validated();
+        $inputs['password'] = Hash::make($inputs['password']);
+        Member::create($inputs);
 
         return redirect()->route('omega.admin.member.members.index');
     }

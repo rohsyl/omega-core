@@ -11,6 +11,8 @@ class Page extends Model
     use SoftDeletes;
     use OvertPageTrait;
 
+    public $content;
+
     protected $fillable = [
         'parent_id',
         'author_id',
@@ -24,6 +26,11 @@ class Page extends Model
         'model',
         'order',
         'published_at',
+    ];
+
+    protected $attributes = [
+        'show_title' => true,
+        'show_subtitle' => true,
     ];
 
     protected $casts = [

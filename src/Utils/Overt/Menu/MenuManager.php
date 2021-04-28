@@ -226,18 +226,17 @@ class MenuManager
         $html = $this->menuHtmlStruct;
         $z = '';
 
-        if(config('omega.member.enabled')) {
+        //if(config('omega.member.enabled')) {
 
             $title = '<span class="glyphicon glyphicon-user"></span> <span class="hidden-md hidden-lg">'.__('Member') .'</span>';
             $url = '#';
 
-            if(isset($_SESSION['member_connected']) && $_SESSION['member_connected'] == true)
+            if(auth()->guard('member')->check())
             {
-                $subItems = sprintf($html['li_nochildren'], $this->PrepareUrl('/module/member/profil'), __('Profil'), 'profil', '');
+                $subItems = sprintf($html['li_nochildren'], $this->PrepareUrl('/module/member/profile'), __('Profil'), 'profil', '');
                 $subItems .= sprintf($html['li_nochildren'], $this->PrepareUrl('/module/member/logout'), __('Logout'), 'logout', '');
                 $sub = sprintf($html['ul_children'], $subItems);
                 $z .= sprintf($html['li_children'], $url, $title, 'member', $sub, '');
-
             }
             else
             {
@@ -246,8 +245,8 @@ class MenuManager
                 $z .= sprintf($html['li_children'], $url, $title, 'member', $sub, '');
             }
             return $z;
-        }
-        return '';
+        //}
+        //return '';
     }
 
     public function getLanguagePart()
