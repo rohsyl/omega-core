@@ -12,10 +12,12 @@ use rohsyl\OmegaCore\Utils\Overt\Page\PageManager;
  * Class Page
  * @package rohsyl\OmegaCore\Utils\Common\Facades
  *
- * @method static void getLoginRedirectUrl()
- * @method static void getLogoutRedirectUrl()
+ * @method static string getLoginRedirectUrl()
+ * @method static string getLogoutRedirectUrl()
+ * @method static string getTemplateModel()
  * @method static void setLoginRedirectUrl(string $url)
  * @method static void setLogoutRedirectUrl(string $url)
+ * @method static void setTemplateModel(string $model)
  *
  * @see MemberManager
  */

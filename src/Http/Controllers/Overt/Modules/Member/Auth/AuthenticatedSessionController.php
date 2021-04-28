@@ -22,8 +22,9 @@ class AuthenticatedSessionController extends Controller
         return Page::get()
             ->withView('omega::overt.modules.member.auth._login')
             ->withPageMeta([
-                'title' => __('Member'),
-                'subtitle' => __('Login')
+                'title'     => __('Member'),
+                'subtitle'  => __('Login'),
+                'model'     => MemberModule::getTemplateModel()
             ])
             ->render();
     }

@@ -42,8 +42,10 @@ return [
     'member' => [
         'enabled' => true,
 
-        'loginRedirectUrl' => '/module/member/profile',
-        'logoutRedirectUrl' => '/module/member/login',
+        'login_redirect_url' => '/module/member/profile',
+        'logout_redirect_url' => '/module/member/login',
+
+        'template_model' => 'member.blade.php',
     ],
 
     /**
