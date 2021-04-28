@@ -62,7 +62,7 @@
     </div>
 </div>
 
-<script src="{{ mix('/js/app.js') }}"></script>
+<script src="/vendor/omega/js/app.js"></script>
 
 <!-- Global js content -->
 
