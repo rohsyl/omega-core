@@ -362,7 +362,10 @@ class MenuManager
     public function PrepareUrl($url, $lang = null)
     {
         // if url start with '#', 'http://' or 'https://', then leave it like that
-        if(strpos($url, '#') === 0 || strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0){
+        if(strpos($url, '#') === 0
+            || strpos($url, 'http://') === 0
+            || strpos($url, 'https://') === 0
+            || strpos($url, '/module') === 0){
             return $url;
         }
 
