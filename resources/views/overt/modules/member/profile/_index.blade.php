@@ -1,3 +1,3 @@
 <p>
-    Welcome {{ auth()->user()->username }}
+    Welcome {{ auth('member')->user()->username }}
 </p>

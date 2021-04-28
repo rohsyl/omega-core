@@ -6,11 +6,8 @@ use rohsyl\OmegaCore\Http\Controllers\Overt\Modules\Member\Profile\ProfileContro
 
 Route::prefix('/member')->group(function() {
 
-    Route::group(['middleware' => ['guest']], function() {
-
-        Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('overt.module.member.login');
-        Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-    });
+    Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('overt.module.member.login');
+    Route::post('/login', [AuthenticatedSessionController::class, 'store']);
 
     Route::group(['middleware' => ['auth_member']], function() {
 
