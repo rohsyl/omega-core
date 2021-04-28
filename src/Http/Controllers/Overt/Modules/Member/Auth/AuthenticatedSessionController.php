@@ -7,6 +7,7 @@ use rohsyl\OmegaCore\Http\Requests\Overt\Modules\Member\Auth\LoginRequest;
 use rohsyl\OmegaCore\ServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use rohsyl\OmegaCore\Utils\Overt\Facades\MemberModule;
 use rohsyl\OmegaCore\Utils\Overt\Facades\Page;
 
 class AuthenticatedSessionController extends Controller
@@ -39,7 +40,7 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended('/module/member/profile');
+        return redirect()->intended(MemberModule::getLoginRedirectUrl());
     }
 
     /**
@@ -56,6 +57,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect()->intended('/module/member/login');
+        return redirect()->intended(MemberModule::getLogoutRedirectUrl());
     }
 }

@@ -11,6 +11,7 @@ use rohsyl\OmegaCore\Http\Middleware\OmegaLoadEntity;
 use rohsyl\OmegaCore\Http\Middleware\OmegaNotInstalled;
 use rohsyl\OmegaCore\Http\Middleware\Overt\Modules\Member\Authenticate;
 use rohsyl\OmegaCore\Modules\Member\MemberBoot;
+use rohsyl\OmegaCore\Modules\Member\MemberManager;
 use rohsyl\OmegaCore\Utils\Admin\Form\FormBoot;
 use rohsyl\OmegaCore\Utils\Admin\Livewire\LivewireBoot;
 use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
@@ -107,6 +108,10 @@ class ServiceProvider extends SP
 
         $this->app->bind('omega:entity', function () {
             return new EntityManager();
+        });
+
+        $this->app->bind('omega:member', function () {
+            return new MemberManager();
         });
     }
 

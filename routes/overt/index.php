@@ -31,6 +31,8 @@ Route::group(['middleware' => ['om_load_entity']], function () {
         Route::get('language/change/{target}/{referer?}', 'PublicControllers\LanguageController@change')->name('public.language.change');
     });*/
     Route::prefix('/module')->group(function(){
-        require __DIR__ . '/modules/member.php';
+        if(config('omega.member.enabled', true)) {
+            require __DIR__ . '/modules/member.php';
+        }
     });
 });

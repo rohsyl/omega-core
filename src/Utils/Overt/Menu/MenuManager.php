@@ -226,7 +226,7 @@ class MenuManager
         $html = $this->menuHtmlStruct;
         $z = '';
 
-        //if(config('omega.member.enabled')) {
+        if(config('omega.member.enabled')) {
 
             $title = '<span class="glyphicon glyphicon-user"></span> <span class="hidden-md hidden-lg">'.__('Member') .'</span>';
             $url = '#';
@@ -245,8 +245,8 @@ class MenuManager
                 $z .= sprintf($html['li_children'], $url, $title, 'member', $sub, '');
             }
             return $z;
-        //}
-        //return '';
+        }
+        return '';
     }
 
     public function getLanguagePart()

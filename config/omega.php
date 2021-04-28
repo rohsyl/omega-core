@@ -37,17 +37,13 @@ return [
     ],
 
     /**
-     * Member part
+     * Member module
      */
     'member' => [
-        /**
-         * Keep it disabled until it's implemented
-         */
-        'enabled' => false,
+        'enabled' => true,
 
-        'password' => [
-            'salt' => 'Jb0=nuxa)2'
-        ],
+        'loginRedirectUrl' => '/module/member/profile',
+        'logoutRedirectUrl' => '/module/member/login',
     ],
 
     /**
