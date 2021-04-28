@@ -42,9 +42,17 @@ return [
     'member' => [
         'enabled' => true,
 
+        /**
+         * You can custom redirect url for the member module here.
+         */
         'login_redirect_url' => '/module/member/profile',
         'logout_redirect_url' => '/module/member/login',
 
+        /**
+         * You can custom the layout used by the member module.
+         * Just put the name of a theme template file.
+         * Located in : /resources/theme/[theme]/template.
+         */
         'template_model' => 'member.blade.php',
     ],
 
