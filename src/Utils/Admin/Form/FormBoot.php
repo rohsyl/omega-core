@@ -30,6 +30,6 @@ class FormBoot
         \Form::component('odelete', 'omega::admin.components.form.delete', ['url', 'attributes' => []]);
 
 
-        \Form::component('oattribute', 'omega::admin.components.form.attribute', ['label', 'value']);
+        \Form::component('oattribute', 'omega::admin.components.form.attribute', ['label', 'value', 'attributes' => []]);
     }
 }
