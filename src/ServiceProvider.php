@@ -93,6 +93,9 @@ class ServiceProvider extends SP
         $this->mergeConfigFrom(
             __DIR__.'/../config/omega.php', 'omega'
         );
+        $this->mergeConfigFrom(
+            __DIR__.'/../config/acl/users.php', 'acl.users'
+        );
 
         $this->registerFacades();
 

@@ -16,6 +16,8 @@ return [
      */
     'permissions' => [
         'superadmin' => 0,
+        'content' => 10,
+        'content.page' => 11,
     ],
 
     /**
