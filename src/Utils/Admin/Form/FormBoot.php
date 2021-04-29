@@ -31,5 +31,8 @@ class FormBoot
 
 
         \Form::component('oattribute', 'omega::admin.components.form.attribute', ['label', 'value', 'attributes' => []]);
+
+
+        \Form::component('opermissions', 'omega::admin.components.acl.editor', ['name', 'permissions', 'user', 'attributes' => []]);
     }
 }

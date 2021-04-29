@@ -40,6 +40,9 @@ return [
      * Member module
      */
     'member' => [
+        /**
+         * Enabled/Disable member module
+         */
         'enabled' => true,
 
         /**

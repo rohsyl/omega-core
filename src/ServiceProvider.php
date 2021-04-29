@@ -4,6 +4,7 @@ namespace rohsyl\OmegaCore;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider as SP;
+use rohsyl\LaravelAcl\ServiceProvider as LaravelAclServiceProvider;
 use rohsyl\OmegaCore\Http\Middleware\AdminLocale;
 use rohsyl\OmegaCore\Http\Middleware\OmegaIsInstalled;
 use rohsyl\OmegaCore\Http\Middleware\OmegaLoadConfiguration;
@@ -26,16 +27,12 @@ use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
 
 class ServiceProvider extends SP
 {
-
     public const DASHBOARD = '/admin/dashboard';
     public const LOGIN = '/admin/login';
 
-    public function register() {
-        $this->mergeConfigFrom(
-            __DIR__.'/../config/omega.php', 'omega'
-        );
-
-        $this->registerFacades();
+    public function __construct($app)
+    {
+        parent::__construct($app);
     }
 
     public function boot() {
@@ -49,6 +46,9 @@ class ServiceProvider extends SP
 
         $this->publishes([
             __DIR__.'/../config/omega.php' => config_path('omega.php'),
+            __DIR__.'/../config/acl.php' => config_path('acl.php'),
+            __DIR__.'/../config/acl/users.php' => config_path('acl/users.php'),
+            __DIR__.'/../config/acl/members.php' => config_path('acl/members.php'),
         ]);
 
         $this->publishes([
@@ -82,6 +82,19 @@ class ServiceProvider extends SP
         $router->aliasMiddleware('om_load_config', OmegaLoadConfiguration::class);
         $router->aliasMiddleware('om_load_entity', OmegaLoadEntity::class);
         $router->aliasMiddleware('auth_member', Authenticate::class);
+
+    }
+
+
+    public function register() {
+        $this->mergeConfigFrom(
+            __DIR__.'/../config/omega.php', 'omega'
+        );
+
+        $this->registerFacades();
+
+
+        $this->app->register(LaravelAclServiceProvider::class);
     }
 
     private function registerFacades() {

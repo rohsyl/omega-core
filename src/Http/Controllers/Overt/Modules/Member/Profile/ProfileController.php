@@ -11,6 +11,7 @@ use rohsyl\OmegaCore\Utils\Overt\Facades\Page;
 class ProfileController extends Controller
 {
     public function index() {
+
         return Page::get()
             ->withView('omega::overt.modules.member.profile._index')
             ->withPageMeta([
