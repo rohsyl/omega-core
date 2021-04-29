@@ -4,21 +4,19 @@
     {{ __('Member groups') }}
 @endsection
 
+@section('actions')
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.member.groups.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+@endsection
+
 @section('content')
 
-    <div class="card">
-        <div class="card-header">
-            {{ __('Create group') }}
-        </div>
-        <div class="card-body">
-            {{ Form::open(['url' => route('omega.admin.member.groups.store'), 'method' => 'post']) }}
+    {{ Form::open(['url' => route('omega.admin.member.groups.store'), 'method' => 'post']) }}
+    <x-oix-card title="Group" subtitle="Create a new member group.">
 
-            {{ Form::otext('name', null, ['label' => __('Name'), 'autocomplete' => 'off']) }}
+        {{ Form::otext('name', null, ['label' => __('Name'), 'autocomplete' => 'off']) }}
 
-            {{ Form::oback() }}
-            {{ Form::osubmit() }}
-
-            {{ Form::close() }}
-        </div>
-    </div>
+        {{ Form::oback() }}
+        {{ Form::osubmit() }}
+    </x-oix-card>
+    {{ Form::close() }}
 @endsection
