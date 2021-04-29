@@ -20,6 +20,7 @@ use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
 use rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Commands\PluginInstallCommand;
 use rohsyl\OmegaCore\Utils\Common\Plugin\PluginManager;
+use rohsyl\OmegaCore\Utils\Common\Theme\Command\InstallThemeCommand;
 use rohsyl\OmegaCore\Utils\Common\Theme\Command\PublishThemeCommand;
 use rohsyl\OmegaCore\Utils\Overt\EntityManager;
 use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
@@ -42,6 +43,7 @@ class ServiceProvider extends SP
             $this->commands([
                 PluginInstallCommand::class,
                 PublishThemeCommand::class,
+                InstallThemeCommand::class,
             ]);
         }
 

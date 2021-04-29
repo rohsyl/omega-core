@@ -61,12 +61,30 @@ class ThemeManager
         return $this->themePath . DIRECTORY_SEPARATOR . $this->installerPath;
     }
 
+
+
     /**
      * @return string
      */
     public function getRegisterPath()
     {
         return $this->themePath . DIRECTORY_SEPARATOR . $this->registerPath;
+    }
+
+    public function getRegister() {
+        $path = $this->getRegisterPath();
+        if(!file_exists($path)){
+            return null;
+        }
+        return include($path);
+    }
+
+    public function getInstaller() {
+        $path = $this->getInstallerPath();
+        if(!file_exists($path)){
+            return null;
+        }
+        return include($path);
     }
 
     public function getThemeTemplate() {
