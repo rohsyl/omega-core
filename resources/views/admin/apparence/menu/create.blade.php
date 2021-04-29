@@ -4,24 +4,21 @@
     {{ __('Menus') }}
 @endsection
 
+@section('actions')
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.appearance.menus.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+@endsection
+
 @section('content')
 
-    <div class="card">
-        <div class="card-header">
-            {{ __('Create menu') }}
-        </div>
-        <div class="card-body">
-            {{ Form::open(['url' => route('omega.admin.appearance.menus.store'), 'method' => 'post']) }}
+    {{ Form::open(['url' => route('omega.admin.appearance.menus.store'), 'method' => 'post']) }}
+    <x-oix-card title="Menu" subtitle="Create a new menu.">
+        {{ Form::otext('name', null, ['label' => __('Title')]) }}
+        {{ Form::otextarea('description', null, ['label' => __('Description')]) }}
 
-                {{ Form::otext('name', null, ['label' => __('Title')]) }}
-                {{ Form::otextarea('description', null, ['label' => __('Description')]) }}
-
-                {{ Form::oback() }}
-                {{ Form::osubmit() }}
-
-            {{ Form::close() }}
-        </div>
-    </div>
+        {{ Form::oback() }}
+        {{ Form::osubmit() }}
+    </x-oix-card>
+    {{ Form::close() }}
 
 @endsection
 

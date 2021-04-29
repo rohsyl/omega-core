@@ -62,4 +62,9 @@ class PageController extends Controller
 
         return redirect()->route('omega.admin.content.pages.edit', $page);
     }
+
+    public function destroy(Page $page) {
+        $page->delete();
+        return redirect()->route('omega.admin.content.pages.index');
+    }
 }

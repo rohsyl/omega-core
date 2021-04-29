@@ -8,6 +8,11 @@
     $overflow = 150;
 @endphp
 
+
+@section('actions')
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.appearance.menus.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+@endsection
+
 @section('content')
 
     <div class="row">

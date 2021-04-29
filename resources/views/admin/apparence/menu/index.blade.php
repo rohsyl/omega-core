@@ -28,7 +28,7 @@
                             <a href="{{ route('omega.admin.appearance.menus.edit', $menu) }}">{{ $menu->name }}</a>
                         </td>
                         <td>
-                            {{ $menu->description }}
+                            {{ $menu->description ?? '-' }}
                         </td>
                         <td>
                             @if(isset($menu->member_group))
@@ -39,6 +39,8 @@
                         </td>
                         <td class="text-right">
                             <a href="{{ route('omega.admin.appearance.menus.edit', $menu) }}"><i class="fas fa-edit"></i></a>
+                            &nbsp;|&nbsp;
+                            {{ Form::odelete(route('omega.admin.appearance.menus.destroy', $menu), ['class' => 'btn btn-link m-0 pt-0 px-0 pb-1 color-red', 'icon' => 'fas fa-trash']) }}
                         </td>
                     </tr>
                 @empty

@@ -14,7 +14,7 @@
                 {{ __('Save') }}
             </button>
             @if($page->is_published)
-                <button class="btn btn-warning btn-sm"
+                <button class="btn btn-secondary btn-sm"
                         name="action"
                         value="unpublish"
                         type="submit">
