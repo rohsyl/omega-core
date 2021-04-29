@@ -15,7 +15,7 @@
     <x-oix-card title="Group" subtitle="Create a new group.">
         {{ Form::otext('name', null, ['label' => __('Name')]) }}
         {{ Form::otext('description', null, ['label' => __('Description')]) }}
-        {{ Form::ocheckbox('is-enabled', true, ['label' => __('Enable group?')]) }}
+        {{ Form::ocheckbox('is_enabled', true, ['label' => __('Enable group?')]) }}
 
         {{ Form::oback() }}
         {{ Form::submit(__('Add group'), ['class' => 'btn btn-primary']) }}

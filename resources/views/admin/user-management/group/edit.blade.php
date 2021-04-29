@@ -10,23 +10,29 @@
 @endsection
 
 @section('content')
-    <div class="card">
-        <div class="card-header">
-            {{ __('Edit') . ' ' . $group->name }}
-        </div>
-        <div class="card-body">
-            {{ Form::open(['route' => ['omega.admin.groups.update', $group], 'method' => 'put']) }}
 
 
+    {{ Form::open(['route' => ['omega.admin.groups.update', $group], 'method' => 'put']) }}
 
-            {{ Form::otext('name', $group->name, ['label' => __('Name')]) }}
-            {{ Form::otext('description', $group->description, ['label' => __('Description')]) }}
-            {{ Form::ocheckbox('is-enabled', $group->is_enabled, ['label' => __('Enable group?')]) }}
+    <x-oix-card title="Group" subtitle="Edit group informations.">
 
-            {{ Form::oback() }}
-            {{ Form::submit(__('Edit group'), ['class' => 'btn btn-primary']) }}
+        {{ Form::otext('name', $group->name, ['label' => __('Name')]) }}
+        {{ Form::otext('description', $group->description, ['label' => __('Description')]) }}
+        {{ Form::ocheckbox('is_enabled', $group->is_enabled, ['label' => __('Enable group?')]) }}
+    </x-oix-card>
 
-            {{ Form::close() }}
-        </div>
-    </div>
+    <x-oix-card title="Permissions" subtitle="Manage member permissions.">
+
+        <p class="mb-1">Permissions</p>
+        {{ Form::opermissions('permissions', $permissions, $group) }}
+
+    </x-oix-card>
+
+    <x-oix-card title="Member groups" subtitle="Assign member to groups.">
+        {{ Form::oselectmultiple('users', $users, $group->users, ['label' => _('Users')]) }}
+        {{ Form::oback() }}
+        {{ Form::osubmit() }}
+    </x-oix-card>
+
+    {{ Form::close() }}
 @endsection

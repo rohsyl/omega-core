@@ -7,6 +7,7 @@ return [
 
     'models' => [
         \rohsyl\OmegaCore\Models\User::class => 'users',
+        \rohsyl\OmegaCore\Models\Group::class => 'users',
 
         \rohsyl\OmegaCore\Models\Member::class => 'members',
         \rohsyl\OmegaCore\Models\MemberGroup::class => 'members'

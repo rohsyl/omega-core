@@ -47,7 +47,7 @@ return [
             /**
              * Enable acl for group
              */
-            'enableAcl' => false,
+            'enableAcl' => true,
             /**
              * The name of the relationship from the User model to the "group" model
              */

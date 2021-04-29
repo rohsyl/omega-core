@@ -4,7 +4,10 @@ namespace rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use rohsyl\OmegaCore\Http\Requests\Admin\UserManagement\Group\CreateGroupRequest;
+use rohsyl\OmegaCore\Http\Requests\Admin\UserManagement\Group\UpdateGroupRequest;
 use rohsyl\OmegaCore\Models\Group;
+use rohsyl\OmegaCore\Models\User;
 
 class GroupController extends Controller
 {
@@ -16,30 +19,35 @@ class GroupController extends Controller
         return view('omega::admin.user-management.group.create');
     }
 
-    public function store(Request $request) {
-        $group = new Group();
-        $group->name = $request->input('name');
-        $group->description = $request->input('description');
-        $group->is_enabled = (bool)$request->input('is-enabled');
-        $group->save();
-
+    public function store(CreateGroupRequest $request) {
+        $group = Group::create($request->validated());
         return redirect()->route('omega.admin.group.show', $group);
     }
 
     public function show(Group $group) {
-        return view('omega::admin.user-management.group.show',['group' => Group::find($group->id)]);
+        $permissions = acl_permissions();
+        return view('omega::admin.user-management.group.show', compact('group', 'permissions'));
     }
 
     public function edit(Group $group) {
-        return view('omega::admin.user-management.group.edit', ['group' => $group]);
+        $permissions = acl_permissions();
+        $users = User::all()->pluck('fullname', 'id')->toArray();
+        return view('omega::admin.user-management.group.edit', compact('group', 'users', 'permissions'));
     }
 
-    public function update(Request $request, Group $group) {
-        $group->name = $request->input('name');
-        $group->description = $request->input('description');
-        $group->is_enabled = (bool)$request->input('is-enabled');
+    public function update(UpdateGroupRequest $request, Group $group) {
+        $group->update($request->validated());
+
+        $group->acl = acl_empty();
+        $group->grantPermissions($request->input('permissions'));
         $group->save();
-        return redirect()->route('omega.admin.group.show', $group);
+
+        $group->users()->detach();
+        if ($request->has('users')) {
+            $group->users()->attach($request->input('users'));
+        }
+
+        return redirect()->route('omega.admin.groups.show', $group);
     }
 
     public function destroy(Group $group) {
