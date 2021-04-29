@@ -1,6 +1,5 @@
-
-
-<div>
+<div wire:init="init">
+    {{ Form::open(['url' => route('omega.admin.content.pages.update', $page), 'method' => 'put']) }}
 
     <div class="text-right mb-2">
         <button class="btn btn-primary btn-sm"
@@ -10,7 +9,6 @@
         </button>
     </div>
 
-    {{ Form::open(['url' => route('omega.admin.content.pages.update', $page), 'method' => 'put']) }}
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <a class="nav-link active" id="content-tab" data-toggle="tab" href="#content" role="tab" aria-controls="content" aria-selected="true">{{ __('Content') }}</a>
@@ -146,9 +144,9 @@
 
                         {{ Form::otext('slug', $page->slug, ['label' => __('Slug'), 'helper' => __('The slug is used in the URL')]) }}
 
-                        {{ Form::oselect('parent_id', $pages, $page->parent_id, ['label' => __('Parent'), 'helper' => __('Define the parent of this page to organize your hierarchy.')]) }}
-                        {{ Form::oselect('model', $models, $page->model, ['label' => __('Model'), 'helper' => __('Define an alternative page template for this page.')]) }}
-                        {{ Form::oselect('menu_id', $menus, $page->menu_id, ['label' => __('Menu'), 'helper' => __('Define the menu to use on this page.')]) }}
+                        {{ Form::oselect('parent_id', $pageParents, $page->parent_id, ['label' => __('Parent'), 'helper' => __('Define the parent of this page to organize your hierarchy.')]) }}
+                        {{ Form::oselect('model', $pageModels, $page->model, ['label' => __('Model'), 'helper' => __('Define an alternative page template for this page.')]) }}
+                        {{ Form::oselect('menu_id', $pageMenus, $page->menu_id, ['label' => __('Menu'), 'helper' => __('Define the menu to use on this page.')]) }}
 
 
                         {{ Form::otext('keyword', $page->keyword, ['label' => __('Keywords'), 'helper' => __('Keywords for this page.')]) }}

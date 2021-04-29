@@ -7,6 +7,7 @@ namespace rohsyl\OmegaCore\Http\Controllers\Admin\Content\Page;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use rohsyl\OmegaCore\Http\Requests\Admin\Content\Page\UpdatePageRequest;
 use rohsyl\OmegaCore\Models\Page;
 use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Type\Type;
@@ -38,11 +39,13 @@ class PageController extends Controller
         return view('omega::admin.content.page.edit', compact('page'));
     }
 
-    public function update(Request $request, Page $page) {
+    public function update(UpdatePageRequest $request, Page $page) {
 
         foreach($page->components as $component) {
             Type::FormSave($component->plugin_form_id, $component->id, $component->page_id);
         }
+
+        $page->update($request->validated());
 
         return redirect()->route('omega.admin.content.pages.edit', $page);
     }

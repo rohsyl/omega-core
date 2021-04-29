@@ -26,4 +26,12 @@ class Menu extends Model
         return $this->hasMany(MenuItem::class, 'menu_id')
             ->orderBy('sort', 'ASC');
     }
+
+    public function scopeEnabled($query) {
+        return $query->where('is_enabled', true);
+    }
+
+    public function scopeMain($query) {
+        return $query->where('is_main', true);
+    }
 }

@@ -68,4 +68,26 @@ class ThemeManager
     {
         return $this->themePath . DIRECTORY_SEPARATOR . $this->registerPath;
     }
+
+    public function getThemeTemplate() {
+
+        $files = array();
+        $themeFolder = $this->getThemePath();
+        $directory_path = $themeFolder . DIRECTORY_SEPARATOR . 'template';
+        if(file_exists($directory_path)){
+            $dir = opendir ($directory_path);
+            while($element = readdir($dir))
+            {
+                if($element != '.' && $element != '..' && $element != 'register.php')
+                {
+                    if (!is_dir($directory_path . DIRECTORY_SEPARATOR . $element))
+                        $files[$element] = ucfirst(without_ext(without_ext($element)));
+                }
+            }
+            sort($files);
+        }
+
+
+        return $files;
+    }
 }

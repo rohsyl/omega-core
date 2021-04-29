@@ -5,14 +5,17 @@ namespace rohsyl\OmegaCore\Http\Livewire\Admin\Content\Page\Edit;
 
 
 use Livewire\Component as LivewireComponent;
+use rohsyl\OmegaCore\Models\Menu;
 use rohsyl\OmegaCore\Models\Page;
 use rohsyl\OmegaCore\Models\PluginForm;
 use rohsyl\OmegaCore\Models\Component;
 use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Type\Type;
+use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 
 class EditPageComponent extends LivewireComponent
 {
+    public $readyToLoad = false;
 
     /**
      * @var Page
@@ -26,13 +29,46 @@ class EditPageComponent extends LivewireComponent
     public $models = [];
     public $menus = [];
 
+    public $pageParents = [];
+    public $pageModels = [];
+    public $pageMenus = [];
+
+
     public function mount() {
 
     }
 
     public function render() {
         $componentsForms = $this->renderComponentsForms();
+        $this->loadSettings();
+
         return view('omega::livewire.admin.content.page.edit.edit', compact('componentsForms'));
+    }
+
+
+    public function init() {
+        $this->readyToLoad = true;
+    }
+
+    public function loadSettings() {
+        $this->pageParents =
+            [null => __('No parent')] + Page::query()
+                ->where('id', '!=', $this->page->id)
+                ->select(['title', 'id'])
+                ->get()
+                ->pluck('title', 'id')
+                ->toArray();
+
+        $this->pageModels = [null => __('No model')] + OmegaTheme::getThemeTemplate();
+
+        $this->pageMenus =
+            [null => __('No menu')] + Menu::query()
+                ->enabled()
+                ->select(['name', 'id'])
+                ->get()
+                ->pluck('name', 'id')
+                ->toArray();
+
     }
 
     public function renderComponentsForms() {
