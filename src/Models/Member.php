@@ -24,4 +24,8 @@ class Member extends Authenticatable
     public function getIsValidatedAttribute() {
         return isset($this->validated_at);
     }
+
+    public function getUsernameAndEmailAttribute() {
+        return $this->username . ' - ' . $this->email;
+    }
 }

@@ -14,13 +14,30 @@
 
 @section('content')
 
-    <div class="card">
-        <div class="card-header">
-            {{ ucfirst($group->name) }}
-        </div>
-        <div class="card-body">
-            {{ Form::oattribute(__('Name'), $group->name) }}
-        </div>
-    </div>
+    <x-oix-card title="Group" subtitle="Member group informations.">
+        {{ Form::oattribute(__('Name'), $group->name) }}
+    </x-oix-card>
 
+    <x-oix-card title="Permissions" subtitle="Member group permissions.">
+        <div style="max-height: 300px; overflow-y: scroll">
+            {{ Form::opermissions('permissions', $permissions, $group, ['readonly' => true, 'acls' => 'members']) }}
+        </div>
+    </x-oix-card>
+
+    <x-oix-card title="Member" subtitle="Member in this membergroup">
+        <table class="table table-sm">
+            @forelse($group->members as $member)
+                <tr>
+                    <td>
+                        <a href="{{ route('omega.admin.member.members.show', $member) }}"><i class="fas fa-eye"></i></a>
+                        {{ $member->username }} - {{ $member->email }}
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td class="text-muted text-sm">{{ __('No members...') }}</td>
+                </tr>
+            @endforelse
+        </table>
+    </x-oix-card>
 @endsection

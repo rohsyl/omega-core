@@ -56,7 +56,7 @@ class MemberController extends Controller
             $member->membergroups()->attach($request->input('membergroups'));
         }
 
-        return redirect()->route('omega.admin.member.members.edit', $member);
+        return redirect()->route('omega.admin.member.members.show', $member);
     }
 
     public function destroy(Member $member) {

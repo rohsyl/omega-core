@@ -4,10 +4,11 @@ namespace rohsyl\OmegaCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use rohsyl\LaravelAcl\Traits\GroupAcl;
 
 class MemberGroup extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, GroupAcl;
 
     protected $fillable = [
         'name',
