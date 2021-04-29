@@ -2,8 +2,9 @@
     @if (!isset($attributes['no-label']) || !$attributes['no-label'])
         {{ Form::label($name, $attributes['label'] ?? $name) }}
     @endif
-    <select id="{{ $name }}" name="{{ $name }}"
+    <select id="{{ $name }}" name="{{ $name }}" onchange="{{ isset($attributes['on-change']) ? $attributes['on-change'] : '' }}"
             class="{{ isset($errors) && $errors->has($name) ? 'is-invalid' : '' }} {{ isset($attributes['class']) ? $attributes['class'] : '' }}">
+
         <option disabled {{ ($value != null) ? 'value="' . $value . '"' : 'selected'   }}
             data-placeholder="true">{{ isset($attributes['placeholder']) ? $attributes['placeholder'] : '' }}</option>
         @foreach($data as $key=>$line)
