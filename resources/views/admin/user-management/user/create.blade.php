@@ -16,7 +16,8 @@
         {{ Form::oemail('email', null, ['label' => __('E-Mail Address')]) }}
         {{ Form::otext('fullname', null, ['label' => __('Fullname')]) }}
         {{ Form::opassword('password', ['label' => __('Password')]) }}
-        {{ Form::ocheckbox('is-enabled', true, ['label' => __('Enable user?')]) }}
+        {{ Form::opassword('repeat_password', ['no-label' => true]) }}
+        {{ Form::ocheckbox('is_enabled', true, ['label' => __('Enable user?')]) }}
 
         {{ Form::oback() }}
         {{ Form::submit(__('Add user'), ['class' => 'btn btn-primary']) }}

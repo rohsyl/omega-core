@@ -5,6 +5,7 @@ namespace rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
+use rohsyl\OmegaCore\Http\Requests\Admin\UserManagement\User\CreateUserRequest;
 use rohsyl\OmegaCore\Http\Requests\Admin\UserManagement\User\UpdateUserRequest;
 use rohsyl\OmegaCore\Models\Group;
 use rohsyl\OmegaCore\Models\User;
@@ -20,13 +21,11 @@ class UserController extends Controller
         return view('omega::admin.user-management.user.create');
     }
 
-    public function store(Request $request) {
-        $user = new User();
-        $user->email = $request->input('email');
-        $user->fullname = $request->input('fullname');
-        $user->password = Hash::make($request->input('password'));
-        $user->is_disabled = !$request->input('is-enabled');
-        $user->save();
+    public function store(CreateUserRequest $request) {
+        $inputs = $request->validated();
+        $inputs['password'] = Hash::make($request->input('password'));
+        $inputs['is_disabled'] = !($inputs['is_enabled'] ?? true);
+        $user = User::create($inputs);
 
         return redirect()->route('omega.admin.users.show', $user);
     }
