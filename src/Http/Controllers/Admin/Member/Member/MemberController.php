@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use rohsyl\OmegaCore\Http\Requests\Admin\Member\Member\CreateMemberRequest;
 use rohsyl\OmegaCore\Http\Requests\Admin\Member\Member\UpdateMemberRequest;
 use rohsyl\OmegaCore\Models\Member;
+use rohsyl\OmegaCore\Models\MemberGroup;
 
 class MemberController extends Controller
 {
@@ -32,15 +33,29 @@ class MemberController extends Controller
     }
 
     public function show(Member $member) {
-        return view('omega::admin.member.member.show', compact('member'));
+        $permissions = acl_permissions('members');
+        return view('omega::admin.member.member.show', compact('member', 'permissions'));
     }
 
     public function edit(Member $member) {
-        return view('omega::admin.member.member.edit', compact('member'));
+        $permissions = acl_permissions('members');
+        $membergroups = MemberGroup::all()->pluck('name', 'id')->toArray();
+        return view('omega::admin.member.member.edit', compact('member', 'permissions', 'membergroups'));
     }
 
     public function update(UpdateMemberRequest $request, Member $member) {
         $member->update($request->validated());
+
+        $member->acl = acl_empty('members');
+        $member->grantPermissions($request->input('permissions'));
+        $member->save();
+
+
+        $member->membergroups()->detach();
+        if ($request->has('membergroups')) {
+            $member->membergroups()->attach($request->input('membergroups'));
+        }
+
         return redirect()->route('omega.admin.member.members.edit', $member);
     }
 

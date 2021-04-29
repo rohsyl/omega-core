@@ -1689,16 +1689,16 @@
         },
         {
             "name": "rohsyl/laravel-acl",
-            "version": "v1.1.0",
+            "version": "v1.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/rohsyl/laravel-acl.git",
-                "reference": "2203b6aa52c85bfa66ecf7d1a6295d8f974386b5"
+                "reference": "770a7273072ee74a07fd8ae50cf59288be03bf76"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/rohsyl/laravel-acl/zipball/2203b6aa52c85bfa66ecf7d1a6295d8f974386b5",
-                "reference": "2203b6aa52c85bfa66ecf7d1a6295d8f974386b5",
+                "url": "https://api.github.com/repos/rohsyl/laravel-acl/zipball/770a7273072ee74a07fd8ae50cf59288be03bf76",
+                "reference": "770a7273072ee74a07fd8ae50cf59288be03bf76",
                 "shasum": ""
             },
             "require": {
@@ -1738,9 +1738,9 @@
             "description": "Access Control List for Laravel",
             "support": {
                 "issues": "https://github.com/rohsyl/laravel-acl/issues",
-                "source": "https://github.com/rohsyl/laravel-acl/tree/v1.1.0"
+                "source": "https://github.com/rohsyl/laravel-acl/tree/v1.1.1"
             },
-            "time": "2021-04-29T07:51:16+00:00"
+            "time": "2021-04-29T08:06:01+00:00"
         },
         {
             "name": "swiftmailer/swiftmailer",

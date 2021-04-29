@@ -15,6 +15,7 @@ use rohsyl\OmegaCore\Modules\Member\MemberBoot;
 use rohsyl\OmegaCore\Modules\Member\MemberManager;
 use rohsyl\OmegaCore\Utils\Admin\Form\FormBoot;
 use rohsyl\OmegaCore\Utils\Admin\Livewire\LivewireBoot;
+use rohsyl\OmegaCore\Utils\Common\Blade\BladeBoot;
 use rohsyl\OmegaCore\Utils\Common\OmegaUtils;
 use rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Commands\PluginInstallCommand;
@@ -72,8 +73,10 @@ class ServiceProvider extends SP
 
         FormBoot::boot();
         LivewireBoot::boot();
+        BladeBoot::boot();
         OmegaTheme::boot($this);
         MemberBoot::boot($this);
+
 
         $router = $this->app->make(Router::class);
         $router->aliasMiddleware('om_not_installed', OmegaNotInstalled::class);
@@ -92,7 +95,6 @@ class ServiceProvider extends SP
         );
 
         $this->registerFacades();
-
 
         $this->app->register(LaravelAclServiceProvider::class);
     }
