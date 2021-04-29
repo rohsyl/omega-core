@@ -34,8 +34,18 @@
                                 -
                             @endif
                         </td>
-                        <td></td>
-                        <td></td>
+                        <td>
+                            <span class="small">
+                            {{ $page->updated_at->format(DATETIMEFORMAT) }}
+                            </span>
+                        </td>
+                        <td>
+                            @if(isset($page->model))
+                                {{ ucfirst(without_ext(without_ext($page->model))) }}
+                            @else
+                                Default
+                            @endif
+                        </td>
                         <td class="text-right">
                             <a href="{{ route('omega.admin.content.pages.edit', $page) }}"><i class="fas fa-edit"></i></a>
                         </td>

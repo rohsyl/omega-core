@@ -1,12 +1,36 @@
 <div wire:init="init">
     {{ Form::open(['url' => route('omega.admin.content.pages.update', $page), 'method' => 'put']) }}
 
-    <div class="text-right mb-2">
-        <button class="btn btn-primary btn-sm"
-                type="submit">
-            <i class="fas fa-save"></i>
-            {{ __('Save') }}
-        </button>
+    <div class="d-flex justify-content-between mb-2">
+        <div>
+            <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.content.pages.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+        <div class="text-right">
+            <button class="btn btn-primary btn-sm"
+                    name="action"
+                    value="save"
+                    type="submit">
+                <i class="fas fa-save"></i>
+                {{ __('Save') }}
+            </button>
+            @if($page->is_published)
+                <button class="btn btn-warning btn-sm"
+                        name="action"
+                        value="unpublish"
+                        type="submit">
+                    <i class="fas fa-eye-slash"></i>
+                    {{ __('Unpublish') }}
+                </button>
+            @else
+                <button class="btn btn-success btn-sm"
+                         name="action"
+                         value="publish"
+                         type="submit">
+                    <i class="fas fa-globe"></i>
+                    {{ __('Publish') }}
+                </button>
+            @endif
+        </div>
     </div>
 
         <ul class="nav nav-tabs" id="myTab" role="tablist">

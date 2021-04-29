@@ -4,23 +4,24 @@
     {{ __('Pages') }}
 @endsection
 
+@section('actions')
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.content.pages.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+@endsection
+
 @section('content')
 
-    <div class="card">
-        <div class="card-header">
-            {{ __('Create page') }}
-        </div>
-        <div class="card-body">
-            {{ Form::open(['url' => route('omega.admin.content.pages.store'), 'method' => 'post']) }}
 
-                {{ Form::otext('title', null, ['label' => __('Title')]) }}
+    {{ Form::open(['url' => route('omega.admin.content.pages.store'), 'method' => 'post']) }}
 
-                {{ Form::oback() }}
-                {{ Form::osubmit() }}
+    <x-oix-card title="Page" subtitle="Create a new page.">
 
-            {{ Form::close() }}
-        </div>
-    </div>
+        {{ Form::otext('title', null, ['label' => __('Title')]) }}
+
+        {{ Form::oback() }}
+        {{ Form::osubmit() }}
+    </x-oix-card>
+
+    {{ Form::close() }}
 
 @endsection
 

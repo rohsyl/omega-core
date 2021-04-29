@@ -7,6 +7,7 @@ namespace rohsyl\OmegaCore\Http\Controllers\Admin\Content\Page;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use rohsyl\OmegaCore\Http\Requests\Admin\Content\Page\CreatePageRequest;
 use rohsyl\OmegaCore\Http\Requests\Admin\Content\Page\UpdatePageRequest;
 use rohsyl\OmegaCore\Models\Page;
 use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
@@ -26,8 +27,8 @@ class PageController extends Controller
         return view('omega::admin.content.page.create');
     }
 
-    public function store(Request $request) {
-        $inputs = $request->all();
+    public function store(CreatePageRequest $request) {
+        $inputs = $request->validated();
         $inputs['slug'] = Str::slug($inputs['title']);
         $inputs['author_id'] = auth()->id();
         Page::create($inputs);
@@ -41,11 +42,23 @@ class PageController extends Controller
 
     public function update(UpdatePageRequest $request, Page $page) {
 
-        foreach($page->components as $component) {
-            Type::FormSave($component->plugin_form_id, $component->id, $component->page_id);
-        }
+        $action = $request->input('action') ?? 'save';
 
-        $page->update($request->validated());
+        if($action == 'save') {
+            foreach($page->components as $component) {
+                Type::FormSave($component->plugin_form_id, $component->id, $component->page_id);
+            }
+
+            $page->update($request->validated());
+        }
+        if($action == 'publish') {
+            $page->published_at = now();
+            $page->save();
+        }
+        if($action == 'unpublish') {
+            $page->published_at = null;
+            $page->save();
+        }
 
         return redirect()->route('omega.admin.content.pages.edit', $page);
     }

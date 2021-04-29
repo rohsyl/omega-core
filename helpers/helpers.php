@@ -3,6 +3,9 @@ use rohsyl\OmegaCore\Models\Config;
 use rohsyl\OmegaCore\Utils\Common\Facades\OmegaConfig;
 use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 
+define('DATEFORMAT', 'Y-m-d');
+define('DATETIMEFORMAT', 'Y-m-d H:i:s');
+
 if (!function_exists('om_config')) {
     /**
      * Get or set the key value in the configs table in the datable
