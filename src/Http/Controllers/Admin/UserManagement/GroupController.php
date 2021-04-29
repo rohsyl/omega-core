@@ -8,9 +8,8 @@ use rohsyl\OmegaCore\Models\Group;
 
 class GroupController extends Controller
 {
-
     public function index(){
-        return (new UserController)->index();
+        return view('omega::admin.user-management.group.index', ['groups' => Group::all()]);
     }
 
     public function create() {

@@ -5,32 +5,37 @@
 @endsection
 
 @section('actions')
-
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.users.show', $user) }}"><i class="fas fa-arrow-left"></i> Back</a>
     <div class="btn-group">
         <a class="btn btn-outline-primary btn-sm"><i class="fas fa-key"></i> {{ __('Edit password') }}</a>
         <a class="btn btn-outline-primary btn-sm"><i class="fas fa-envelope"></i> {{ __('Send reset link') }}</a>
     </div>
-
-    <a class="btn btn-outline-primary btn-sm"><i class="fas fa-users"></i> {{ __('Edit groups') }}</a>
 @endsection
 
 @section('content')
-    <div class="card">
-        <div class="card-header">
-            {{ __('Edit') . ' ' . $user->fullname }}
-        </div>
-        <div class="card-body">
-            {{ Form::open(['route' => ['omega.admin.users.update', $user], 'method' => 'put']) }}
 
+    {{ Form::open(['route' => ['omega.admin.users.update', $user], 'method' => 'put']) }}
 
-            {{ Form::oemail('email', $user->email, ['label' => __('E-Mail Address')]) }}
-            {{ Form::otext('fullname', $user->fullname, ['label' => __('Fullname')]) }}
-            {{ Form::ocheckbox('is-enabled', !$user->is_disabled, ['label' => __('Enable user?')]) }}
+    <x-oix-card title="User" subtitle="Edit user informations.">
 
-            {{ Form::oback() }}
-            {{ Form::submit(__('Edit user'), ['class' => 'btn btn-primary']) }}
+        {{ Form::oemail('email', $user->email, ['label' => __('E-Mail Address')]) }}
+        {{ Form::otext('fullname', $user->fullname, ['label' => __('Fullname')]) }}
+        {{ Form::ocheckbox('is_enabled', !$user->is_disabled, ['label' => __('Enable user?')]) }}
 
-            {{ Form::close() }}
-        </div>
-    </div>
+    </x-oix-card>
+
+    <x-oix-card title="Permissions" subtitle="Manage user permissions.">
+
+        <p class="mb-1">Permissions</p>
+        {{ Form::opermissions('permissions', $permissions, $user) }}
+    </x-oix-card>
+
+    <x-oix-card title="User groups" subtitle="Assign user to groups.">
+        {{ Form::oselectmultiple('groups', $groups, $user->groups, ['label' => _('Groups')]) }}
+        {{ Form::oback() }}
+        {{ Form::osubmit() }}
+    </x-oix-card>
+
+    {{ Form::close() }}
+
 @endsection

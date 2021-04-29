@@ -5,6 +5,7 @@ namespace rohsyl\OmegaCore\Http\Controllers\Admin\UserManagement;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Hash;
+use rohsyl\OmegaCore\Http\Requests\Admin\UserManagement\User\UpdateUserRequest;
 use rohsyl\OmegaCore\Models\Group;
 use rohsyl\OmegaCore\Models\User;
 
@@ -12,7 +13,7 @@ class UserController extends Controller
 {
 
     public function index(){
-        return view('omega::admin.user-management.index', ['users' => User::all(), 'groups' => Group::all()]);
+        return view('omega::admin.user-management.user.index', ['users' => User::all()]);
     }
 
     public function create() {
@@ -31,18 +32,30 @@ class UserController extends Controller
     }
 
     public function show(User $user) {
-        return view('omega::admin.user-management.user.show',['user' => User::find($user->id)]);
+        $permissions = acl_permissions();
+        return view('omega::admin.user-management.user.show', compact('user', 'permissions'));
     }
 
     public function edit(User $user) {
-        return view('omega::admin.user-management.user.edit', ['user' => $user]);
+        $permissions = acl_permissions();
+        $groups = Group::all()->pluck('name', 'id')->toArray();
+        return view('omega::admin.user-management.user.edit', compact('user', 'permissions', 'groups'));
     }
 
-    public function update(Request $request, User $user) {
-        $user->email = $request->input('email');
-        $user->fullname = $request->input('fullname');
-        $user->is_disabled = !$request->input('is-enabled');
+    public function update(UpdateUserRequest $request, User $user) {
+        $inputs = $request->validated();
+        $inputs['is_disabled'] = !($inputs['is_enabled'] ?? true);
+        $user->update();
+
+        $user->acl = acl_empty();
+        $user->grantPermissions($request->input('permissions'));
         $user->save();
+
+        $user->groups()->detach();
+        if ($request->has('groups')) {
+            $user->groups()->attach($request->input('groups'));
+        }
+
         return redirect()->route('omega.admin.users.show', $user);
     }
 

@@ -4,16 +4,18 @@ namespace rohsyl\OmegaCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use rohsyl\LaravelAcl\Traits\GroupAcl;
 
 class Group extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, GroupAcl;
 
     protected $fillable = [
         'name',
         'description',
         'is_enabled',
         'is_system',
+        'acl'
     ];
     //
     public function getNiceName(){
@@ -22,10 +24,6 @@ class Group extends Model
 
     public function users(){
         return $this->belongsToMany(User::class);
-    }
-
-    public function permissions(){
-        return $this->belongsToMany(Permission::class);
     }
 
 }

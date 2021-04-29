@@ -13,16 +13,30 @@
 
 @section('content')
 
-    <div class="card">
-        <div class="card-header">
-            {{ $user->fullname }}
-        </div>
-        <div class="card-body">
-            {{ Form::oattribute(__('E-Mail Address'), $user->email) }}
-            {{ Form::oattribute(__('Fullname'), $user->fullname) }}
-            {{ Form::oattribute(__('User enabled '), !$user->is_disabled ? __('Yes') : __('No')) }}
-        </div>
-    </div>
+    <x-oix-card title="User" subtitle="User informations.">
+        {{ Form::oattribute(__('E-Mail Address'), $user->email) }}
+        {{ Form::oattribute(__('Fullname'), $user->fullname) }}
+        {{ Form::oattribute(__('User enabled '), !$user->is_disabled ? __('Yes') : __('No')) }}
+    </x-oix-card>
 
+    <x-oix-card title="Permissions" subtitle="User permissions.">
+        <div style="max-height: 300px; overflow-y: scroll">
+            {{ Form::opermissions('permissions', $permissions, $user, ['readonly' => true]) }}
+        </div>
+    </x-oix-card>
+
+    <x-oix-card title="Member groups" subtitle="Groups to which the user belongs.">
+        <table class="table table-sm">
+            @forelse($user->groups as $group)
+                <tr>
+                    <td><a href="{{ route('omega.admin.groups.show', $group) }}"><i class="fas fa-eye"></i></a> {{ $group->name }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td class="text-muted text-sm">{{ __('No groups...') }}</td>
+                </tr>
+            @endforelse
+        </table>
+    </x-oix-card>
 
 @endsection

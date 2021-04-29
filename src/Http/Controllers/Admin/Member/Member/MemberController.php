@@ -50,7 +50,6 @@ class MemberController extends Controller
         $member->grantPermissions($request->input('permissions'));
         $member->save();
 
-
         $member->membergroups()->detach();
         if ($request->has('membergroups')) {
             $member->membergroups()->attach($request->input('membergroups'));
