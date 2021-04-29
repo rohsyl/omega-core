@@ -2,12 +2,10 @@
 
 namespace rohsyl\OmegaCore\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use rohsyl\OmegaCore\Modules\Member\Auth\MemberAuthenticatable as Authenticatable;
 
 class Member extends Authenticatable
 {
-
     protected $fillable = [
         'username',
         'email',
@@ -15,9 +13,9 @@ class Member extends Authenticatable
         'validation_hash',
         'lost_password_hash',
         'is_enabled',
+        'acl',
         'validated_at',
     ];
-
 
     public function membergroups(){
         return $this->belongsToMany(MemberGroup::class );

@@ -11,6 +11,7 @@ class MemberGroup extends Model
 
     protected $fillable = [
         'name',
+        'acl'
     ];
 
     public function menus(){
