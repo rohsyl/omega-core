@@ -50,7 +50,6 @@ class ServiceProvider extends SP
         $this->publishes([
             __DIR__.'/../config/omega.php' => config_path('omega.php'),
             __DIR__.'/../config/acl.php' => config_path('acl.php'),
-            __DIR__.'/../config/acl/users.php' => config_path('acl/users.php'),
             __DIR__.'/../config/acl/members.php' => config_path('acl/members.php'),
         ]);
 
