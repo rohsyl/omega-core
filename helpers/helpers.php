@@ -109,3 +109,12 @@ if(!function_exists('theme_decode_components_template')) {
         return $cv;
     }
 }
+
+if (! function_exists('labelling_array')) {
+    function labelling_array($array, $label_prefix = 'label.')
+    {
+        return array_combine($array, array_map(function ($value) use ($label_prefix) {
+            return __($label_prefix.$value);
+        }, $array));
+    }
+}
