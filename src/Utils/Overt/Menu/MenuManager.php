@@ -239,7 +239,7 @@ class MenuManager
         $menu = [];
         if(auth()->guard('member')->check()) {
             $menu[] = [
-                'label' => __('Profil'),
+                'label' => __('Profile'),
                 'url' => $this->PrepareUrl('/module/member/profile'),
                 'class' => 'profile',
             ];
