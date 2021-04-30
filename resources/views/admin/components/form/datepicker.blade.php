@@ -11,7 +11,7 @@
         {{ Form::label($name, $name) }}
     @endif
 @endif
-{{ Form::text($name, old($name) ?? $value, array_merge(['id'=>$name,isset($syncedAttributes) && in_array($name, $syncedAttributes) ? 'disabled' : '','class' => 'form-control form-control-lg ' . (isset($errors) && $errors->has($name) ? 'is-invalid' : '')])) }}
+{{ Form::text($name, old($name) ?? $value, array_merge(['id'=>$name,isset($syncedAttributes) && in_array($name, $syncedAttributes) ? 'disabled' : '','class' => 'form-control ' . (isset($errors) && $errors->has($name) ? 'is-invalid' : '')])) }}
 @if(isset($errors) && $errors->has($name))
     <small class="form-text text-danger">{{ $errors->first($name) }}</small>
 @endif
