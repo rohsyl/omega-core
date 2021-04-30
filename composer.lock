@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3f61e0526d471464ab2f4aa73bcad1e0",
+    "content-hash": "62e2cce5c4579e4df495bab72b13697c",
     "packages": [
         {
             "name": "brick/math",
@@ -1744,11 +1744,17 @@
         },
         {
             "name": "rohsyl/omega-plugins-bundle",
-            "version": "dev-master",
+            "version": "v1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/rohsyl/omega-plugins-bundle.git",
+                "reference": "3665adcbb6620d2d3762dc97c1b07849bb1d1ca7"
+            },
             "dist": {
-                "type": "path",
-                "url": "../omega-plugins-bundle",
-                "reference": "726966d4b6a16e9a1669a191c3aa60f0216d97cb"
+                "type": "zip",
+                "url": "https://api.github.com/repos/rohsyl/omega-plugins-bundle/zipball/3665adcbb6620d2d3762dc97c1b07849bb1d1ca7",
+                "reference": "3665adcbb6620d2d3762dc97c1b07849bb1d1ca7",
+                "shasum": ""
             },
             "require": {
                 "illuminate/auth": "^8.0",
@@ -1776,6 +1782,7 @@
                     "rohsyl\\OmegaPlugin\\Bundle\\": "src"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "GPL-3.0"
             ],
@@ -1786,9 +1793,11 @@
                 }
             ],
             "description": "OmegaCMS Plugins Bundle",
-            "transport-options": {
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/rohsyl/omega-plugins-bundle/issues",
+                "source": "https://github.com/rohsyl/omega-plugins-bundle/tree/v1.0"
+            },
+            "time": "2021-04-30T14:07:37+00:00"
         },
         {
             "name": "swiftmailer/swiftmailer",
@@ -7127,9 +7136,7 @@
     ],
     "aliases": [],
     "minimum-stability": "dev",
-    "stability-flags": {
-        "rohsyl/omega-plugins-bundle": 20
-    },
+    "stability-flags": [],
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {

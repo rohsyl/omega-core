@@ -109,6 +109,8 @@ class InstallController extends Controller
         $group = Group::where('name', 'administrator')->first();
         $group->users()->attach($admin);
 
+        Artisan::call('omega-plugins-bundle:install');
+
         return redirect(route('omega.admin.dashboard'));
     }
 

@@ -21,7 +21,7 @@
         "livewire/livewire": "^2.4",
         "tightenco/ziggy": "^1.0",
         "rohsyl/laravel-acl": "^1.1",
-        "rohsyl/omega-plugins-bundle": "dev-master"
+        "rohsyl/omega-plugins-bundle": "^1.0"
     },
     "require-dev": {
         "orchestra/testbench": "^6.0",
@@ -50,12 +50,5 @@
                 "Entity": "rohsyl\\OmegaCore\\Utils\\Overt\\Facades\\Entity"
             }
         }
-    },
-
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../omega-plugins-bundle"
-        }
-    ]
+    }
 }
