@@ -5,9 +5,11 @@
                 <h5 class="mb-0">
                     {{ $title }}
                 </h5>
+                @if(isset($subtitle))
                 <p class="text-muted">
                     {{ $subtitle }}
                 </p>
+                @endif
             </div>
             <div class="col-md-9">
                 {{ $slot }}
