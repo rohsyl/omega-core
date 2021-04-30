@@ -21,6 +21,9 @@ window.SlimSelect = SlimSelect;
 import moment from 'moment';
 window.moment = moment;
 
+import CodeMirror from 'codemirror';
+window.CodeMirror = CodeMirror;
+
 // window.Vue = require('vue');
 
 /**

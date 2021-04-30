@@ -33,6 +33,6 @@ class TextRich extends TypeEntry {
     }
 
     public function getDoc(){
-        return view('omega:common.plugin.type.textrich.doc');
+        return view('omega::common.plugin.type.textrich.doc');
     }
 }

@@ -49,8 +49,16 @@ class PluginInstallCommand extends Command
             $plugin = Plugin::getPlugin($name);
             if(!isset($plugin)) {
                 $this->warn('Plugin ' . $name . ' not found. Have you installed it with composer ?');
-                break;
+                continue;
             }
+
+            $model = Plugin::getModel($name); {
+                if(isset($model)) {
+                    $this->warn('Plugin ' . $name . ' already installed !');
+                    continue;
+                }
+            }
+
             $this->info('Installing : ' . $name);
 
             \rohsyl\OmegaCore\Models\Plugin::firstOrCreate(
@@ -61,7 +69,7 @@ class PluginInstallCommand extends Command
             $result = $plugin->install();
             if(!$result) {
                 $this->warn('[ FAILED ]');
-                break;
+                continue;
             }
             $this->info('[ SUCCESS ]');
         }

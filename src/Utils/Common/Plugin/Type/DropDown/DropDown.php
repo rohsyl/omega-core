@@ -45,7 +45,7 @@ class DropDown extends TypeEntry {
 
     public function getPostedValue()
     {
-        return real_null($this->getPost($this->getUniqId()));
+        return $this->getPost($this->getUniqId());
     }
 
     public  function getObjectValue() {
@@ -65,7 +65,7 @@ class DropDown extends TypeEntry {
     }
 
     public function getDoc(){
-        return $this->view('Doc');
+        return view('omega::common.plugin.type.dropdown.doc');
     }
 }
 

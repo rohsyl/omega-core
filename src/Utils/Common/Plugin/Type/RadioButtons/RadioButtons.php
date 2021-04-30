@@ -43,6 +43,6 @@ class RadioButtons extends TypeEntry {
     }
 
     public function getDoc(){
-        return view('omega:common.plugin.type.radiobuttons.doc');
+        return view('omega::common.plugin.type.radiobuttons.doc');
     }
 }

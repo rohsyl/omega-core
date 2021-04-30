@@ -29,6 +29,6 @@ class TextSimple extends TypeEntry {
     }
 
     public function getDoc(){
-        return view('omega:common.plugin.type.textsimple.doc');
+        return view('omega::common.plugin.type.textsimple.doc');
     }
 }

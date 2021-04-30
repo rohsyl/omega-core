@@ -5,6 +5,8 @@ use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider as SP;
 use rohsyl\LaravelAcl\ServiceProvider as LaravelAclServiceProvider;
+use rohsyl\OmegaCore\Utils\Common\Command\VendorPublishCommand;
+use rohsyl\OmegaPlugin\Bundle\ServiceProvider as PluginsBundleServiceProvider;
 use rohsyl\OmegaCore\Http\Middleware\AdminLocale;
 use rohsyl\OmegaCore\Http\Middleware\OmegaIsInstalled;
 use rohsyl\OmegaCore\Http\Middleware\OmegaLoadConfiguration;
@@ -41,6 +43,7 @@ class ServiceProvider extends SP
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                VendorPublishCommand::class,
                 PluginInstallCommand::class,
                 PublishThemeCommand::class,
                 InstallThemeCommand::class,
@@ -100,6 +103,7 @@ class ServiceProvider extends SP
 
         $this->registerFacades();
 
+        $this->app->register(PluginsBundleServiceProvider::class);
         $this->app->register(LaravelAclServiceProvider::class);
     }
 

@@ -32,8 +32,8 @@ class PluginManager
         }
     }
 
-    public function register($name, $plugin) {
-        $this->plugins[$name] = $plugin;
+    public function register(Plugin $plugin) {
+        $this->plugins[$plugin->name()] = $plugin;
     }
 
     public function all() {
