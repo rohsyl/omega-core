@@ -25,6 +25,8 @@ class MenuManager
      */
     private $currentPage = null;
 
+    private $showMemberMenuInMainMenu = true;
+
 
     public function __construct()
     {
@@ -36,6 +38,11 @@ class MenuManager
             'ul_children' => '<ul>%1$s</ul>',
             'li_childrenactiv' => '<li class="active nav-item-%3$s"><a href="%1$s" %5$s>%2$s</a>%4$s</li>'
         );
+    }
+
+    public function showMemberMenuInMainMenu($boolean = true) {
+        $this->showMemberMenuInMainMenu = $boolean;
+        return $this;
     }
 
     /**
@@ -68,9 +75,7 @@ class MenuManager
 
         if($menu == null) return 'No menu';
 
-        $menuHtml = $this->getHtmlFromJson($menu->json, $this->menuHtmlStruct, $menu->lang);
-
-        return $menuHtml;
+        return $this->getHtml($menu, $this->menuHtmlStruct, Entity::LocaleSlug());
     }
 
     /**
@@ -159,7 +164,9 @@ class MenuManager
 
         $z = $this->getHtmlMenuItems($menu->items, $html, $lang, $level, $containesActive);
 
-        $z .= $this->getMemberPart();
+        if($this->showMemberMenuInMainMenu) {
+            $z .= $this->getMemberPart();
+        }
         //$z .= $this->getLanguagePart();
         $z = sprintf($html['ul_main'], $z);
 
@@ -216,9 +223,40 @@ class MenuManager
             }
         }
 
-        $z = sprintf($html['ul_children'], $z);
+        if($level > 0) {
+            $z = sprintf($html['ul_children'], $z);
+        }
 
         return $z;
+    }
+
+    public function getMemberPartAsArray() {
+
+        if(!config('omega.member.enabled')) {
+            return null;
+        }
+
+        $menu = [];
+        if(auth()->guard('member')->check()) {
+            $menu[] = [
+                'label' => __('Profil'),
+                'url' => $this->PrepareUrl('/module/member/profile'),
+                'class' => 'profile',
+            ];
+            $menu[] = [
+                'label' => __('Logout'),
+                'url' => $this->PrepareUrl('/module/member/logout'),
+                'class' => 'logout',
+            ];
+        }
+        else {
+            $menu[] = [
+                'label' => __('Log in'),
+                'url' => $this->PrepareUrl('/module/member/login'),
+                'class' => 'login',
+            ];
+        }
+        return $menu;
     }
 
     public function getMemberPart()
@@ -230,20 +268,13 @@ class MenuManager
 
             $title = '<span class="glyphicon glyphicon-user"></span> <span class="hidden-md hidden-lg">'.__('Member') .'</span>';
             $url = '#';
-
-            if(auth()->guard('member')->check())
-            {
-                $subItems = sprintf($html['li_nochildren'], $this->PrepareUrl('/module/member/profile'), __('Profil'), 'profil', '');
-                $subItems .= sprintf($html['li_nochildren'], $this->PrepareUrl('/module/member/logout'), __('Logout'), 'logout', '');
-                $sub = sprintf($html['ul_children'], $subItems);
-                $z .= sprintf($html['li_children'], $url, $title, 'member', $sub, '');
+            $menuItems = $this->getMemberPartAsArray();
+            $subItems = '';
+            foreach($menuItems as $menuItem) {
+                $subItems = sprintf($html['li_nochildren'], $menuItem['url'], $menuItem['label'], $menuItem['class'], '');
             }
-            else
-            {
-                $subItems = sprintf($html['li_nochildren'], $this->PrepareUrl('/module/member/login'), __('Log in'), 'login', '');
-                $sub = sprintf($html['ul_children'], $subItems);
-                $z .= sprintf($html['li_children'], $url, $title, 'member', $sub, '');
-            }
+            $sub = sprintf($html['ul_children'], $subItems);
+            $z .= sprintf($html['li_children'], $url, $title, 'member', $sub, '');
             return $z;
         }
         return '';
@@ -337,6 +368,7 @@ class MenuManager
 
         return [];
     }
+
 
 
     private function getMemberGroupOrPublic()
