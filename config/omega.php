@@ -57,6 +57,7 @@ return [
          * Located in : /resources/theme/[theme]/template.
          */
         'template_model' => 'member.blade.php',
+
     ],
 
     /**

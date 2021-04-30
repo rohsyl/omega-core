@@ -4,12 +4,21 @@
 namespace rohsyl\OmegaCore\Modules\Member;
 
 
+use rohsyl\OmegaCore\Modules\Member\Locale\MemberLocaleManager;
+
 class MemberManager
 {
     private $loginRedirectUrl = null;
     private $logoutRedirectUrl = null;
 
     private $templateModel = null;
+
+    private $localeManager;
+
+    public function __construct()
+    {
+        $this->localeManager = new MemberLocaleManager();
+    }
 
     /**
      * @return string
@@ -57,5 +66,13 @@ class MemberManager
     public function setTemplateModel(string $templateModel): void
     {
         $this->templateModel = $templateModel;
+    }
+
+    /**
+     * @return MemberLocaleManager
+     */
+    public function getLocaleManager(): MemberLocaleManager
+    {
+        return $this->localeManager;
     }
 }
