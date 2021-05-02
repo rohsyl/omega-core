@@ -8,6 +8,8 @@ use rohsyl\OmegaCore\Models\Media;
 
 class MediaLibraryComponent extends LivewireComponent
 {
+    protected $listeners = ['fileUploaded', 'fileUploadCancelled'];
+
     public $directory = null;
 
     protected $queryString = [
@@ -30,6 +32,11 @@ class MediaLibraryComponent extends LivewireComponent
     public function render() {
 
         return view('omega::livewire.admin.content.media.medialibrary.index');
+    }
+
+    public function refresh() {
+        $this->loadDirectory($this->directory);
+        $this->selectMedia(null);
     }
 
     private function loadDirectory($media_id = null) {
@@ -65,11 +72,13 @@ class MediaLibraryComponent extends LivewireComponent
     }
 
     public function openMedia($media_id) {
-        $this->loadDirectory($media_id);
+        $media = Media::find($media_id);
+        if ($media->type == Media::TYPE_DIRECTORY) {
+            $this->loadDirectory($media_id);
+        }
     }
 
-    public function selectMedia($media_id) {
-
+    public function selectMedia($media_id = null) {
         if(!isset($media_id)) {
             $this->selectedMedia = null;
         }
@@ -79,5 +88,26 @@ class MediaLibraryComponent extends LivewireComponent
 
     public function home() {
         $this->loadDirectory(null);
+    }
+
+    public $showUploadForm = false;
+    public function showUploadForm() {
+        $this->selectMedia(null);
+        $this->showUploadForm = true;
+    }
+    public function closeUploadForm() {
+        $this->showUploadForm = false;
+    }
+    public function fileUploaded() {
+        $this->closeUploadForm();
+        $this->refresh();
+    }
+    public function fileUploadCancelled() {
+        $this->closeUploadForm();
+    }
+
+    public function deleteFile() {
+        $this->selectedMedia->delete();
+        $this->refresh();
     }
 }

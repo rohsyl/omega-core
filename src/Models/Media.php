@@ -13,6 +13,16 @@ class Media extends Model
 
     const TYPE_DIRECTORY = 1;
     const TYPE_FILE = 2;
+    const TYPE_EXTERNAL_VIDEO = 3;
+
+
+    const MT_PICTURE = 'picture';
+    const MT_VIDEO = 'video';
+    const MT_MUSIC = 'music';
+    const MT_DOCUMENT = 'document';
+    const MT_OTHER = 'other';
+    const MT_FOLDER = 'folder';
+    const MT_VIDEO_EXT = 'video_ext';
 
     const ROOT_DIRECTORY = 'ROOT';
     const PUBLIC_DIRECTORY = 'PUBLIC';
@@ -49,7 +59,9 @@ class Media extends Model
     }
 
     public function children() {
-        return $this->hasMany(Media::class, 'parent_id');
+        return $this->hasMany(Media::class, 'parent_id')
+            ->orderBy('type')
+            ->orderBy('name');
     }
 
     public function owner() {
@@ -59,7 +71,53 @@ class Media extends Model
     public function group() {
         return $this->belongsTo(Group::class);
     }
-    
+
+    public function getMediaTypeAttribute() {
+        $ext = $this->ext;
+        if($this->type == self::TYPE_DIRECTORY)
+            return self::MT_FOLDER;
+        else if($this->type == self::TYPE_EXTERNAL_VIDEO)
+            return self::MT_VIDEO_EXT;
+        else{
+            return media_type_by_ext($ext);
+        }
+    }
+
+    public function getIconAttribute() {
+
+        $folder_icon_class = 'fas fa-folder';
+        $video_icon_class = 'fas fa-file-video';
+        $picture_icon_class = 'fas fa-file-image';
+        $file_icon_class = 'fas fa-file';
+        $music_icon_class = 'fas fa-file-audio';
+        $videoext_icon_class = 'fas fa-video';
+
+        switch($this->media_type) {
+            case self::MT_FOLDER:
+                return $folder_icon_class;
+            case self::MT_PICTURE:
+                return $picture_icon_class;
+            case self::MT_VIDEO:
+                return $video_icon_class;
+            case self::MT_MUSIC:
+                return $music_icon_class;
+            case self::MT_DOCUMENT:
+                return $file_icon_class;
+            case self::MT_VIDEO_EXT:
+                return $videoext_icon_class;
+            default:
+                return $file_icon_class;
+        }
+    }
+
+    public function getUrlAttribute() {
+        return route('omega.common.media', [$this, $this->name]);
+    }
+
+    public function getUrlDownloadAttribute() {
+        return route('omega.common.media', [$this, $this->name, 'download']);
+    }
+
     /*public function getThumbnail($w, $h, $returnUrl = true)
     {
         $fn = basename($this->path);

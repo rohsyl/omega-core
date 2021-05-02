@@ -20,6 +20,8 @@ Route::group(['middleware' => ['web']], function () {
 
     include __DIR__ . '/overt/index.php';
 
+    include __DIR__ . '/common/media.php';
+
     /********************************************************************
      * Omega CMS must be installed to acces all these routes
      * The *om_not_installed* middleware check if omega is installed,

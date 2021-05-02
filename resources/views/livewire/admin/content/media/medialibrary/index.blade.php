@@ -12,11 +12,11 @@
 
     <div>
         @if($media->parent !== null)
-            <a href="#" wire:click="openMedia({{ $media->parent->id }})" class=" btn btn-secondary btn-sm">
+            <a href="{{ route('omega.admin.content.media.index', ['directory' => $media->parent->id]) }}" class=" btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left"></i> {{ __('Back') }}
             </a>
         @else
-            <a href="#" disabled class="disabled btn btn-secondary btn-sm">
+            <a href="javascript:void(0)" disabled class="disabled btn btn-secondary btn-sm">
                 <i class="fas fa-arrow-left"></i> {{ __('Back') }}
             </a>
         @endif
@@ -24,7 +24,7 @@
             <i class="fas fa-folder-plus"></i>
             {{ __('Create directory') }}
         </a>
-        <a href="#" class="btn btn-outline-secondary btn-sm">
+        <a href="#" class="btn btn-outline-secondary btn-sm" wire:click="showUploadForm">
             <i class="fas fa-upload"></i>
             {{ __('Upload files') }}
         </a>
@@ -34,21 +34,19 @@
         <div class="col-md-8">
             @if(isset($media))
 
-                <div class="d-flex justify-content-start">
+                <div class="d-flex justify-content-start flex-wrap">
                     @forelse($media->children as $child)
 
-                        <div class="mr-2 mb-2 py-2 border @if(isset($selectedMedia) && $selectedMedia->id == $child->id) bg-grey @else bg-white @endif" style="width: 80px; cursor: pointer;"
+                        <div title="{{ $child->title ?? $child->name }}"
+                             class="mr-2 mb-2 pt-3 pb-0 border @if(isset($selectedMedia) && $selectedMedia->id == $child->id) bg-primary text-white border-dark @else bg-white @endif"
+                             style="width: 80px; cursor: pointer;"
                              wire:click="selectMedia({{ $child->id }})"
                              wire:dblclick="openMedia({{ $child->id }})">
                             <div class="text-center">
                                 <div>
-                                    @if($child->type == \rohsyl\OmegaCore\Models\Media::TYPE_DIRECTORY)
-                                        <i class="fas fa-2x fa-folder"></i>
-                                    @else
-                                        <i class="fas fa-2x fa-file"></i>
-                                    @endif
+                                    <i class="fa-2x {{ $child->icon }}"></i>
                                 </div>
-                                <small>
+                                <small class="d-inline-block mt-1 px-1 text-truncate w-100">
                                     {{ $child->title ?? $child->name }}
                                 </small>
                             </div>
@@ -64,6 +62,17 @@
             @endif
         </div>
         <div class="col-md-4">
+
+            @if($this->showUploadForm)
+
+                <div class="card">
+                    <div class="card-body">
+                        <livewire:omega_media-fileuploader :media="$media"/>
+                    </div>
+                </div>
+
+            @endif
+
             @if(isset($selectedMedia))
 
                 <div class="card">
@@ -71,7 +80,7 @@
 
                         <div class="d-flex justify-content-between">
                             <div>
-                                <i class="fas fa-folder"></i>
+                                <i class="{{ $selectedMedia->icon }}"></i>
                                 {{ $selectedMedia->title ?? $selectedMedia->name }}
                             </div>
                             <a href="#" wire:click="selectMedia(null)" class="btn btn-link btn-sm p-0 m-0">
@@ -83,14 +92,49 @@
                         <div>
                             <a href="#" class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-pen"></i>
-                                {{ __('Rename') }}
+                                {{ __('Edit') }}
                             </a>
-                            <a href="#" class="btn btn-outline-danger btn-sm">
+                            <a href="{{ $selectedMedia->url_download }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-download"></i>
+                                {{ __('Download') }}
+                            </a>
+                            <a href="#" class="btn btn-outline-danger btn-sm" wire:click="deleteFile">
                                 <i class="fas fa-trash"></i>
                                 {{ __('Delete') }}
                             </a>
                         </div>
 
+                        <div class="mt-4">
+                            <dl class="small row">
+                                <dt class="col-4 text-truncate">{{ __('Name') }}</dt>
+                                <dd class="col-8 text-truncate">{{ $selectedMedia->name }}</dd>
+                                <dt class="col-4 text-truncate">{{ __('Title') }}</dt>
+                                <dd class="col-8 text-truncate">{{ $selectedMedia->title ?? '-' }}</dd>
+                                <dt class="col-4 text-truncate">{{ __('Description') }}</dt>
+                                <dd class="col-8 text-truncate">{{ $selectedMedia->description ?? '-' }}</dd>
+
+                                <dt class="col-4 text-truncate">{{ __('Size') }}</dt>
+                                <dd class="col-8 text-truncate">{{ '-' }}</dd>
+                                <dt class="col-4 text-truncate">{{ __('Ext') }}</dt>
+                                <dd class="col-8 text-truncate">{{ $selectedMedia->ext ?? '-' }}</dd>
+                            </dl>
+                        </div>
+
+                        @if($selectedMedia->type == \rohsyl\OmegaCore\Models\Media::TYPE_FILE)
+                            <div class="mt-4">
+                                <p class="mb-1 font-weight-bold">{{ __('Preview') }}</p>
+                                @if($selectedMedia->media_type == \rohsyl\OmegaCore\Models\Media::MT_PICTURE)
+                                    <a href="{{ $selectedMedia->url }}" target="_blank">
+                                        <img src="{{ $selectedMedia->url }}" style="max-height: 200px"/>
+                                    </a>
+                                @else
+                                    <a href="{{ $selectedMedia->url }}" target="_blank">
+                                        <i class="fa fa-external-link-alt"></i>
+                                        {{ __('View file') }}
+                                    </a>
+                                @endif
+                            </div>
+                        @endif
 
                     </div>
                 </div>

@@ -2,9 +2,42 @@
 use rohsyl\OmegaCore\Models\Config;
 use rohsyl\OmegaCore\Utils\Common\Facades\OmegaConfig;
 use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
+use rohsyl\OmegaCore\Models\Media;
 
 define('DATEFORMAT', 'Y-m-d');
 define('DATETIMEFORMAT', 'Y-m-d H:i:s');
+
+// Authorized extensions for upload
+// Pictures
+define('AUTHORIZED_PICTURE_TYPE', serialize(array(
+    'jpg',        'jpeg',
+    'png',        'svg',
+    'gif'
+)));
+// Videos
+define('AUTHORIZED_VIDEO_TYPE', serialize(array(
+    'mp4',     'm4v',
+    'mov',     'wmv',
+    'avi',     'mpg'
+)));
+// Audios
+define('AUTHORIZED_AUDIO_TYPE', serialize(array(
+    'mp3',     'm4a',
+    'ogg',     'wav'
+)));
+// Documents
+define('AUTHORIZED_DOCUMENT_TYPE', serialize(array(
+    'pdf',
+    'doc',     'docx',
+    'ppt',     'pptx',
+    'pps',     'ppsx',
+    'xls',     'xlsx',
+    'odt',     'odp',
+    'ods',    'ott'
+)));
+define('AUTHORIZED_OTHER_TYPE', serialize(array(
+
+)));
 
 if (!function_exists('om_config')) {
     /**
@@ -116,5 +149,29 @@ if (! function_exists('labelling_array')) {
         return array_combine($array, array_map(function ($value) use ($label_prefix) {
             return __($label_prefix.$value);
         }, $array));
+    }
+}
+
+if (! function_exists('media_type_by_ext')) {
+    function media_type_by_ext($ext) {
+        if(in_array($ext, unserialize(AUTHORIZED_PICTURE_TYPE))){
+            $file_type = Media::MT_PICTURE;
+        }
+        elseif(in_array($ext, unserialize(AUTHORIZED_VIDEO_TYPE))){
+            $file_type = Media::MT_VIDEO;
+        }
+        elseif(in_array($ext, unserialize(AUTHORIZED_AUDIO_TYPE))){
+            $file_type = Media::MT_MUSIC;
+        }
+        elseif(in_array($ext, unserialize(AUTHORIZED_DOCUMENT_TYPE))){
+            $file_type = Media::MT_DOCUMENT;
+        }
+        elseif(in_array($ext, unserialize(AUTHORIZED_OTHER_TYPE))){
+            $file_type = Media::MT_OTHER;
+        }
+        else {
+            $file_type = null;
+        }
+        return $file_type;
     }
 }
