@@ -20,6 +20,14 @@
     </a>
 </li>
 <li class="nav-item">
+    <a class="sidebar-link {{ request()->is('*/admin/content/media*') ? 'active' : '' }}" href="{{ route('omega.admin.content.media.index') }}">
+        <span class="icon-holder">
+            <i class="c-brown-500 fas fa-images color-gray-dark"></i>
+        </span>
+        <span class="title">{{ __('Media library') }}</span>
+    </a>
+</li>
+<li class="nav-item">
     <a class="sidebar-link {{ request()->is('*/admin/apparence/menus*') ? 'active' : '' }}" href="{{ route('omega.admin.appearance.menus.index') }}">
         <span class="icon-holder">
             <i class="c-blue-500 fas fa-bars color-gray-dark"></i>

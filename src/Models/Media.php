@@ -4,19 +4,26 @@ namespace rohsyl\OmegaCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Omega\Repositories\MediaMetaRepository;
-use Omega\Repositories\MediaRepository;
-use Omega\Facades\Entity;
-use Omega\Utils\Interfaces\InterfaceMediaConstant;
-use Omega\Utils\Path;
-use Omega\Utils\PictureHelper;
-use Omega\Utils\Url;
 
-class Media extends Model implements InterfaceMediaConstant
+class Media extends Model
 {
     use SoftDeletes;
 
     const IMG_404 = 'images/image-not-found.png';
+
+    const TYPE_DIRECTORY = 1;
+    const TYPE_FILE = 2;
+
+    const ROOT_DIRECTORY = 'ROOT';
+    const PUBLIC_DIRECTORY = 'PUBLIC';
+
+
+    public $defaultPermissions = [
+        'owner_permission' => '1',
+        'group_permission' => '1',
+        'other_permission' => '1',
+        'public_permission' => '1',
+    ];
 
     protected $fillable = [
         'parent_id',
@@ -26,109 +33,34 @@ class Media extends Model implements InterfaceMediaConstant
         'path',
         'title',
         'description',
+
+        'is_system',
+
+        'owner_id',
+        'group_id',
+        'owner_permission',
+        'group_permission',
+        'other_permission',
+        'public_permission',
     ];
 
-    private static $mediaRepository;
-    private static $mediaMetaRepository;
-
-    /**
-     * Get an instance of MediaRepository
-     * @return MediaRepository
-     */
-    private static function GetMediaRepository(){
-        if(!isset(self::$mediaRepository)){
-            self::$mediaRepository = new MediaRepository(new Media());
-        }
-        return self::$mediaRepository;
+    public function parent() {
+        return $this->belongsTo(Media::class, 'parent_id');
     }
 
-    /**
-     * Get an instance of MediametaRepository
-     * @return MediaMetaRepository
-     */
-    private static function GetMediaMetaRepository(){
-        if(!isset(self::$mediaMetaRepository)){
-            self::$mediaMetaRepository = new MediaMetaRepository(new MediaMeta());
-        }
-        return self::$mediaMetaRepository;
+    public function children() {
+        return $this->hasMany(Media::class, 'parent_id');
     }
 
-    /**
-     * Get a media by id
-     * @param $id int The Id
-     * @return Media The media
-     */
-    public static function Get($id){
-        return self::GetMediaRepository()->GetMedia($id);
+    public function owner() {
+        return $this->belongsTo(User::class, 'owner_id');
     }
 
-    private $metas = array();
-
-    public function getTitle($lang = null){
-        return $this->getMeta($lang, 'title') ?? $this->title;
+    public function group() {
+        return $this->belongsTo(Group::class);
     }
-
-    public function getDescription($lang = null){
-        return $this->getMeta($lang, 'description') ?? $this->description;
-    }
-
-    public function setTitle($title, $lang = null){
-        $this->setMeta($lang, 'title', $title);
-    }
-
-    public function setDescription($description, $lang = null){
-        $this->setMeta($lang, 'description', $description);
-    }
-
-    private function getMeta($lang, $meta) {
-        if(!isset($lang)){
-            // get active lang
-            $lang = Entity::LangSlug();
-        }
-        if(array_key_exists($lang, $this->metas)){
-            $l = $this->metas[$lang];
-            if(array_key_exists($meta, $l)){
-                return $l[$meta];
-            }
-        }
-        return null;
-    }
-
-    private function setMeta($lang, $meta, $value){
-        if(!isset($lang)){
-            // get active lang
-            $lang = Entity::LangSlug();
-        }
-        $this->metas[$lang][$meta] = $value;
-    }
-
-    public function readInDbMeta(){
-        $metas = self::GetMediametaRepository()->GetAllForMedia($this->id);
-        $this->metas = array();
-        foreach($metas as $meta){
-            $this->metas[$meta->lang] = array(
-                'id' => $meta->id,
-                'title' => $meta->title,
-                'description' => $meta->description
-            );
-        }
-    }
-
-
-    public function saveMeta(){
-        foreach($this->metas as $lang => $meta) {
-            $mm = self::GetMediaMetaRepository()->getOrNew(isset($meta['id']) ? $meta['id'] : null);
-            $mm->lang = $lang;
-            $mm->title = $meta['title'];
-            $mm->description = $meta['description'];
-            $mm->fkMedia = $this->id;
-            $mm->save();
-            $this->metas[$lang]['id'] = $mm->id;
-        }
-    }
-
-
-    public function getThumbnail($w, $h, $returnUrl = true)
+    
+    /*public function getThumbnail($w, $h, $returnUrl = true)
     {
         $fn = basename($this->path);
 
@@ -157,10 +89,6 @@ class Media extends Model implements InterfaceMediaConstant
             PictureHelper::Crop($fp, $newFilePath, $w, $h, 100);
 
         return $returnUrl ? $newFileUrl : $newFilePath;
-    }
-
-    public function getType(){
-        return $this->getTypeByExt();
     }
 
     public function getWidth()
@@ -195,53 +123,10 @@ class Media extends Model implements InterfaceMediaConstant
         return $height;
     }
 
-
-
     public function __toString()
     {
         return '<a href="'.Url::CombAndAbs(url('/'), $this->path).'", target="_blank">Preview</a>';
-    }
+    }*/
 
 
-    public function getFilesize()
-    {
-        return self::GetMediaRepository()->GetMediaSize($this);
-    }
-
-    public function getRealpath()
-    {
-        return self::GetMediaRepository()->GetRealpath($this);
-    }
-
-    public function getChildren($filterType = null){
-
-        $medias = self::GetMediaRepository()->GetMedias($this->id);
-        $m = array();
-        foreach($medias as $media){
-            if($filterType == null || (isset($filterType) && in_array($media->getType(), $filterType))){
-                $m[] = $media;
-            }
-        }
-        return $m;
-    }
-
-    public function getTypeByExt(){
-        return self::GetMediaRepository()->GetType($this);
-    }
-
-    public function getIcon(){
-        return self::GetMediaRepository()->GetIcon($this);
-    }
-
-    public function getMediaSize(){
-        return self::GetMediaRepository()->GetMediaSize($this);
-    }
-
-    public static function Get404Placeholder(){
-        return asset(self::IMG_404);
-    }
-
-    public static function Get404PlaceholderRealPath(){
-        return public_path(self::IMG_404);
-    }
 }

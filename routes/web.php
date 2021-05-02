@@ -42,6 +42,8 @@ Route::group(['middleware' => ['web']], function () {
         Route::group(['middleware' => ['auth', 'om_admin_locale']], function () {
             Route::prefix('admin')->group(function () {
 
+                Route::redirect('/', '/admin/dashboard');
+
                 Route::get('dashboard', [\rohsyl\OmegaCore\Http\Controllers\Admin\Dashboard\DashboardController::class, 'index'])->name('omega.admin.dashboard');
 
                 require __DIR__ . '/admin/content.php';
