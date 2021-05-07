@@ -89,7 +89,6 @@ class InstallController extends Controller
 
         // create omega tables and fill with data
         Artisan::call('migrate');
-        Artisan::call('db:seed');
 
         // set configs in database
         om_config(['om_site_title' => session('install.title')]);
@@ -111,7 +110,7 @@ class InstallController extends Controller
 
         Artisan::call('omega-plugins-bundle:install');
 
-        return redirect(route('omega.admin.dashboard'));
+        return redirect()->route('omega.admin.dashboard');
     }
 
 }

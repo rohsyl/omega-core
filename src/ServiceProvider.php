@@ -73,6 +73,9 @@ class ServiceProvider extends SP
         // load views
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'omega');
 
+        $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'omega');
+
+
         Blade::componentNamespace('rohsyl\\OmegaCore\\Views\\Components', 'omega');
 
         FormBoot::boot();

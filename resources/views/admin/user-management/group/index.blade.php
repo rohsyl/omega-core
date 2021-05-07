@@ -22,6 +22,7 @@
                     <th scope="col">{{ __('Name') }}</th>
                     <th scope="col">{{ __('Users') }}</th>
                     <th scope="col" class="text-center">{{ __('Enabled') }}</th>
+                    <th scope="col" class="text-center">{{ __('System') }}</th>
                     <th scope="col" class="text-right">{{ __('Actions') }}</th>
                 </tr>
                 </thead>
@@ -43,12 +44,21 @@
                                 <i class="fas fa-times-circle color-red-light"></i>
                             @endif
                         </td>
+                        <td class="text-center">
+                            @if ($group->is_system)
+                                <i class="fas fa-check-circle color-blue"></i>
+                            @else
+                                <i class="fas fa-times-circle"></i>
+                            @endif
+                        </td>
                         <td class="text-right">
                             <a href="{{ route('omega.admin.groups.show', $group) }}"><i class="fas fa-eye"></i></a>
                             &nbsp;|&nbsp;
                             <a href="{{ route('omega.admin.groups.edit', $group) }}"><i class="fas fa-edit"></i></a>
+                            @if (!$group->is_system)
                             &nbsp;|&nbsp;
                             {{ Form::odelete(route('omega.admin.groups.destroy', $group), ['class' => 'btn btn-link m-0 pt-0 px-0 pb-1 color-red', 'icon' => 'fas fa-trash']) }}
+                            @endif
                         </td>
                     </tr>
                 @endforeach

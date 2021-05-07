@@ -21,7 +21,7 @@ class GroupController extends Controller
 
     public function store(CreateGroupRequest $request) {
         $group = Group::create($request->validated());
-        return redirect()->route('omega.admin.group.show', $group);
+        return redirect()->route('omega.admin.groups.show', $group);
     }
 
     public function show(Group $group) {
@@ -51,6 +51,10 @@ class GroupController extends Controller
     }
 
     public function destroy(Group $group) {
+        if ($group->is_system) {
+            return redirect()->route('omega.admin.groups.index');
+        }
+
         $group->delete();
         return redirect()->route('omega.admin.groups.index');
     }

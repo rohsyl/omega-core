@@ -7,7 +7,9 @@
 @section('actions')
     <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.groups.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
     <a class="btn btn-outline-primary btn-sm" href="{{ route('omega.admin.groups.edit', $group) }}"><i class="fas fa-edit"></i> {{ __('Edit group') }}</a>
-    {{ Form::odelete(route('omega.admin.groups.destroy', $group), ['class' => 'btn btn-outline-danger btn-sm', 'label' => __('Delete group')]) }}
+    @if (!$group->is_system)
+        {{ Form::odelete(route('omega.admin.groups.destroy', $group), ['class' => 'btn btn-outline-danger btn-sm', 'label' => __('Delete group')]) }}
+    @endif
 @endsection
 
 @section('content')
@@ -21,7 +23,7 @@
 
     <x-oix-card title="Permissions" subtitle="Group permissions.">
         <div style="max-height: 300px; overflow-y: scroll">
-            {{ Form::opermissions('permissions', $permissions, $group, ['readonly' => true]) }}
+            {{ Form::opermissions('permissions', $permissions, $group, ['readonly' => true, 'label_prefix' => 'omega::label.acl_.']) }}
         </div>
     </x-oix-card>
 

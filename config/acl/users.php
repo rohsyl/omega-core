@@ -18,6 +18,17 @@ return [
         'superadmin' => 0,
         'content' => 10,
         'content.page' => 11,
+        'content.medialibrary' => 15,
+        'appearance' => 20,
+        'appearance.menu' => 21,
+        'members' => 30,
+        'members.member' => 31,
+        'members.group' => 32,
+        'plugins' => 40,
+        'usermanagement' => 45,
+        'usermanagement.user' => 46,
+        'usermanagement.group' => 47,
+        'developper' => 50,
     ],
 
     /**

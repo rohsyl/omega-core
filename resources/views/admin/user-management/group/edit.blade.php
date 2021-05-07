@@ -6,7 +6,7 @@
 
 
 @section('actions')
-    <a class="btn btn-outline-primary btn-sm"><i class="fas fa-edit"></i> {{ __('Edit users') }}</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.groups.show', $group) }}"><i class="fas fa-arrow-left"></i> Back</a>
 @endsection
 
 @section('content')
@@ -16,8 +16,8 @@
 
     <x-oix-card title="Group" subtitle="Edit group informations.">
 
-        {{ Form::otext('name', $group->name, ['label' => __('Name')]) }}
-        {{ Form::otext('description', $group->description, ['label' => __('Description')]) }}
+        {{ Form::otext('name', $group->name, ['label' => __('Name'), 'readonly' => $group->is_system]) }}
+        {{ Form::otext('description', $group->description, ['label' => __('Description'), 'readonly' => $group->is_system]) }}
         {{ Form::ocheckbox('is_enabled', $group->is_enabled, ['label' => __('Enable group?')]) }}
     </x-oix-card>
 
