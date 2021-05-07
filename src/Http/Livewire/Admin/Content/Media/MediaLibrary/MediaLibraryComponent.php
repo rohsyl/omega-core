@@ -79,6 +79,8 @@ class MediaLibraryComponent extends LivewireComponent
     }
 
     public function selectMedia($media_id = null) {
+        $this->closeCreateDirectoryForm();
+        $this->closeUploadForm();
         if(!isset($media_id)) {
             $this->selectedMedia = null;
         }
@@ -93,6 +95,7 @@ class MediaLibraryComponent extends LivewireComponent
     public $showUploadForm = false;
     public function showUploadForm() {
         $this->selectMedia(null);
+        $this->closeCreateDirectoryForm();
         $this->showUploadForm = true;
     }
     public function closeUploadForm() {
@@ -109,5 +112,33 @@ class MediaLibraryComponent extends LivewireComponent
     public function deleteFile() {
         $this->selectedMedia->delete();
         $this->refresh();
+    }
+
+    public $showCreateDirectoryForm = false;
+    public $directory_name;
+    public function showCreateDirectoryForm() {
+        $this->selectMedia(null);
+        $this->closeUploadForm();
+        $this->showCreateDirectoryForm = true;
+    }
+    public function createDirectory() {
+        $inputs = $this->validate([
+            'directory_name' => 'required|string',
+        ]);
+
+        Media::create([
+            'parent_id' => $this->media->id,
+            'owner_id' => auth()->id(),
+            'type' => Media::TYPE_DIRECTORY,
+            'name' => $inputs['directory_name'],
+            'title' => $inputs['directory_name'],
+        ]);
+
+        $this->closeCreateDirectoryForm();
+        $this->directory_name = null;
+        $this->refresh();
+    }
+    public function closeCreateDirectoryForm() {
+        $this->showCreateDirectoryForm = false;
     }
 }

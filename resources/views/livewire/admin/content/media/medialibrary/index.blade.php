@@ -20,7 +20,7 @@
                 <i class="fas fa-arrow-left"></i> {{ __('Back') }}
             </a>
         @endif
-        <a href="#" class="btn btn-outline-secondary btn-sm">
+        <a href="#" class="btn btn-outline-secondary btn-sm" wire:click="showCreateDirectoryForm">
             <i class="fas fa-folder-plus"></i>
             {{ __('Create directory') }}
         </a>
@@ -63,11 +63,40 @@
         </div>
         <div class="col-md-4">
 
-            @if($this->showUploadForm)
+            @if($showUploadForm)
 
                 <div class="card">
                     <div class="card-body">
                         <livewire:omega_media-fileuploader :media="$media"/>
+                    </div>
+                </div>
+
+            @endif
+
+            @if($showCreateDirectoryForm)
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <i class="fas fa-folder-plus"></i>
+                                {{ __('Create directory') }}
+                            </div>
+                            <a href="#" wire:click="closeCreateDirectoryForm" class="btn btn-link btn-sm p-0 m-0">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </div>
+                        <hr />
+                        {{ Form::otext('directory_name', null, ['label' => 'Directory', 'wire:model.defer' => 'directory_name', 'wire:target' => 'createDirectory', 'wire:loading.attr' => 'readonly']) }}
+                        <button type="button" class="btn btn-primary"
+                                wire:click="createDirectory"
+                                wire:loading.attr="disabled"
+                                wire:target="createDirectory">
+                            <span wire:loading wire:target="createDirectory">
+                                <i class="fas fa-spinner fa-spin"></i>
+                            </span>
+                            {{ __('Create') }}
+                        </button>
                     </div>
                 </div>
 
