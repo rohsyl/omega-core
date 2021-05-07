@@ -117,7 +117,9 @@
                             </a>
                         </div>
                         <hr />
-                        {{ Form::otext('selectedMedia.name', $selectedMedia->name, ['label' => 'Name', 'wire:model.defer' => 'selectedMedia.name', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
+                        @if($selectedMedia->name !== 'PUBLIC')
+                            {{ Form::otext('selectedMedia.name', $selectedMedia->name, ['label' => 'Name', 'wire:model.defer' => 'selectedMedia.name', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
+                        @endif
                         {{ Form::otext('selectedMedia.title', $selectedMedia->title, ['label' => 'Title', 'wire:model.defer' => 'selectedMedia.title', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
                         {{ Form::otext('selectedMedia.description', $selectedMedia->description, ['label' => 'Description', 'wire:model.defer' => 'selectedMedia.description', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
 

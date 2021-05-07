@@ -24,7 +24,7 @@ class MediaLibraryComponent extends LivewireComponent
 
 
     protected $rules = [
-        'selectedMedia.name' => 'required|string',
+        'selectedMedia.name' => 'sometimes|required|string',
         'selectedMedia.title' => 'required|string',
         'selectedMedia.description' => 'nullable|string',
     ];
@@ -167,6 +167,10 @@ class MediaLibraryComponent extends LivewireComponent
         ]);
 
         $inputs['selectedMedia']['name'] = Str::slug($inputs['selectedMedia']['name'], '_');
+
+        if($this->selectedMedia->name == 'PUBLIC') {
+            unset($inputs['selectedMedia']['name']);
+        }
 
         $this->selectedMedia->update($inputs['selectedMedia']);
         $this->closeEditForm();
