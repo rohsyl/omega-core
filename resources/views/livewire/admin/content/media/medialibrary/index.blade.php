@@ -102,7 +102,40 @@
 
             @endif
 
-            @if(isset($selectedMedia))
+
+            @if($showEditForm)
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <i class="fas fa-edit"></i>
+                                {{ __('Edit media') }}
+                            </div>
+                            <a href="#" wire:click="closeEditForm" class="btn btn-link btn-sm p-0 m-0">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        </div>
+                        <hr />
+                        {{ Form::otext('selectedMedia.name', $selectedMedia->name, ['label' => 'Name', 'wire:model.defer' => 'selectedMedia.name', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
+                        {{ Form::otext('selectedMedia.title', $selectedMedia->title, ['label' => 'Title', 'wire:model.defer' => 'selectedMedia.title', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
+                        {{ Form::otext('selectedMedia.description', $selectedMedia->description, ['label' => 'Description', 'wire:model.defer' => 'selectedMedia.description', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
+
+                        <button type="button" class="btn btn-primary"
+                                wire:click="editMedia"
+                                wire:loading.attr="disabled"
+                                wire:target="editMedia">
+                        <span wire:loading wire:target="editMedia">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </span>
+                            {{ __('Update') }}
+                        </button>
+                    </div>
+                </div>
+
+            @endif
+
+            @if(isset($selectedMedia) && !$showEditForm)
 
                 <div class="card">
                     <div class="card-body">
@@ -119,7 +152,7 @@
                         <hr />
 
                         <div>
-                            <a href="#" class="btn btn-outline-secondary btn-sm">
+                            <a href="#" class="btn btn-outline-secondary btn-sm" wire:click="showEditForm">
                                 <i class="fas fa-pen"></i>
                                 {{ __('Edit') }}
                             </a>

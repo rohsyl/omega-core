@@ -3,6 +3,7 @@
 
 namespace rohsyl\OmegaCore\Http\Livewire\Admin\Content\Media\MediaLibrary;
 
+use Illuminate\Support\Str;
 use Livewire\Component as LivewireComponent;
 use rohsyl\OmegaCore\Models\Media;
 
@@ -20,6 +21,13 @@ class MediaLibraryComponent extends LivewireComponent
 
     public $selectedMedia = null;
     public $selecteds = [];
+
+
+    protected $rules = [
+        'selectedMedia.name' => 'required|string',
+        'selectedMedia.title' => 'required|string',
+        'selectedMedia.description' => 'nullable|string',
+    ];
 
     public function mount() {
         $this->loadDirectory();
@@ -81,6 +89,7 @@ class MediaLibraryComponent extends LivewireComponent
     public function selectMedia($media_id = null) {
         $this->closeCreateDirectoryForm();
         $this->closeUploadForm();
+        $this->closeEditForm();
         if(!isset($media_id)) {
             $this->selectedMedia = null;
         }
@@ -96,6 +105,7 @@ class MediaLibraryComponent extends LivewireComponent
     public function showUploadForm() {
         $this->selectMedia(null);
         $this->closeCreateDirectoryForm();
+        $this->closeEditForm();
         $this->showUploadForm = true;
     }
     public function closeUploadForm() {
@@ -119,6 +129,7 @@ class MediaLibraryComponent extends LivewireComponent
     public function showCreateDirectoryForm() {
         $this->selectMedia(null);
         $this->closeUploadForm();
+        $this->closeEditForm();
         $this->showCreateDirectoryForm = true;
     }
     public function createDirectory() {
@@ -140,5 +151,28 @@ class MediaLibraryComponent extends LivewireComponent
     }
     public function closeCreateDirectoryForm() {
         $this->showCreateDirectoryForm = false;
+    }
+
+    public $showEditForm = false;
+    public function showEditForm() {
+        $this->closeUploadForm();
+        $this->closeCreateDirectoryForm();
+        $this->showEditForm = true;
+    }
+    public function editMedia() {
+        $inputs = $this->validate(null, null, [
+            'selectedMedia.name',
+            'selectedMedia.title',
+            'selectedMedia.description',
+        ]);
+
+        $inputs['selectedMedia']['name'] = Str::slug($inputs['selectedMedia']['name'], '_');
+
+        $this->selectedMedia->update($inputs['selectedMedia']);
+        $this->closeEditForm();
+        $this->refresh();
+    }
+    public function closeEditForm() {
+        $this->showEditForm = false;
     }
 }

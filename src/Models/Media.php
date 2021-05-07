@@ -61,6 +61,7 @@ class Media extends Model
     public function children() {
         return $this->hasMany(Media::class, 'parent_id')
             ->orderBy('type')
+            ->orderBy('title')
             ->orderBy('name');
     }
 
