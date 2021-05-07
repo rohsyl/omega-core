@@ -117,9 +117,7 @@
                             </a>
                         </div>
                         <hr />
-                        @if($selectedMedia->name !== 'PUBLIC')
-                            {{ Form::otext('selectedMedia.name', $selectedMedia->name, ['label' => 'Name', 'wire:model.defer' => 'selectedMedia.name', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
-                        @endif
+                        {{ Form::otext('selectedMedia.name', $selectedMedia->name, ['label' => 'Name', 'wire:model.defer' => 'selectedMedia.name', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
                         {{ Form::otext('selectedMedia.title', $selectedMedia->title, ['label' => 'Title', 'wire:model.defer' => 'selectedMedia.title', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
                         {{ Form::otext('selectedMedia.description', $selectedMedia->description, ['label' => 'Description', 'wire:model.defer' => 'selectedMedia.description', 'wire:target' => 'editMedia', 'wire:loading.attr' => 'readonly']) }}
 
@@ -154,18 +152,20 @@
                         <hr />
 
                         <div>
-                            <a href="#" class="btn btn-outline-secondary btn-sm" wire:click="showEditForm">
-                                <i class="fas fa-pen"></i>
-                                {{ __('Edit') }}
-                            </a>
-                            <a href="{{ $selectedMedia->url_download }}" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-download"></i>
-                                {{ __('Download') }}
-                            </a>
-                            <a href="#" class="btn btn-outline-danger btn-sm" wire:click="deleteFile">
-                                <i class="fas fa-trash"></i>
-                                {{ __('Delete') }}
-                            </a>
+                            @if($selectedMedia->name !== 'PUBLIC')
+                                <a href="#" class="btn btn-outline-secondary btn-sm" wire:click="showEditForm">
+                                    <i class="fas fa-pen"></i>
+                                    {{ __('Edit') }}
+                                </a>
+                                <a href="{{ $selectedMedia->url_download }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-download"></i>
+                                    {{ __('Download') }}
+                                </a>
+                                <a href="#" class="btn btn-outline-danger btn-sm" wire:click="deleteFile">
+                                    <i class="fas fa-trash"></i>
+                                    {{ __('Delete') }}
+                                </a>
+                            @endif
                         </div>
 
                         <div class="mt-4">

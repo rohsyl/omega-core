@@ -24,7 +24,7 @@ class MediaLibraryComponent extends LivewireComponent
 
 
     protected $rules = [
-        'selectedMedia.name' => 'sometimes|required|string',
+        'selectedMedia.name' => 'sometimes|required|string|not_in:ROOT,PUBLIC',
         'selectedMedia.title' => 'required|string',
         'selectedMedia.description' => 'nullable|string',
     ];
@@ -134,7 +134,7 @@ class MediaLibraryComponent extends LivewireComponent
     }
     public function createDirectory() {
         $inputs = $this->validate([
-            'directory_name' => 'required|string',
+            'directory_name' => 'required|string|not_in:ROOT,PUBLIC',
         ]);
 
         Media::create([
@@ -167,10 +167,6 @@ class MediaLibraryComponent extends LivewireComponent
         ]);
 
         $inputs['selectedMedia']['name'] = Str::slug($inputs['selectedMedia']['name'], '_');
-
-        if($this->selectedMedia->name == 'PUBLIC') {
-            unset($inputs['selectedMedia']['name']);
-        }
 
         $this->selectedMedia->update($inputs['selectedMedia']);
         $this->closeEditForm();
