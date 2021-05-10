@@ -46,6 +46,14 @@ return [
         'enabled' => true,
 
         /**
+         * Login field
+         * Possible values :
+         *  - email
+         *  - username
+         */
+        'login_field' => 'email',
+
+        /**
          * You can custom redirect url for the member module here.
          */
         'login_redirect_url' => '/module/member/profile',
