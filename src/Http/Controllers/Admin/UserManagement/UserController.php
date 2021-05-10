@@ -23,9 +23,10 @@ class UserController extends Controller
 
     public function store(CreateUserRequest $request) {
         $inputs = $request->validated();
-        $inputs['password'] = Hash::make($request->input('password'));
         $inputs['is_disabled'] = !($inputs['is_enabled'] ?? true);
-        $user = User::create($inputs);
+        $user = new User($inputs);
+        $user->password = Hash::make($request->input('password'));
+        $user->save();
 
         return redirect()->route('omega.admin.users.show', $user);
     }
