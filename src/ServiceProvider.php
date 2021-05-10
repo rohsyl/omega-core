@@ -34,21 +34,21 @@ class ServiceProvider extends SP
     public const DASHBOARD = '/admin/dashboard';
     public const LOGIN = '/admin/login';
 
-    public function __construct($app)
-    {
-        parent::__construct($app);
-    }
-
     public function boot() {
 
         if ($this->app->runningInConsole()) {
+            // command only callable in console
             $this->commands([
-                VendorPublishCommand::class,
-                PluginInstallCommand::class,
-                PublishThemeCommand::class,
-                InstallThemeCommand::class,
             ]);
         }
+        // command callable in console and web
+        $this->commands([
+            VendorPublishCommand::class,
+            PluginInstallCommand::class,
+            PublishThemeCommand::class,
+            InstallThemeCommand::class,
+        ]);
+
 
         $this->publishes([
             __DIR__.'/../config/omega.php' => config_path('omega.php'),
