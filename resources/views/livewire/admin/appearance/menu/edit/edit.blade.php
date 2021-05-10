@@ -91,7 +91,7 @@
                 <div class="col-md-6">
                     @if(isset($editedMenuItem))
                         <div class="border py-2 px-3">
-                            <label>{{ __('Label') }}</label>
+                            <label>{{ __('Title') }}</label>
                             <input type="text"
                                    class="form-control mb-2"
                                    value="{{ $editedMenuItem->label }}"
