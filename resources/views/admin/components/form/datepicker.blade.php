@@ -35,16 +35,55 @@
                 minYear: 1901,
                 maxYear: parseInt(moment().add(10, 'years').format('YYYY'), 10),
                 //autoUpdateInput: false,
-                ranges: {
-                    'Last Year': [moment().startOf('year'), moment().startOf('year')],
-                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').startOf('month')],
-                    'Today': [moment()],
-                    'Next Month': [moment().add(1, 'month').startOf('month'), moment().add(1, 'month').startOf('month')],
-                    'Next Year': [moment().add(1, 'year').startOf('year'), moment().add(1, 'year').startOf('year')]
-                },
+                @isset($attributes['range'])
+                    @if ($attributes['range'] == 'Today')
+                        ranges: {
+                            '{{ __('omega::component.date_picker.Today') }}': [moment()],
+                        },
+                    @elseif ($attributes['range'] == 'Month')
+                        ranges: {
+                            '{{ __('omega::component.date_picker.Last Month') }}': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').startOf('month')],
+                            '{{ __('omega::component.date_picker.Today') }}': [moment()],
+                            '{{ __('omega::component.date_picker.Next Month') }}': [moment().add(1, 'month').startOf('month'), moment().add(1, 'month').startOf('month')]
+                        },
+                    @endif
+                @else
+                    ranges: {
+                        '{{ __('omega::component.date_picker.Last Year') }}': [moment().startOf('year'), moment().startOf('year')],
+                        '{{ __('omega::component.date_picker.Last Month') }}': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').startOf('month')],
+                        '{{ __('omega::component.date_picker.Today') }}': [moment()],
+                        '{{ __('omega::component.date_picker.Next Month') }}': [moment().add(1, 'month').startOf('month'), moment().add(1, 'month').startOf('month')],
+                        '{{ __('omega::component.date_picker.Next Year') }}': [moment().add(1, 'year').startOf('year'), moment().add(1, 'year').startOf('year')]
+                    },
+                @endif
                 locale: {
-                    cancelLabel: 'Clear',
+                    cancelLabel: '{{ __('omega::misc.button.Clear') }}',
+                    applyLabel: '{{ __('omega::misc.button.Apply') }}',
                     format: 'DD.MM.YYYY',
+                    daysOfWeek: [
+                        '{{ __('omega::misc.datetime.Su') }}',
+                        '{{ __('omega::misc.datetime.Mo') }}',
+                        '{{ __('omega::misc.datetime.Tu') }}',
+                        '{{ __('omega::misc.datetime.We') }}',
+                        '{{ __('omega::misc.datetime.Th') }}',
+                        '{{ __('omega::misc.datetime.Fr') }}',
+                        '{{ __('omega::misc.datetime.Sa') }}',
+                    ],
+                    monthNames: [
+                        '{{ __('omega::misc.datetime.January') }}',
+                        '{{ __('omega::misc.datetime.February') }}',
+                        '{{ __('omega::misc.datetime.March') }}',
+                        '{{ __('omega::misc.datetime.April') }}',
+                        '{{ __('omega::misc.datetime.May') }}',
+                        '{{ __('omega::misc.datetime.June') }}',
+                        '{{ __('omega::misc.datetime.July') }}',
+                        '{{ __('omega::misc.datetime.August') }}',
+                        '{{ __('omega::misc.datetime.September') }}',
+                        '{{ __('omega::misc.datetime.October') }}',
+                        '{{ __('omega::misc.datetime.November') }}',
+                        '{{ __('omega::misc.datetime.December') }}',
+                    ],
+                    firstDay: 1
                 },
                 showCustomRangeLabel: false
             }, function (start, end, label) {
