@@ -10,7 +10,6 @@
 
     @yield('content')
 
-    <script src="/vendor/omega/js/app.js'"></script>
 
     <!-- Global js content -->
 

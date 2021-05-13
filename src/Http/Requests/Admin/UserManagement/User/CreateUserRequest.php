@@ -29,8 +29,8 @@ class CreateUserRequest extends FormRequest
             'email' => 'required|email|string',
             'fullname' => 'required|string',
             'is_enabled' => 'nullable|boolean',
-            'password' => 'required',
-            'repeat_password' => 'required|same:password',
+            'password' => 'required|string',
+            'repeat_password' => 'required|string|same:password',
         ];
     }
 }
