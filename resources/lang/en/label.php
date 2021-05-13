@@ -15,5 +15,7 @@ return [
        'usermanagement_user' => 'User',
        'usermanagement_group' => 'Group',
        'developper' => 'Developper',
-    ]
+    ],
+
+    'username' => 'Username',
 ];
