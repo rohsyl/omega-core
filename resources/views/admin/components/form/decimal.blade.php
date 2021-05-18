@@ -8,7 +8,7 @@
                 <span class="input-group-text" id="basic-addon1">{{ $attributes['prepend']   }}</span>
             </div>
         @endif
-        {{ Form::number($name, old($name) ?? $value, array_merge(['step'=>0.01,'class' => 'form-control ' . (isset($errors) && $errors->has($name) ? 'is-invalid' : '')])) }}
+        {{ Form::number($name, old($name) ?? $value, array_merge(['step'=> $attributes['step'] ?? 0.01,'class' => 'form-control ' . (isset($errors) && $errors->has($name) ? 'is-invalid' : '')])) }}
         @if (isset($attributes['append']))
             <div class="input-group-append">
                 <span class="input-group-text" id="basic-addon1">{{ $attributes['append'] }}</span>
