@@ -29,10 +29,20 @@ class LoginRequest extends FormRequest
      */
     public function rules()
     {
-        return [
-            'email' => 'required|email|string',
-            'password' => 'required|string',
-        ];
+
+        $rules = [];
+
+        $field = config('omega.member.login_field');
+        if($field == 'email') {
+            $rules['email'] = 'required|email|string';
+        }
+        else {
+            $rules[$field] = 'required|string';
+        }
+
+        $rules['password'] = 'required|string';
+
+        return $rules;
     }
 
     /**
@@ -46,12 +56,13 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::guard('member')->attempt($this->only('email', 'password'), $this->filled('remember'))) {
+        $field = config('omega.member.login_field');
+        if (! Auth::guard('member')->attempt($this->only($field, 'password'), $this->filled('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
 
             throw ValidationException::withMessages([
-                'email' => __('auth.failed'),
+                $field => __('auth.failed'),
             ]);
         }
 

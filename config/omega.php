@@ -46,12 +46,10 @@ return [
         'enabled' => true,
 
         /**
-         * Login field
-         * Possible values :
-         *  - email
-         *  - username
+         * members table field used for the auth
+         * email, username
          */
-        'login_field' => 'email',
+        'login_field' => 'username',
 
         /**
          * You can custom redirect url for the member module here.

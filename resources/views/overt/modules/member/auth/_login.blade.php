@@ -10,22 +10,42 @@
                     <form method="POST" action="{{ route('overt.module.member.login') }}">
                         @csrf
 
-                        <div class="form-group row">
-                            <label for="email"
-                                   class="col-md-4 col-form-label text-md-right">{{ __('E-Mail Address') }}</label>
 
-                            <div class="col-md-6">
-                                <input id="email" type="email"
-                                       class="form-control @error('email') is-invalid @enderror" name="email"
-                                       value="{{ old('email') }}" required autocomplete="email" autofocus>
+                        @if($loginField == 'email')
+                            <div class="form-group row">
+                                <label for="email"
+                                       class="col-md-4 col-form-label text-md-right">{{ __('E-Mail Address') }}</label>
 
-                                @error('email')
-                                <span class="invalid-feedback" role="alert">
+                                <div class="col-md-6">
+                                    <input id="email" type="email"
+                                           class="form-control @error('email') is-invalid @enderror" name="email"
+                                           value="{{ old('email') }}" required autocomplete="email" autofocus>
+
+                                    @error('email')
+                                    <span class="invalid-feedback" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
+                        @else
+                            <div class="form-group row">
+                                <label for="{{ $loginField }}"
+                                       class="col-md-4 col-form-label text-md-right">{{ __('omega::label.'.$loginField) }}</label>
+
+                                <div class="col-md-6">
+                                    <input id="email" type="text"
+                                           class="form-control @error($loginField) is-invalid @enderror" name="{{ $loginField }}"
+                                           value="{{ old($loginField) }}" required autocomplete="{{ $loginField }}" autofocus>
+
+                                    @error($loginField)
+                                    <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
                                     </span>
-                                @enderror
+                                    @enderror
+                                </div>
                             </div>
-                        </div>
+                        @endif
 
                         <div class="form-group row">
                             <label for="password"

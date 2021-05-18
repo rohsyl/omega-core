@@ -19,8 +19,9 @@ class AuthenticatedSessionController extends Controller
      */
     public function create()
     {
+        $loginField = config('omega.member.login_field');
         return Page::get()
-            ->withView('omega::overt.modules.member.auth._login')
+            ->withView('omega::overt.modules.member.auth._login', compact('loginField'))
             ->withPageMeta([
                 'title'     => __('Member'),
                 'subtitle'  => __('Login'),
