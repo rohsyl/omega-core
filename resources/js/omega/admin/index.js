@@ -1,5 +1,4 @@
 
-
 $(function () {
     $('.destroy button').click(function (e, from) {
         if (from == null) {  // user clicked it!
