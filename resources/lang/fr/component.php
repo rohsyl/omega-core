@@ -8,4 +8,10 @@ return [
         'Next Month' => 'Mois prochain',
         'Next Year' => 'Année prochaine',
     ],
+
+    'swal' => [
+        'Are you sure?' => 'Êtes vous sûr?',
+        'You wont be able to revert this!' => 'Vous ne pourrez pas revenir en arrière!',
+    ]
+    
 ];

@@ -8,4 +8,10 @@ return [
         'Next Month' => 'Next Month',
         'Next Year' => 'Next Year',
     ],
+
+
+    'swal' => [
+        'Are you sure?' => 'Are you sure?',
+        'You wont be able to revert this!' => 'You wont be able to revert this!',
+    ]
 ];

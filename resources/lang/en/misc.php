@@ -26,11 +26,6 @@ return [
     'button' => [
         'Clear' => 'Clear',
         'Apply' => 'Apply',
-    ],
-
-    'swal' => [
-        'Are you sure?' => 'Are you sure?',
-        'You wont be able to revert this!' => 'You wont be able to revert this!',
     ]
 
 ];
