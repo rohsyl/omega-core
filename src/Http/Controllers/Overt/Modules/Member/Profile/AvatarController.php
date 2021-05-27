@@ -36,7 +36,7 @@ class AvatarController extends Controller
             $path, $filename, 'public'
         );
 
-        $member->avatar = $path;
+        $member->avatar = 'storage/' . $path;
         $member->save();
 
         return redirect()->route('overt.module.member.profile');
