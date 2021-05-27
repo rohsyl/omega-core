@@ -108,4 +108,8 @@ class ThemeManager
 
         return $files;
     }
+
+    public function getName() {
+        return $this->getRegister()->getName();
+    }
 }

@@ -10,6 +10,7 @@ use rohsyl\OmegaCore\Models\Page;
 use rohsyl\OmegaCore\Models\PluginForm;
 use rohsyl\OmegaCore\Models\Component;
 use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
+use rohsyl\OmegaCore\Utils\Common\Facades\WidgetArea;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Type\Type;
 use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 
@@ -22,9 +23,10 @@ class EditPageComponent extends LivewireComponent
      */
     public $page;
 
-    /**
-     * TODO:
-     */
+    public $tab = 'content';
+
+    protected $queryString = ['tab'];
+
     public $pages = [];
     public $models = [];
     public $menus = [];
@@ -33,9 +35,11 @@ class EditPageComponent extends LivewireComponent
     public $pageModels = [];
     public $pageMenus = [];
 
+    public $widgetAreas;
 
     public function mount() {
-
+        $this->tab = request()->has('tab') ? request()->input('tab') : 'content';
+        $this->widgetAreas = WidgetArea::getAll();
     }
 
     public function render() {
@@ -118,9 +122,25 @@ class EditPageComponent extends LivewireComponent
         $this->page->load('components');
         $this->hideAddComponentForm();
     }
-
     public function deleteComponent($component_id) {
         Component::destroy($component_id);
         $this->page->load('components');
+    }
+
+    public function setTab($tab) {
+        $this->tab = $tab;
+    }
+
+    public $creatableWidgetPluginForms;
+    public $showAddWidgetForm = false;
+    public function showAddWidgetForm($widgetAreaId) {
+        $this->showAddWidgetForm = true;
+        $this->creatableWidgetPluginForms = PluginForm::query()->where('widgetable', true)->get();
+    }
+    public function hideAddWidgetForm() {
+        $this->showAddWidgetForm = false;
+    }
+    public function createWidget() {
+
     }
 }
