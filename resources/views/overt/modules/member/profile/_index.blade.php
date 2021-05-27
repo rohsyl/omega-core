@@ -1,5 +1,8 @@
 
 <div class="text-right">
+    <a href="{{ route('overt.module.member.profile.avatar') }}" class="btn btn-sm btn-outline-primary">
+        <i class="fas fa-user-circle"></i> {{ __('Change avatar') }}
+    </a>
     <a href="{{ route('overt.module.member.profile.password') }}" class="btn btn-sm btn-outline-dark">
         <i class="fas fa-key"></i> {{ __('Change password') }}
     </a>
