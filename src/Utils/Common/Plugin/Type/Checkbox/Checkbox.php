@@ -10,8 +10,8 @@ class Checkbox extends TypeEntry {
         $param = $this->getParam();
         $uid = $this->getUniqId();
         $v = $this->getValue();
-
-        $html = '<br><input class=" " type="checkbox" name="'.$uid.'" '. $param["checked"] ? 'checked' : '' . '" id="'.$uid.'">';
+        $checkboxValue = $param["checked"] ? 'checked="true"' : '';
+        $html = '<br><input class="" type="checkbox" name="'.$uid.'" '. $checkboxValue . '" id="'.$uid.'">';
 
         return $html;
     }
