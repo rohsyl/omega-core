@@ -10,14 +10,9 @@ class Checkbox extends TypeEntry {
         $param = $this->getParam();
         $uid = $this->getUniqId();
         $v = $this->getValue();
-        $checked = $param["checked"] ?? false;
 
-        $html = '<div class="form-group">';
-        $html .= '<input class="form-check-input" type="checkbox" name="'.$uid.'" checked="'.$checked.'" id="'.$uid.'">';
-        $html .= '<label for="'.$uid.'" class="form-check-label">
-                      '.$v.'
-                  </label>';
-        $html .= '</div>';
+        $html = '<br><input class=" " type="checkbox" name="'.$uid.'" '. $param["checked"] ? 'checked' : '' . '" id="'.$uid.'">';
+
         return $html;
     }
 
