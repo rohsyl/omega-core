@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider as SP;
 use rohsyl\LaravelAcl\ServiceProvider as LaravelAclServiceProvider;
 use rohsyl\OmegaCore\Utils\Common\Command\VendorPublishCommand;
+use rohsyl\OmegaCore\Utils\Common\Widget\WidgetAreaManager;
 use rohsyl\OmegaPlugin\Bundle\ServiceProvider as PluginsBundleServiceProvider;
 use rohsyl\OmegaCore\Http\Middleware\AdminLocale;
 use rohsyl\OmegaCore\Http\Middleware\OmegaIsInstalled;
@@ -138,6 +139,10 @@ class ServiceProvider extends SP
 
         $this->app->bind('omega:member', function () {
             return new MemberManager();
+        });
+
+        $this->app->bind('omega:widgetarea', function () {
+            return new WidgetAreaManager();
         });
     }
 

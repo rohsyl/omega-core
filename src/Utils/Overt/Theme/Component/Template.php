@@ -17,6 +17,14 @@ class Template
     }
 
     /**
+     * @return mixed
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    /**
      * Register a component template view
      * @param $pluginName string The name of the plugin
      * @param $viewName string The name of the view in the plugin view directory (the name without the extentions)

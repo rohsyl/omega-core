@@ -35,20 +35,20 @@
 
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <a class="nav-link active" id="content-tab" data-toggle="tab" href="#content" role="tab" aria-controls="content" aria-selected="true">{{ __('Content') }}</a>
+                <a class="nav-link @if($tab == 'content') active @endif" wire:click="setTab('content')" id="content-tab" data-toggle="tab" href="#content" role="tab" aria-controls="content">{{ __('Content') }}</a>
             </li>
             <li class="nav-item" role="presentation">
-                <a class="nav-link" id="settings-tab" data-toggle="tab" href="#settings" role="tab" aria-controls="settings" aria-selected="false">{{ __('Settings') }}</a>
+                <a class="nav-link @if($tab == 'settings') active @endif" wire:click="setTab('settings')" id="settings-tab" data-toggle="tab" href="#settings" role="tab" aria-controls="settings">{{ __('Settings') }}</a>
             </li>
             <li class="nav-item" role="presentation">
-                <a class="nav-link" id="widgetarea-tab" data-toggle="tab" href="#widgetarea" role="tab" aria-controls="widgetarea" aria-selected="false">{{ __('Widget area') }}</a>
+                <a class="nav-link @if($tab == 'widgetarea') active @endif" wire:click="setTab('widgetarea')" id="widgetarea-tab" data-toggle="tab" href="#widgetarea" role="tab" aria-controls="widgetarea">{{ __('Widget area') }}</a>
             </li>
             <li class="nav-item" role="presentation">
-                <a class="nav-link" id="security-tab" data-toggle="tab" href="#security" role="tab" aria-controls="security" aria-selected="false">{{ __('Security') }}</a>
+                <a class="nav-link @if($tab == 'security') active @endif" wire:click="setTab('security')" id="security-tab" data-toggle="tab" href="#security" role="tab" aria-controls="security">{{ __('Security') }}</a>
             </li>
         </ul>
         <div class="tab-content" id="myTabContent">
-            <div class="tab-pane fade show active" id="content" role="tabpanel" aria-labelledby="content-tab">
+            <div class="tab-pane fade @if($tab == 'content') show active @endif" id="content" role="tabpanel" aria-labelledby="content-tab">
 
                 <div class="row">
                     <div class="col-md-8">
@@ -57,7 +57,7 @@
                             <div class="card" id="{{ $form['id'] }}-{{ $form['name'] }}">
                                 <div class="card-header p-10 d-flex justify-content-between">
                                     <div>
-                                        {{ $form['name'] }}
+                                        {{ \Illuminate\Support\Str::title($form['name']) }}
                                     </div>
                                     <div>
                                         <a class="text-danger" href="#" wire:click="deleteComponent({{ $form['id'] }})"><i class="fas fa-trash"></i></a>
@@ -100,6 +100,7 @@
 
                                         <div class="mt-4 text-right">
                                             <button class="btn btn-outline-secondary btn-sm"
+                                                    type="button"
                                                     wire:click="hideAddComponentForm"
                                                     wire:target="hideAddComponentForm"
                                                     wire:loading.attr="disabled"
@@ -116,7 +117,7 @@
                 </div>
 
             </div>
-            <div class="tab-pane fade" id="settings" role="tabpanel" aria-labelledby="settings-tab">
+            <div class="tab-pane fade @if($tab == 'settings') show active @endif" id="settings" role="tabpanel" aria-labelledby="settings-tab">
 
                 <div class="card">
                     <div class="card-body">
@@ -168,9 +169,9 @@
 
                         {{ Form::otext('slug', $page->slug, ['label' => __('Slug'), 'helper' => __('The slug is used in the URL')]) }}
 
-                        {{ Form::oselect('parent_id', $pageParents, $page->parent_id, ['label' => __('Parent'), 'helper' => __('Define the parent of this page to organize your hierarchy.')]) }}
-                        {{ Form::oselect('model', $pageModels, $page->model, ['label' => __('Model'), 'helper' => __('Define an alternative page template for this page.')]) }}
-                        {{ Form::oselect('menu_id', $pageMenus, $page->menu_id, ['label' => __('Menu'), 'helper' => __('Define the menu to use on this page.')]) }}
+                        {{ Form::oselect('parent_id', $pageParents, $page->parent_id, ['label' => __('Parent'), 'helper' => __('Define the parent of this page to organize your hierarchy.'), 'class' => 'form-control']) }}
+                        {{ Form::oselect('model', $pageModels, $page->model, ['label' => __('Model'), 'helper' => __('Define an alternative page template for this page.'), 'class' => 'form-control']) }}
+                        {{ Form::oselect('menu_id', $pageMenus, $page->menu_id, ['label' => __('Menu'), 'helper' => __('Define the menu to use on this page.'), 'class' => 'form-control']) }}
 
 
                         {{ Form::otext('keyword', $page->keyword, ['label' => __('Keywords'), 'helper' => __('Keywords for this page.')]) }}
@@ -178,8 +179,71 @@
                 </div>
 
             </div>
-            <div class="tab-pane fade" id="widgetarea" role="tabpanel" aria-labelledby="widgetarea-tab">...</div>
-            <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">...</div>
+            <div class="tab-pane fade @if($tab == 'widgetarea') show active @endif" id="widgetarea" role="tabpanel" aria-labelledby="widgetarea-tab">
+
+                <div class="mt-2">
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="row">
+                                @forelse($widgetAreas as $widgetArea)
+                                    <div class="col-md-4">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <div class="d-flex justify-content-between">
+                                                    <div>
+                                                        {{ \Illuminate\Support\Str::title($widgetArea->name) }}
+                                                    </div>
+                                                    <div>
+                                                        <button type="button" class="btn btn-sm btn-outline-dark" wire:click="showAddWidgetForm({{ $widgetArea->id }})"><i class="fas fa-plus"></i></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                @forelse($widgetArea->component_widget_areas as $component_widget_area)
+
+                                                @empty
+                                                    <p class="mb-0">{{ __('No widget...') }}</p>
+                                                @endforelse
+                                            </div>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="col">
+                                        <p>{{ __('No widgetarea...') }}</p>
+                                    </div>
+                                @endforelse
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+
+                            @if($showAddWidgetForm)
+                                <div class="card">
+                                    <div class="card-body">
+
+
+                                        <div class="mt-4 text-right">
+                                            <button class="btn btn-outline-secondary btn-sm"
+                                                    type="button"
+                                                    wire:click="hideAddWidgetForm"
+                                                    wire:target="hideAddWidgetForm"
+                                                    wire:loading.attr="disabled"
+                                            >
+                                                {{ __('Cancel') }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                        </div>
+                    </div>
+
+                </div>
+
+
+            </div>
+            <div class="tab-pane fade @if($tab == 'security') show active @endif" id="security" role="tabpanel" aria-labelledby="security-tab">...</div>
         </div>
     {{ Form::close() }}
 </div>

@@ -10,6 +10,7 @@ class Member extends Authenticatable
         'username',
         'email',
         'password',
+        'avatar',
         'validation_hash',
         'lost_password_hash',
         'is_enabled',

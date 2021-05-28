@@ -22,6 +22,7 @@ use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
  * @method static Template getRegister()
  * @method static Installer getInstaller()
  * @method static array getThemeTemplate()
+ * @method static string getName()
  *
  * @see ThemeManager
  */
