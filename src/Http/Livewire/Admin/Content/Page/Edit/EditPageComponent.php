@@ -5,6 +5,7 @@ namespace rohsyl\OmegaCore\Http\Livewire\Admin\Content\Page\Edit;
 
 
 use Livewire\Component as LivewireComponent;
+use rohsyl\OmegaCore\Models\ComponentWidgetArea;
 use rohsyl\OmegaCore\Models\Menu;
 use rohsyl\OmegaCore\Models\Page;
 use rohsyl\OmegaCore\Models\PluginForm;
@@ -39,12 +40,12 @@ class EditPageComponent extends LivewireComponent
 
     public function mount() {
         $this->tab = request()->has('tab') ? request()->input('tab') : 'content';
-        $this->widgetAreas = WidgetArea::getAll();
     }
 
     public function render() {
         $componentsForms = $this->renderComponentsForms();
         $this->loadSettings();
+        $this->loadWidetAreas();
 
         return view('omega::livewire.admin.content.page.edit.edit', compact('componentsForms'));
     }
@@ -73,6 +74,10 @@ class EditPageComponent extends LivewireComponent
                 ->pluck('name', 'id')
                 ->toArray();
 
+    }
+
+    public function loadWidetAreas() {
+        $this->widgetAreas = WidgetArea::getAll();
     }
 
     public function renderComponentsForms() {
@@ -129,18 +134,73 @@ class EditPageComponent extends LivewireComponent
 
     public function setTab($tab) {
         $this->tab = $tab;
+        $this->hideAddWidgetForm();
+        $this->hideEditWidgetForm();
     }
 
+    public $widget_plugin_form_id;
+    public $widget_name;
+    public $widgetarea_id;
     public $creatableWidgetPluginForms;
     public $showAddWidgetForm = false;
+    public $showEditWidgetForm = false;
+    public $editableWidget;
     public function showAddWidgetForm($widgetAreaId) {
+        $this->widgetarea_id = $widgetAreaId;
         $this->showAddWidgetForm = true;
-        $this->creatableWidgetPluginForms = PluginForm::query()->where('widgetable', true)->get();
+        $this->creatableWidgetPluginForms = PluginForm::query()->where('widgetable', true)->get()->pluck('title', 'id');
     }
     public function hideAddWidgetForm() {
         $this->showAddWidgetForm = false;
+        $this->widgetarea_id = null;
+        $this->widget_plugin_form_id = null;
+        $this->widget_name = null;
     }
     public function createWidget() {
+        $this->validate([
+            'widget_plugin_form_id' => 'required|exists:plugin_forms,id',
+            'widget_name' => 'required|string',
+        ]);
+
+        $pluginForm = PluginForm::find($this->widget_plugin_form_id);
+        $maxOrder = Component::query()->where('page_id', $this->page->id)->max('order');
+        $maxId = Component::query()->where('page_id', $this->page->id)->max('id');
+
+        $component = Component::create([
+            'plugin_form_id' => $pluginForm->id,
+            'page_id' => $this->page->id,
+            'name' => $this->widget_name,
+            'param' => [
+                'settings' => [
+                    'compId' => $pluginForm->name . $maxId ?? 0
+                ],
+            ],
+            'is_enabled' => true,
+            'is_widget' => true,
+            'order' => $maxOrder ?? 0,
+        ]);
+
+        $maxOrder = ComponentWidgetArea::query()->where('page_id', $this->page->id)->max('order');
+        ComponentWidgetArea::create([
+            'widget_area_id' => $this->widgetarea_id,
+            'component_id' => $component->id,
+            'page_id' => $this->page->id,
+            'order' => $maxOrder+1,
+        ]);
+
+        $this->hideAddWidgetForm();
+        $this->loadWidetAreas();
+    }
+
+    public function showEditWidgetForm($widget_id) {
+        $this->editableWidget = Component::find($widget_id);
+        $this->showEditWidgetForm = true;
+    }
+    public function hideEditWidgetForm() {
+        $this->showEditWidgetForm = false;
+        $this->editableWidget = null;
+    }
+    public function updateWidget() {
 
     }
 }
