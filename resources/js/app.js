@@ -5,6 +5,9 @@
  * building robust, powerful web applications using Vue and Laravel.
  */
 
+import $ from 'jquery';
+window.$ = window.jQuery = $;
+
 require('./bootstrap');
 require('./omega/admin/index')
 require('bs4-summernote/src/js/summernote')

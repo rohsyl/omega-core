@@ -1,3 +1,8 @@
+@php
+
+    $attributes['autoUpdateInput'] = false;
+@endphp
+
 @if (!isset($attributes['no-label']))
     @if(isset($attributes['label']))
         @if(Lang::has('resource.'.$attributes['label'].'.field.'.$name.'.label'))
@@ -11,7 +16,7 @@
         {{ Form::label($name, $name) }}
     @endif
 @endif
-{{ Form::text($name, old($name) ?? $value, array_merge(['id'=>$name,isset($syncedAttributes) && in_array($name, $syncedAttributes) ? 'disabled' : '','class' => 'form-control ' . (isset($errors) && $errors->has($name) ? 'is-invalid' : '')])) }}
+{{ Form::text($name, old($name) ?? $value, array_merge($attributes, ['id'=>$name,'class' => 'form-control ' . (isset($errors) && $errors->has($name) ? 'is-invalid' : '')])) }}
 @if(isset($errors) && $errors->has($name))
     <small class="form-text text-danger">{{ $errors->first($name) }}</small>
 @endif
@@ -27,8 +32,11 @@
     $(function () {
         $('#{{ $name }}')
             .daterangepicker({
+                @if(isset($attributes['autoApply']))
+                autoApply: @json($attributes['autoApply']),
+                @endif
                 @if(isset($attributes['autoUpdateInput']))
-                autoApply: @json($attributes['autoUpdateInput']),
+                autoUpdateInput: @json($attributes['autoUpdateInput']),
                 @endif
                 timePicker: true,
                 timePicker24Hour: true,
@@ -43,8 +51,15 @@
                     cancelLabel: 'Clear',
                     format: 'HH:mm'
                 }
-            }).on('show.daterangepicker', function (ev, picker) {
-            picker.container.find(".calendar-table").hide();
+            })
+            .on('show.daterangepicker', function (ev, picker) {
+                picker.container.find(".calendar-table").hide();
+            })
+            .on('apply.daterangepicker', function (ev, picker) {
+                $(this).val(picker.startDate.format('HH:mm') + ' - ' + picker.endDate.format('HH:mm'));
+            })
+            .on('cancel.daterangepicker', function (ev, picker) {
+                $(this).val('');
             });
     });
 </script>
