@@ -1,3 +1,6 @@
+@php
+    $value = old($name) ?? $value;
+@endphp
 <div class="form-group">
     @if (!isset($attributes['no-label']) || !$attributes['no-label'])
         {{ Form::label($name, $attributes['label'] ?? $name) }}
