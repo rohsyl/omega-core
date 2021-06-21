@@ -17,6 +17,8 @@ class FormBoot
         \Form::component('ocheckbox', 'omega::admin.components.form.checkbox', ['name', 'value' => 0, 'attributes' => []]);
         \Form::component('oradio', 'omega::admin.components.form.radio', ['name', 'checked' => false, 'value' => 0, 'attributes' => []]);
         \Form::component('otextarea', 'omega::admin.components.form.textarea', ['name', 'value' => null, 'attributes' => []]);
+        \Form::component('owysiwyg', 'omega::admin.components.form.wysiwyg', ['name', 'value' => null, 'attributes' => []]);
+        \Form::component('oeditor', 'omega::admin.components.form.wysiwyg', ['name', 'value' => null, 'attributes' => []]);
         \Form::component('opassword', 'omega::admin.components.form.password', ['name', 'attributes' => []]);
 
         // TODO : datepicker

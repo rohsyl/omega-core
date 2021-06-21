@@ -25,7 +25,6 @@
     <!-- End of specific css content placeholder -->
 
     <!-- Global js content -->
-
     <script src="/vendor/omega/js/app.js"></script>
     <!-- End of global js content-->
 
