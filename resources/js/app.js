@@ -25,6 +25,9 @@ window.moment = moment;
 import CodeMirror from 'codemirror';
 window.CodeMirror = CodeMirror;
 
+import frenchkiss from 'frenchkiss';
+window.frenchkiss = frenchkiss;
+
 // window.Vue = require('vue');
 
 /**
