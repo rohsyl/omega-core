@@ -16,7 +16,7 @@
 
 
         {{ Form::oback(null, ['class' => 'btn btn-secondary']) }}
-        {{ Form::submit(__('Update avatar'), ['class' => 'btn btn-dark']) }}
+        {{ Form::submit( __('Update avatar'), ['class' => 'btn btn-dark']) }}
 
     </x-oix-card>
 {{ Form::close() }}

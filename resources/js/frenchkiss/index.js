@@ -10,6 +10,7 @@ export default (function () {
         confirm_delete_EM : 'Yes, delete it!',
         confirm_btn : 'Yeah, sure!',
         cancel_btn : 'Cancel',
+        Search : 'Search',
     });
 
     frenchkiss.set('fr', {
@@ -19,6 +20,7 @@ export default (function () {
         confirm_delete_EM : 'Oui, supprimer !',
         confirm_btn : 'Oui, sûr !',
         cancel_btn : 'Annuler',
+        Search : 'Rechercher',
     });
 
 }())
