@@ -25,7 +25,7 @@
                         </td>
                         <td>
                             @if(!$plugin->isInstalled())
-                                <a href="{{ route('omega.admin.plugins.install', $plugin->name()) }}">{{ __('Install' }}</a>
+                                <a href="{{ route('omega.admin.plugins.install', $plugin->name()) }}">{{ __('Install') }}</a>
                             @endif
                         </td>
                     </tr>

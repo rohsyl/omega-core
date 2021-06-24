@@ -1,0 +1,1 @@
+<livewire:omega_media-library :chooser="true" />

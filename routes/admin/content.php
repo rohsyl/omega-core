@@ -11,4 +11,5 @@ Route::prefix('content')->group(function () {
     Route::get('pages/{page}/unpublish', [PublishController::class, 'unpublish'])->name('omega.admin.content.pages.unpublish');
 
     Route::get('media', [MediaController::class, 'index'])->name('omega.admin.content.media.index');
+    Route::get('media/modal', [MediaController::class, 'modal'])->name('omega.admin.content.media.index.modal');
 });

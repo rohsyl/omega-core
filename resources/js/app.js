@@ -28,6 +28,14 @@ window.CodeMirror = CodeMirror;
 import frenchkiss from 'frenchkiss';
 window.frenchkiss = frenchkiss;
 
+require('./omega/plugins/jquery.rsExplorer');
+require('./omega/plugins/jquery.rsMediaChooser');
+require('./omega/plugins/jquery.rsModuleChooser');
+window.omega = require('./omega/app/omega');
+
+// quickfix, let's not talk about it ok ?
+window.__ = function(value) { return value; };
+
 // window.Vue = require('vue');
 
 /**

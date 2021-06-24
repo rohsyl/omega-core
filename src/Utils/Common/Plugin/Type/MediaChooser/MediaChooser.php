@@ -28,7 +28,19 @@ class MediaChooser extends TypeEntry
 
     public function getHtml()
     {
-        // TODO: Implement getHtml() method.
+        $param = $this->getMCParam();
+        $uid = $this->getUniqId();
+        $v = $this->getValue();
+
+        if(!$param['multiple']){
+            $value = $v;
+            return view('omega::common.plugin.type.mediachooser.simple.html', compact('value', 'uid', 'param'));
+        }
+        else {
+            $values = isset($v) ? json_decode($v, true) : array();
+            return view('omega::common.plugin.type.mediachooser.multiple.html', compact('values', 'uid', 'param'));
+        }
+
     }
 
     public function getPostedValue()

@@ -29,6 +29,7 @@
     <!-- End of global js content-->
 
     <!-- Specific js content placeholder -->
+    @routes()
     @stack('js')
     @livewireScripts()
     <!-- End of specific js content placeholder -->
