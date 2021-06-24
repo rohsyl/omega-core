@@ -16,12 +16,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['middleware' => ['web']], function () {
 
-
-
-    include __DIR__ . '/overt/index.php';
-
-    include __DIR__ . '/common/media.php';
-
     /********************************************************************
      * Omega CMS must be installed to acces all these routes
      * The *om_not_installed* middleware check if omega is installed,
@@ -29,6 +23,10 @@ Route::group(['middleware' => ['web']], function () {
      * page.
      ********************************************************************/
     Route::middleware(['om_not_installed', 'om_load_config'])->group(function() {
+
+        include __DIR__ . '/overt/index.php';
+
+        include __DIR__ . '/common/media.php';
 
         /********************************************************************
          * Public admin routes
