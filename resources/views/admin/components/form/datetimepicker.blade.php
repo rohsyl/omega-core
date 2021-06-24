@@ -26,6 +26,12 @@
     $(function () {
         $('#{{ $name }}')
             .daterangepicker({
+                @if(isset($attributes['autoApply']))
+                autoApply: @json($attributes['autoApply']),
+                @endif
+                @if(isset($attributes['autoUpdateInput']))
+                autoUpdateInput: @json($attributes['autoUpdateInput']),
+                @endif
                 singleDatePicker: true,
                 showDropdowns: true,
                 timePicker: true,

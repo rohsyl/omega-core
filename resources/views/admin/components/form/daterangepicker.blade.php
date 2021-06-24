@@ -32,11 +32,16 @@
         let end_date = $('#{{ $to }}').val();
         $('#{{ $name }}')
             .daterangepicker({
+                @if(isset($attributes['autoApply']))
+                autoApply: @json($attributes['autoApply']),
+                @endif
+                @if(isset($attributes['autoUpdateInput']))
+                autoUpdateInput: @json($attributes['autoUpdateInput']),
+                @endif
                 startDate: start_date !== null && start_date.length > 0 ? start_date : moment(),
                 endDate: end_date !== null && end_date.length > 0 ? end_date : moment(),
                 singleDatePicker: false,
                 showDropdowns: true,
-                autoApply: true,
                 minYear: 1901,
                 maxYear: parseInt(moment().add(10, 'years').format('YYYY'), 10),
                 //autoUpdateInput: false,
@@ -57,6 +62,9 @@
             .on('apply.daterangepicker', function (ev, picker) {
                 $('#{{ $from }}').val(picker.startDate.format('DD.MM.YYYY'));
                 $('#{{ $to }}').val(picker.endDate.format('DD.MM.YYYY'));
+            })
+            .on('cancel.daterangepicker', function (ev, picker) {
+                $(this).val('');
             });
     });
 </script>
