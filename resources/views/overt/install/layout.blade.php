@@ -35,7 +35,7 @@
         <!-- ### $Topbar ### -->
         <div class="bgc-white p-15 bdB fixed-top">
             <div class="font-weight-bold">
-                OmegaCMS
+                {{__('Omega CMS')}}
             </div>
         </div>
 

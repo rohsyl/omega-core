@@ -19,8 +19,5 @@ return [
 
 
     'username' => 'Nom d\'utilisateur',
-    'Update avatar' => 'Mettre à jour l\'avatar',
-    'Change avatar' => 'Modifier l\'avatar',
-
 
 ];

@@ -5,13 +5,13 @@
     <div class="container">
         <div class="card">
             <div class="card-header">
-                Installation
+                {{ __('Installation') }}
             </div>
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4">
-                        <h4>Site informations</h4>
-                        <p>Basics settings for your website.</p>
+                        <h4>{{ __('Site informations') }}</h4>
+                        <p>{{ __('Basics settings for your website.') }}</p>
                     </div>
                     <div class="col-md-8">
                         <dl class="dl-horizontal">
@@ -28,8 +28,8 @@
 
                 <div class="row">
                     <div class="col-md-4">
-                        <h4>Administrator</h4>
-                        <p>Informations about the first user.</p>
+                        <h4>{{ __('Administrator') }}</h4>
+                        <p>{{ __('Informations about the first user.') }}</p>
                     </div>
                     <div class="col-md-8">
                         <dl class="dl-horizontal">

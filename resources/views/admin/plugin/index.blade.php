@@ -11,8 +11,8 @@
         <div class="card-body">
             <table class="table">
                 <tr>
-                    <th>Plugin</th>
-                    <th>Installed</th>
+                    <th>{{__('Plugin')}}</th>
+                    <th>{{ __('Installed') }}</th>
                     <th></th>
                 </tr>
                 @foreach($plugins as $plugin)
@@ -25,7 +25,7 @@
                         </td>
                         <td>
                             @if(!$plugin->isInstalled())
-                                <a href="{{ route('omega.admin.plugins.install', $plugin->name()) }}">Install</a>
+                                <a href="{{ route('omega.admin.plugins.install', $plugin->name()) }}">{{ __('Install' }}</a>
                             @endif
                         </td>
                     </tr>

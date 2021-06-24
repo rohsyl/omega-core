@@ -10,7 +10,7 @@
 
 
 @section('actions')
-    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.appearance.menus.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.appearance.menus.index') }}"><i class="fas fa-arrow-left"></i> {{ _('Back') }}</a>
 @endsection
 
 @section('content')
