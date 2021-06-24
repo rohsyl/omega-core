@@ -69,7 +69,7 @@ class PageManager
 
             if (isset($pageId)){
                 om_config(['om_home_page_id' => $pageId->id]);
-                $homePageId = $pageId;
+                $homePageId = $pageId->id;
             }
             else
             {

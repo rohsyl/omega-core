@@ -63,7 +63,7 @@
                                         <a class="text-danger" href="#" wire:click="deleteComponent({{ $form['id'] }})"><i class="fas fa-trash"></i></a>
                                     </div>
                                 </div>
-                                <div class="card-body p-10">
+                                <div class="card-body p-10" wire:ignore>
                                     {!! $form['html'] !!}
                                 </div>
                             </div>

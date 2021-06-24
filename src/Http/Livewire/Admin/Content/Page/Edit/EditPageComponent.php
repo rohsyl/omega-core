@@ -43,10 +43,10 @@ class EditPageComponent extends LivewireComponent
     }
 
     public function render() {
+        $this->dispatchBrowserEvent('omega-form-rendered');
         $componentsForms = $this->renderComponentsForms();
         $this->loadSettings();
         $this->loadWidetAreas();
-
         return view('omega::livewire.admin.content.page.edit.edit', compact('componentsForms'));
     }
 

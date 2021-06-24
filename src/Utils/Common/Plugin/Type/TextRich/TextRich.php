@@ -14,6 +14,9 @@ class TextRich extends TypeEntry {
                 $(function() {
                     $(\'.'.$uid.'\').summernote();
                 });
+                window.addEventListener(\'omega-form-rendered\', function(e) {
+                    $(\'.'.$uid.'\').summernote();
+                });
             </script>';
         return $html;
     }
