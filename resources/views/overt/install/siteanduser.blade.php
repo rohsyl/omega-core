@@ -7,14 +7,14 @@
         {{ Form::open(['route' => 'omega.install.step2', 'method' => 'POST', 'class' => 'form-horizontal main-form']) }}
         <div class="card">
             <div class="card-header">
-                Installation
+                {{ __('Installation') }}
             </div>
             <div class="card-body">
 
                 <div class="row">
                     <div class="col-md-4">
-                        <h4>Site informations</h4>
-                        <p>Please fill out the name and the slogan of your website.</p>
+                        <h4>{{ __('Site informations') }}</h4>
+                        <p>{{ __('Please fill out the name and the slogan of your website.') }}</p>
                     </div>
                     <div class="col-md-8">
                         <div class="form-group">
@@ -42,8 +42,8 @@
 
                 <div class="row">
                     <div class="col-md-4">
-                        <h4>Administrator</h4>
-                        <p>Create a new user</p>
+                        <h4>{{ __('Administrator') }}</h4>
+                        <p>{{ __('Create a new user') }}</p>
                     </div>
                     <div class="col-md-8">
 

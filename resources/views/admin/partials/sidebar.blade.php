@@ -14,7 +14,7 @@
 								</div>
 							</div>
 							<div class="peer peer-greed">
-								<h5 class="lh-1 mB-0 logo-text">OmegaCMS</h5>
+								<h5 class="lh-1 mB-0 logo-text">{{ __('Omega CMS') }}</h5>
 							</div>
 						</div>
 					</a>

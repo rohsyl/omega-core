@@ -5,7 +5,7 @@
 @endsection
 
 @section('actions')
-    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.content.pages.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.content.pages.index') }}"><i class="fas fa-arrow-left"></i> {{ __('Back') }}</a>
 @endsection
 
 @section('content')
@@ -13,7 +13,7 @@
 
     {{ Form::open(['url' => route('omega.admin.content.pages.store'), 'method' => 'post']) }}
 
-    <x-oix-card title="Page" subtitle="Create a new page.">
+    <x-oix-card title="{{ __('Page') }}" subtitle="{{ __('Create a new page.') }}">
 
         {{ Form::otext('title', null, ['label' => __('Title')]) }}
 

@@ -5,13 +5,13 @@
 @endsection
 
 @section('actions')
-    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.appearance.menus.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.appearance.menus.index') }}"><i class="fas fa-arrow-left"></i> {{ __('Back') }}</a>
 @endsection
 
 @section('content')
 
     {{ Form::open(['url' => route('omega.admin.appearance.menus.store'), 'method' => 'post']) }}
-    <x-oix-card title="Menu" subtitle="Create a new menu.">
+    <x-oix-card title="{{ __('Menu') }}" subtitle="{{ __('Create a new menu.') }}">
         {{ Form::otext('name', null, ['label' => __('Title')]) }}
         {{ Form::otextarea('description', null, ['label' => __('Description')]) }}
 

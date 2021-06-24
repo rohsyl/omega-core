@@ -5,13 +5,13 @@
 @endsection
 
 @section('actions')
-    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.users.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.users.index') }}"><i class="fas fa-arrow-left"></i> {{ __('Back') }}</a>
 @endsection
 
 @section('content')
 
     {{ Form::open(['route' => 'omega.admin.users.store']) }}
-    <x-oix-card title="User" subtitle="Create a new user.">
+    <x-oix-card title="{{ __('User') }}" subtitle="{{ __('Create a new user.') }}">
 
         {{ Form::oemail('email', null, ['label' => __('E-Mail Address')]) }}
         {{ Form::otext('fullname', null, ['label' => __('Fullname')]) }}

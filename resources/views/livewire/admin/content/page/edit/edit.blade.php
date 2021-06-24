@@ -3,7 +3,7 @@
 
     <div class="d-flex justify-content-between mb-2">
         <div>
-            <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.content.pages.index') }}"><i class="fas fa-arrow-left"></i> Back</a>
+            <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.content.pages.index') }}"><i class="fas fa-arrow-left"></i> {{ __('Back') }}</a>
         </div>
         <div class="text-right">
             <button class="btn btn-primary btn-sm"
@@ -131,7 +131,7 @@
                                     {{ Form::checkbox('show_title', 1, $page->show_title) }}
                                 </span>
                             </span>
-                                {{ Form::text('title', $page->title, ['class' => 'form-control', 'paceholder' => __('Title')]) }}
+                                {{ Form::text('title', $page->title, ['class' => 'form-control', 'placeholder' => __('Title')]) }}
                             </div>
                             @if ($errors->has('title'))
                                 <span class="text-danger" role="alert">

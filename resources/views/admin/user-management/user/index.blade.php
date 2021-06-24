@@ -1,7 +1,7 @@
 @extends('omega::admin.layouts.default')
 
 @section('page-header')
-    Users & Groups Management
+    {{ __('Users & Groups Management') }}
 @endsection
 
 @section('actions')

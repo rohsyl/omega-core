@@ -6,16 +6,16 @@
         {{ Form::open(['route' => 'omega.install.step1', 'method' => 'POST', 'class' => 'form-horizontal main-form']) }}
         <div class="card">
             <div class="card-header">
-                Installation
+                {{ __('Installation') }}
             </div>
             <div class="card-body">
 
                 <p>
-                    Welcome to the <strong>Omega CMS</strong> installation. Click below to start the installation...
+                    {{ __('Welcome to the :omega installation. Click below to start the installation...', ['omega' => '<strong>Omega CMS</strong>']) }}
                 </p>
 
                 <p class="mB-0">
-                    Please select the language...
+                    {{ __('Please select the language...') }}
                 </p>
 
                 <div class="form-group">

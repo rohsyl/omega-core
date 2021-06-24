@@ -4,6 +4,6 @@
 @endsection
 @section('content')
 
-    Welcome to Omega CMS
+    {{ __('Welcome to :name', ['name' => 'Omega CMS']) }}
 
 @endsection

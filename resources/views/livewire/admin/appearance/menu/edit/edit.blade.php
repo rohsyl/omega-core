@@ -9,7 +9,7 @@
                     @if(isset($menuItems))
                         @if($menuItems->count() == 0)
                             <p class="text-muted">
-                                No menu item...
+                                {{ __('No menu item...') }}
                             </p>
                         @endif
                         <div id="menu-items" class="items-container">
