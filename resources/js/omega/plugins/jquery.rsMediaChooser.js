@@ -64,7 +64,6 @@ var mediaChooserInstance = 0;
 					}
 					else if ($media.length === 1) {
 						let media = $.parseJSON($('<div/>').html($media.data('media')).text());
-						console.log(media);
 						if ($.inArray(media.media_type, $this.settings.allowedMedia) !== -1) {
 							$this.settings.doneFunction(media, $this.$button);
 							omega.modal.hide(mid);
