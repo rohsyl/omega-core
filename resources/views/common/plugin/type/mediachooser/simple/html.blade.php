@@ -8,7 +8,7 @@
     $description = '';
     if(isset($id) && !empty($id))
     {
-        $media = Media::Get($id);
+        $media = Media::find($id);
         if(isset($media)){
             $name = $media->name;
             $title = $media->title;
@@ -20,10 +20,10 @@
 
 <div class="media {{ $uid }}-media">
     @if($param['preview'])
-        <div class="media-left media-middle" id="{{ $uid }}-media-preview">
-            @if(isset($media))
+        <div class="mr-3" id="{{ $uid }}-media-preview">
+            @if(isset($media) && isset($media->id))
                 @if($media->media_type == Media::MT_PICTURE)
-                    <img class="media-object" src=" {{ $media->getThumbnail(120, 85) }}" alt="Thumbnail" width="120px"/>
+                    <img class="media-object" src="{{ $media->getThumbnail(120, 85) }}" alt="Thumbnail" width="120px"/>
                 @elseif($media->media_type == Media::MT_FOLDER)
                     <i class="media-object fa fa-3x fa-folder"></i>
                 @elseif($media->media_type == Media::MT_MUSIC)
@@ -52,9 +52,9 @@
         </div>
     @endif
     <div class="media-body">
-        <h4 class="media-heading" id="{{ $uid }}-media-name">
+        <p class="media-heading font-weight-bold" id="{{ $uid }}-media-name">
             {{ isset($title) && !empty($title) ? $title : $name }}
-        </h4>
+        </p>
 
         <div id="{{ $uid }}-media-description">
             @if(isset($description) && !empty($description))
@@ -62,8 +62,8 @@
             @endif
         </div>
 
-        <button class="btn btn-default btn-sm" id="{{ $uid }}-chooser">Choose</button>
-        <button class="btn btn-danger btn-sm" id="{{ $uid }}-deleter">Delete</button>
+        <button class="btn btn-primary btn-sm" id="{{ $uid }}-chooser">Choose</button>
+        <button class="btn btn-outline-danger btn-sm" id="{{ $uid }}-deleter">Delete</button>
         <input value="{{ $id }}" id="{{ $uid }}-media-id" name="{{ $uid }}-media-id" type="hidden">
     </div>
 </div>
@@ -73,11 +73,11 @@
             multiple: false,
             allowedMedia: {!! $allowedType !!},
             doneFunction: function (data) {
-                var t = data.type;
+                console.log(data);
+                var t = data.media_type;
                 var title = data.title;
                 var name = data.name;
                 var description = data.description;
-                console.log(title);
                 $("#{{ $uid }}-media-id").val(data.id);
                 $("#{{ $uid }}-media-name").html(title !== undefined && title !== '' && title != null ? title : name);
 
@@ -86,21 +86,11 @@
                     $("#{{ $uid }}-media-description").html('<p>' + description + '</p>');
                 }
 
-
                 @if($param['preview'])
-                var html;
-                if(t === "picture")
-                    html = '<i class="media-object fa fa-3x fa-picture-o"></i>';
-                else if(t === "folder")
-                    html = '<i class="media-object fa fa-3x fa-folder"></i>';
-                else if(t === "music")
-                    html = '<i class="media-object fa fa-3x fa-music"></i>';
-                else if(t === "video")
-                    html = '<i class="media-object fa fa-3x fa-video"></i>';
-                else if(t == "video_ext")
-                    html = '<i class="media-object fa fa-3x fa-play"></i>';
-                else
-                    html = '<i class="media-object fa fa-3x fa-file"></i>';
+                var html = '<i class="media-object fa-3x ' + data.icon + '"></i>';
+                if(data.media_type) {
+                    html = '<img class="media-object" src="' + data.url + '?w=120&h=85" alt="' + data.name + '" width="120px"/>';
+                }
                 $("#{{ $uid }}-media-preview").html(html);
                 @endif
             }

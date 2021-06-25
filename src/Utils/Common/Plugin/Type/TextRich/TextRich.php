@@ -12,10 +12,10 @@ class TextRich extends TypeEntry {
         $html = '<textarea class="form-control '.$uid.'" name="'.$uid.'">'.$value.'</textarea>
             <script>
                 $(function() {
-                    $(\'.'.$uid.'\').summernote();
+                    omega.initSummerNote(\'.'.$uid.'\');
                 });
                 window.addEventListener(\'omega-form-rendered\', function(e) {
-                    $(\'.'.$uid.'\').summernote();
+                    omega.initSummerNote(\'.'.$uid.'\');
                 });
             </script>';
         return $html;

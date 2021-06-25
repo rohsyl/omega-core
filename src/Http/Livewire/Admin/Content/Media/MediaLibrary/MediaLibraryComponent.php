@@ -9,7 +9,7 @@ use rohsyl\OmegaCore\Models\Media;
 
 class MediaLibraryComponent extends LivewireComponent
 {
-    protected $listeners = ['fileUploaded', 'fileUploadCancelled'];
+    protected $listeners = ['fileUploaded', 'fileUploadCancelled', 'selectMedia'];
 
     public $directory = null;
 
@@ -86,15 +86,38 @@ class MediaLibraryComponent extends LivewireComponent
         }
     }
 
-    public function selectMedia($media_id = null) {
+    public function selectMedia($media_id = null, $ctrlPressed = false) {
+        if(!$ctrlPressed) {
+            $this->selecteds = [];
+        }
+        if(isset($media_id)) {
+            $this->selecteds[$media_id] = isset($this->selecteds[$media_id]) ? !$this->selecteds[$media_id] : true;
+        }
+        if($ctrlPressed) {
+            if(isset($this->selectedMedia) && $this->selectedMedia->id == $media_id) {
+                $this->selectedMedia = null;
+            }
+            return;
+        }
+
         $this->closeCreateDirectoryForm();
         $this->closeUploadForm();
         $this->closeEditForm();
+
+
         if(!isset($media_id)) {
             $this->selectedMedia = null;
         }
 
-        $this->selectedMedia = Media::find($media_id);
+        if(isset($media_id) && isset($this->selectedMedia) && $this->selectedMedia->id === $media_id) {
+            $this->selectedMedia = null;
+            unset($this->selecteds[$media_id]);
+        }
+        else {
+            $this->selectedMedia = Media::find($media_id);
+        }
+
+        //$this->dispatchBrowserEvent('omega-media-selected', ['media' => isset($this->selectedMedia) ? $this->selectedMedia->toArray() : null]);
     }
 
     public function home() {

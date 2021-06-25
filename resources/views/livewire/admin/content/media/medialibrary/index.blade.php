@@ -34,13 +34,15 @@
         <div class="col-md-8">
             @if(isset($media))
 
-                <div class="d-flex justify-content-start flex-wrap">
+                <div class="d-flex justify-content-start flex-wrap medias-container">
                     @forelse($media->children as $child)
 
                         <div title="{{ $child->title ?? $child->name }}"
-                             class="mr-2 mb-2 pt-3 pb-0 border @if(isset($selectedMedia) && $selectedMedia->id == $child->id) bg-primary text-white border-dark @else bg-white @endif"
+                             class="mr-2 mb-2 pt-3 pb-0 border media-item
+                             @if((isset($selectedMedia) && $selectedMedia->id == $child->id) || isset($selecteds[$child->id]) && $selecteds[$child->id]) bg-primary text-white border-dark selected @else bg-white @endif"
                              style="width: 80px; cursor: pointer;"
-                             wire:click="selectMedia({{ $child->id }})"
+                             data-media="{{ htmlentities(json_encode($child->toMediaLibraryArray())) }}"
+                             onclick="mediaClick(event, {{ $child->id }})"
                              wire:dblclick="openMedia({{ $child->id }})">
                             <div class="text-center">
                                 <div>
@@ -208,8 +210,16 @@
     </div>
 
 
-
+    <script language="JavaScript">
+        function mediaClick(e, media_id) {
+            // if ctrl + click then multiple selection
+            if( e.ctrlKey ) {
+                Livewire.emit('selectMedia', media_id, true);
+            }
+            // else single selection
+            else {
+                Livewire.emit('selectMedia', media_id);
+            }
+        }
+    </script>
 </div>
-<style>
-
-</style>

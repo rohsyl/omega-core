@@ -28,7 +28,8 @@ var mediaChooserInstance = 0;
 			omega.ajax.query($this.settings.url, args, 'GET', function(html){
 				var o = $this.parseScript(html);
 				var mid = omega.modal.open(__('Select media'), o.html, __('Choose'), function(){
-					var $media = $('#omega-modal-'+mid+' .modal-body').find('.icon.selected');
+
+					var $media = $('#omega-modal-'+mid+' .modal-body').find('.media-item.selected');
 
 					if ($media.length > 1) {
 						if($this.settings.multiple == true) {
@@ -61,27 +62,11 @@ var mediaChooserInstance = 0;
 							alert('Multiple selection denied');
 						}
 					}
-					else if ($media.length == 1) {
-                        console.log($media.data('type'));
-                        console.log($this.settings.allowedMedia);
-						if ($.inArray($media.data('type'), $this.settings.allowedMedia) != -1) {
-
-							console.log($media);
-							var data = {
-								icon: $media.data('icon'),
-								name: $media.data('name'),
-								parent: $media.data('parent'),
-								ext: $media.data('ext'),
-								type: $media.data('type'),
-								size: $media.data('size'),
-								path: $media.data('path'),
-								id: $media.data('id'),
-								title:  $media.data('title'),
-								description:  $media.data('description')
-							};
-
-							$this.settings.doneFunction(data, $this.$button);
-
+					else if ($media.length === 1) {
+						let media = $.parseJSON($('<div/>').html($media.data('media')).text());
+						console.log(media);
+						if ($.inArray(media.media_type, $this.settings.allowedMedia) !== -1) {
+							$this.settings.doneFunction(media, $this.$button);
 							omega.modal.hide(mid);
 						}
 						else {

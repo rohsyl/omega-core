@@ -45,7 +45,32 @@ class MediaChooser extends TypeEntry
 
     public function getPostedValue()
     {
-        // TODO: Implement getPostedValue() method.
+        $param = $this->getMCParam();
+        $uid = $this->getUniqId();
+        if(!$param['multiple']){
+            if($this->existsPost($uid.'-media-id')) {
+                return $this->getPost($uid . '-media-id');
+            }
+            return null;
+        }
+        else{
+
+            $medias = array();
+            if($this->existsPost($uid.'-media-id') && $this->existsPost($uid.'-media-order')){
+                foreach ($this->getPost($uid.'-media-id') as $i => $type) {
+                    $item = array(
+                        'id' => $this->getPost($uid.'-media-id')[$i],
+                        'order' => $this->getPost($uid.'-media-order')[$i]
+                    );
+                    if($this->getPost($uid.'-media-delete')[$i] == false && isset($item)) {
+                        $medias[] = $item;
+                    }
+                }
+                $medias = array_orderby($medias, 'order', SORT_ASC);
+            }
+
+            return json_encode($medias);
+        }
     }
 
     public function getObjectValue()

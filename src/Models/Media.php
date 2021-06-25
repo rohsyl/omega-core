@@ -119,6 +119,36 @@ class Media extends Model
         return route('omega.common.media', [$this, $this->name, 'download']);
     }
 
+    public function getThumbnail($w, $h) {
+        return $this->url . '?w='.$w.'&h='.$h;
+    }
+
+    public function toMediaLibraryArray() {
+        return [
+            'id' => $this->id,
+            'parent_id' => $this->parent_id,
+            'media_type' => $this->media_type,
+            'icon' => $this->icon,
+            'type' => $this->type,
+            'name' => $this->name,
+            'ext' => $this->ext,
+            'path' => $this->path,
+            'url' => $this->url,
+            'url_download' => $this->url_download,
+            'title' => $this->title,
+            'description' => $this->description,
+
+            'is_system' => $this->is_system,
+
+            'owner_id' => $this->owner_id,
+            'group_id' => $this->group_id,
+            'owner_permission' => $this->owner_permission,
+            'group_permission' => $this->group_permission,
+            'other_permission' => $this->other_permission,
+            'public_permission' => $this->public_permission,
+        ];
+    }
+
     /*public function getThumbnail($w, $h, $returnUrl = true)
     {
         $fn = basename($this->path);
@@ -186,6 +216,4 @@ class Media extends Model
     {
         return '<a href="'.Url::CombAndAbs(url('/'), $this->path).'", target="_blank">Preview</a>';
     }*/
-
-
 }
