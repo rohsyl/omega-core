@@ -102,7 +102,7 @@ class ThemeManager
                         $files[$element] = ucfirst(without_ext(without_ext($element)));
                 }
             }
-            sort($files);
+            //sort($files);
         }
 
 

@@ -6,6 +6,11 @@
             <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.content.pages.index') }}"><i class="fas fa-arrow-left"></i> {{ __('Back') }}</a>
         </div>
         <div class="text-right">
+            <a class="btn btn-dark btn-sm"
+                href="{{ $page->url }}">
+                <i class="fas fa-eye"></i>
+                {{ __('View') }}
+            </a>
             <button class="btn btn-primary btn-sm"
                     name="action"
                     value="save"
@@ -22,7 +27,7 @@
                     {{ __('Unpublish') }}
                 </button>
             @else
-                <button class="btn btn-success btn-sm"
+                <button class="btn btn-info btn-sm"
                          name="action"
                          value="publish"
                          type="submit">

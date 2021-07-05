@@ -2,10 +2,13 @@
 
 namespace rohsyl\OmegaCore\Models;
 
+use Illuminate\Notifications\Notifiable;
 use rohsyl\OmegaCore\Modules\Member\Auth\MemberAuthenticatable as Authenticatable;
 
 class Member extends Authenticatable
 {
+    use Notifiable;
+
     protected $fillable = [
         'username',
         'email',

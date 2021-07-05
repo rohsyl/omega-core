@@ -69,4 +69,9 @@ class Page extends Model
     public function getIsPublishedAttribute() {
         return isset($this->published_at) && $this->published_at->isBefore(now());
     }
+
+    public function getUrlAttribute() {
+        // TODO : generate url correctly
+        return '/' . $this->slug;
+    }
 }
