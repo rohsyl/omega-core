@@ -75,7 +75,18 @@ class MediaChooser extends TypeEntry
 
     public function getObjectValue()
     {
-        // TODO: Implement getObjectValue() method.
+        $param = $this->getMCParam();
+        $v = $this->getValue();
+
+        if(!$param['multiple']){
+            if(isset($v)) {
+                return Media::find($v);
+            }
+        }
+        else {
+
+        }
+        return null;
     }
 
     public function getDoc()
