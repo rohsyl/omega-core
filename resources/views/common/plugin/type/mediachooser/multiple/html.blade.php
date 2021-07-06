@@ -1,5 +1,5 @@
 <div>
-    <button class="btn btn-primary" id="{{ $uid }}-media-chooser"><i class="fa fa-images"></i> {{ __('Choose media from MediaLibrary') }}</button>
+    <button class="btn btn-primary btn-sm" id="{{ $uid }}-media-chooser"><i class="fas fa-plus"></i> {{ __('Choose files') }}</button>
     <div id="{{ $uid }}-media-container">
     </div>
 </div>
@@ -72,7 +72,7 @@
             var html = '<div class="media {{ $uid }}-media">';
             html += getPreview(media);
             html += '<div class="media-body">';
-            html += '<button class="btn btn-danger btn-sm {{ $uid }}-deleter" data-index="'+i+'">Delete</button>';
+            html += '<button class="btn btn-outline-danger btn-sm {{ $uid }}-deleter" data-index="'+i+'"><i class="fas fa-trash"></i></button>';
             html += '<p class="media-heading font-weight-bold" id="{{ $uid }}-media-name">' + logo + headingText + '</p>';
             html += '<div id="{{ $uid }}-media-description">';
             if(description !== undefined && description !== '' && description != null) {

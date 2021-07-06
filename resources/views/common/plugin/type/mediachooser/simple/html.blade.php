@@ -62,8 +62,8 @@
             @endif
         </div>
 
-        <button class="btn btn-primary btn-sm" id="{{ $uid }}-chooser">Choose</button>
-        <button class="btn btn-outline-danger btn-sm" id="{{ $uid }}-deleter">Delete</button>
+        <button class="btn btn-primary btn-sm" id="{{ $uid }}-chooser"><i class="fas fa-plus"></i> Choose a file</button>
+        <button class="btn btn-outline-danger btn-sm" id="{{ $uid }}-deleter"><i class="fas fa-trash"></i></button>
         <input value="{{ $id }}" id="{{ $uid }}-media-id" name="{{ $uid }}-media-id" type="hidden">
     </div>
 </div>
