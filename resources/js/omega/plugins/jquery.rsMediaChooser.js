@@ -26,31 +26,20 @@ var mediaChooserInstance = 0;
                 inception : $this.settings.inception
 			};
 			omega.ajax.query($this.settings.url, args, 'GET', function(html){
-				var o = $this.parseScript(html);
-				var mid = omega.modal.open(__('Select media'), o.html, __('Choose'), function(){
+				let o = $this.parseScript(html);
+				let mid = omega.modal.open(__('Select media'), o.html, __('Choose'), function(){
 
-					var $media = $('#omega-modal-'+mid+' .modal-body').find('.media-item.selected');
+					let $media = $('#omega-modal-'+mid+' .modal-body').find('.media-item.selected');
 
 					if ($media.length > 1) {
-						if($this.settings.multiple == true) {
+						if($this.settings.multiple === true) {
 
-							var data = [];
+							let data = [];
 
 							$media.each(function(){
-								if ($.inArray($(this).data('type'), $this.settings.allowedMedia) != -1) {
-
-									data.push({
-										icon: $(this).data('icon'),
-										name: $(this).data('name'),
-										parent: $(this).data('parent'),
-										ext: $(this).data('ext'),
-										type: $(this).data('type'),
-										size: $(this).data('size'),
-										path: $(this).data('path'),
-										id: $(this).data('id'),
-										title:  $(this).data('title'),
-										description:  $(this).data('description')
-									});
+								let media = $.parseJSON($('<div/>').html($(this).data('media')).text());
+								if ($.inArray(media.media_type, $this.settings.allowedMedia) !== -1) {
+									data.push(media);
 								}
 							});
 

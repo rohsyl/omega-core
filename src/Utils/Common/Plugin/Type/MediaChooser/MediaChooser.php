@@ -2,6 +2,7 @@
 namespace rohsyl\OmegaCore\Utils\Common\Plugin\Type\MediaChooser;
 
 
+use Illuminate\Support\Arr;
 use rohsyl\OmegaCore\Models\Media;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Type\TypeEntry;
 
@@ -30,15 +31,14 @@ class MediaChooser extends TypeEntry
     {
         $param = $this->getMCParam();
         $uid = $this->getUniqId();
-        $v = $this->getValue();
 
         if(!$param['multiple']){
-            $value = $v;
+            $value = $this->getValue();
             return view('omega::common.plugin.type.mediachooser.simple.html', compact('value', 'uid', 'param'));
         }
         else {
-            $values = isset($v) ? json_decode($v, true) : array();
-            return view('omega::common.plugin.type.mediachooser.multiple.html', compact('values', 'uid', 'param'));
+            $medias = $this->getMultipleMediaAsArray($this->getObjectValue());
+            return view('omega::common.plugin.type.mediachooser.multiple.html', compact('medias', 'uid', 'param'));
         }
 
     }
@@ -55,7 +55,7 @@ class MediaChooser extends TypeEntry
         }
         else{
 
-            $medias = array();
+            $medias = [];
             if($this->existsPost($uid.'-media-id') && $this->existsPost($uid.'-media-order')){
                 foreach ($this->getPost($uid.'-media-id') as $i => $type) {
                     $item = array(
@@ -66,7 +66,9 @@ class MediaChooser extends TypeEntry
                         $medias[] = $item;
                     }
                 }
-                $medias = array_orderby($medias, 'order', SORT_ASC);
+                $medias = array_values(Arr::sort($medias, function($media) {
+                    return $media['order'];
+                }));
             }
 
             return json_encode($medias);
@@ -84,9 +86,39 @@ class MediaChooser extends TypeEntry
             }
         }
         else {
-
+            $values = isset($v) ? json_decode($v, true) : [];
+            $medias = collect();
+            foreach($values as $value) {
+                $media = Media::find($value['id']);
+                if(isset($media)){
+                    $medias[] = $media;
+                }
+            }
+            return $medias;
         }
         return null;
+    }
+
+    private function getMultipleMediaAsArray($medias) {
+        $out = [];
+        foreach($medias as $media) {
+            $mediaItem = array(
+                'id' => $media->id,
+                'name' => $media->name,
+                'title' => $media->title,
+                'description' => $media->description,
+                'type' => $media->media_type,
+            );
+            if($media->media_type == Media::MT_PICTURE){
+                $mediaItem['thumbnail'] = $media->getThumbnail(120, 68);
+            }
+            if($media->media_type == Media::MT_VIDEO_EXT){
+                /*$media = new \Omega\Utils\Entity\VideoExternal($media);
+                $mediaItem['thumbnail'] = $media->getVideoThumbnail();*/
+            }
+            $out[] = $mediaItem;
+        }
+        return $out;
     }
 
     public function getDoc()
