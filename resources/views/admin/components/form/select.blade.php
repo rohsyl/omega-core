@@ -32,5 +32,11 @@
         select: '#{{ $name }}',
         allowDeselect: {{ isset($attributes['allowdeselect']) ? 'true' : 'false' }},
     })
+    window.addEventListener('form-rendered', function(e) {
+        new SlimSelect({
+            select: '#{{ $name }}',
+            allowDeselect: {{ isset($attributes['allowdeselect']) ? 'true' : 'false' }},
+        })
+    });
 </script>
 @endif

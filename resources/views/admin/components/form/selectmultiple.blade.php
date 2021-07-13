@@ -30,4 +30,11 @@
         select: '#{{ \Illuminate\Support\Str::slug($name, '_') }}',
         closeOnSelect: false
     })
+
+    window.addEventListener('form-rendered', function(e) {
+        var select{{ \Illuminate\Support\Str::slug($name, '_') }} = new SlimSelect({
+            select: '#{{ \Illuminate\Support\Str::slug($name, '_') }}',
+            closeOnSelect: false
+        })
+    })
 </script>
