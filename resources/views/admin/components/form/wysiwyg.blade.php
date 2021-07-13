@@ -15,5 +15,10 @@
         $('#{{ $name}}').summernote({
             minHeight: 300,
         });
+        window.addEventListener('form-rendered', function(e) {
+            $('#{{ $name}}').summernote({
+                minHeight: 300,
+            });
+        });
     });
 </script>

@@ -26,9 +26,11 @@
     @endif
 </div>
 
+@if(!isset($attributes['no-js']) || !$attributes['no-js'])
 <script>
     new SlimSelect({
         select: '#{{ $name }}',
         allowDeselect: {{ isset($attributes['allowdeselect']) ? 'true' : 'false' }},
     })
 </script>
+@endif

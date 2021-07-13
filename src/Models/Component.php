@@ -30,4 +30,8 @@ class Component extends Model
     public function page(){
         return $this->belongsTo(Page::class);
     }
+
+    public function getSettingsAttribute() {
+        return $this->param['settings'] ?? [];
+    }
 }
