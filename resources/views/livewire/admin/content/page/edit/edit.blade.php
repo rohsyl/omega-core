@@ -120,33 +120,7 @@
                             @endif
 
                             @if($showSettingsComponentForm)
-
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h4>{{ __('Edit') }} {{ \Illuminate\Support\Str::title($settingsEditableComponent->plugin_form->plugin->name) }}'s {{ __('settings') }}</h4>
-                                        <p>
-                                            {{ __('Here you can configure your component\'s settings...') }}
-                                        </p>
-
-
-                                        {{ Form::otext('compId', $settingsEditableComponent->settings['compId'] ?? null, ['label' => __('Component ID'), 'helper' => __('Set the #id of the component\'s section.')]) }}
-                                        {{ Form::otext('compTitle', null, ['label' => __('Component Title'), 'helper' => __('A title for the component.')]) }}
-                                        {{ Form::oselect('compTemplate', $componentTemplates, null, ['label' => __('Component\'s template'), 'helper' => __('Choose the template for this component'), 'no-js' => true, 'class' => 'form-control']) }}
-                                        {{ Form::ocheckbox('is_hidden', null, ['label' => __('Hide the component')]) }}
-                                        {{ Form::oselect('comp_width', $componentWidths, null, ['label' => __('Component width'), 'helper' => __('Keywords for this page.'), 'no-js' => true, 'class' => 'form-control']) }}
-
-                                        <div class="mt-4 text-right">
-                                            <button class="btn btn-outline-secondary btn-sm"
-                                                    type="button"
-                                                    wire:click="hideSettingsComponentForm"
-                                                    wire:target="hideSettingsComponentForm"
-                                                    wire:loading.attr="disabled"
-                                            >
-                                                {{ __('Cancel') }}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                                <livewire:omega_edit-componentsettings :component="$settingsEditableComponent" wire:settingsSaved="hideSettingsComponentForm" />
                             @endif
                         </div>
                     </div>
