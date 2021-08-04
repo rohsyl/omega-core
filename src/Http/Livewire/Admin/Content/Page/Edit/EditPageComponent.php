@@ -40,6 +40,11 @@ class EditPageComponent extends LivewireComponent
 
     public $widgetAreas;
 
+    protected $listeners = [
+        'settingsEditSaved',
+        'settingsEditCancelled',
+    ];
+
     public function mount() {
         $this->tab = request()->has('tab') ? request()->input('tab') : 'content';
     }
@@ -136,41 +141,21 @@ class EditPageComponent extends LivewireComponent
     }
 
     public $settingsEditableComponent;
-    public $componentTemplates;
-    public $componentWidths;
     public $showSettingsComponentForm = false;
     public function showSettingsComponentForm($component_id) {
         $this->hideSidebarForms();
         $this->settingsEditableComponent = Component::find($component_id);
         $this->showSettingsComponentForm = true;
-        $this->loadSettingsForm();
+    }
+    public function settingsEditSaved() {
+        $this->hideSettingsComponentForm();
+    }
+    public function settingsEditCancelled() {
+        $this->hideSettingsComponentForm();
     }
     public function hideSettingsComponentForm() {
         $this->settingsEditableComponent = null;
         $this->showSettingsComponentForm = false;
-    }
-    public function loadSettingsForm() {
-        $pluginName = $this->settingsEditableComponent->plugin_form->plugin->name;
-        $themeName = OmegaTheme::getName();
-        $componentsTemplates = OmegaTheme::getRegister()->getAllComponentsViewForPlugin($pluginName);
-
-        $pluginTemplatesWithTitle = [];
-        $pluginTemplatesWithTitle['null'] = __('Default');
-        foreach ($componentsTemplates as $views) {
-            foreach ($views as $newView) {
-                $newViewName = $newView->getNewViewPath();
-                $label = $newView->getLabel();
-                if (!isset($label)) {
-                    $label = Str::title($themeName) . ' - ' . Str::title($pluginName) . ' - ' . without_ext(without_ext(Str::title($newViewName)));
-                }
-                $pluginTemplatesWithTitle[theme_encode_components_template($themeName, $newView)] = $label;
-            }
-        }
-        $this->componentTemplates = $pluginTemplatesWithTitle;
-        $this->componentWidths = [
-            'wrapped' => __('Wrapped'),
-            'full-width' => __('Full Width')
-        ];
     }
 
     public function hideSidebarForms() {

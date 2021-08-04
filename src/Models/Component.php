@@ -34,4 +34,5 @@ class Component extends Model
     public function getSettingsAttribute() {
         return $this->param['settings'] ?? [];
     }
+
 }
