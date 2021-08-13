@@ -43,11 +43,21 @@
 <script>
     new SlimSelect({
         select: '#{{ $name }}',
+        showSearch:  {{ isset($attributes['show-search']) ? 'true' : 'false' }},
+        {!! isset($attributes['search-text']) ? 'searchText: \'' . $attributes['search-text'] . '\',' : '' !!}
+        {!! isset($attributes['search-placeholder']) ? 'searchPlaceholder: \'' . $attributes['search-placeholder'] . '\',' : '' !!}
+        searchFocus: {{ isset($attributes['search-focus']) ? 'true' : 'false' }}, // Whether or not to focus on the search input field
+        searchHighlight: {{ isset($attributes['search-highlight']) ? 'true' : 'false' }},
         allowDeselect: {{ isset($attributes['allowdeselect']) ? 'true' : 'false' }},
     })
     window.addEventListener('form-rendered', function(e) {
         new SlimSelect({
             select: '#{{ $name }}',
+            showSearch:  {{ isset($attributes['show-search']) ? 'true' : 'false' }},
+            {!! isset($attributes['search-text']) ? 'searchText: \'' . $attributes['search-text'] . '\',' : '' !!}
+            {!! isset($attributes['search-placeholder']) ? 'searchPlaceholder: \'' . $attributes['search-placeholder'] . '\',' : '' !!}
+            searchFocus: {{ isset($attributes['search-focus']) ? 'true' : 'false' }}, // Whether or not to focus on the search input field
+            searchHighlight: {{ isset($attributes['search-highlight']) ? 'true' : 'false' }},
             allowDeselect: {{ isset($attributes['allowdeselect']) ? 'true' : 'false' }},
         })
     });
