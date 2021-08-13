@@ -30,6 +30,7 @@ abstract class OvertPluginController extends Controller
 
     protected function view($name, $data = []) {
 
+        dd($this->forceView);
         if(isset($this->forceView[$name])){
             $name = $this->forceView[$name];
         }

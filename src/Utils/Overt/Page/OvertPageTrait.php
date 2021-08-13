@@ -166,7 +166,7 @@ trait OvertPageTrait
             );
 
             // force using an other view defined in the settings of the component
-            if(isset($args['settings']['pluginTemplate']) && $args['settings']['pluginTemplate'] != 'null'){
+            if(isset($args['settings']['pluginTemplate'])){
                 $ct = theme_decode_components_template($args['settings']['pluginTemplate']);
                 $instance->forceView($ct->getViewName(), $ct->getNewView());
             }
@@ -229,7 +229,7 @@ trait OvertPageTrait
             );
 
             // force using an other view defined in the settings of the component
-            if(isset($args['settings']['pluginTemplate']) && $args['settings']['pluginTemplate'] != 'null'){
+            if(isset($args['settings']['pluginTemplate'])){
                 $ct = theme_decode_components_template($args['settings']['pluginTemplate']);
                 $instance->forceView($ct->getViewName(), $ct->getNewView());
             }

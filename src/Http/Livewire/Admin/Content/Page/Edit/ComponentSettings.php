@@ -60,12 +60,12 @@ class ComponentSettings extends LivewireComponent
         $pluginTemplatesWithTitle[null] = __('Default');
         foreach ($componentsTemplates as $views) {
             foreach ($views as $newView) {
-                $newViewName = $newView->getNewViewPath();
+                $newViewName = $newView->getNewView();
                 $label = $newView->getLabel();
                 if (!isset($label)) {
                     $label = Str::title($themeName) . ' - ' . Str::title($pluginName) . ' - ' . without_ext(without_ext(Str::title($newViewName)));
                 }
-                $pluginTemplatesWithTitle[theme_encode_components_template($themeName, $newView)] = $label;
+                $pluginTemplatesWithTitle[theme_encode_components_template($newView)] = $label;
             }
         }
         $this->componentTemplates = $pluginTemplatesWithTitle;

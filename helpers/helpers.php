@@ -115,7 +115,7 @@ if(!function_exists('theme_encode_components_template')) {
      */
     function theme_encode_components_template($newView)
     {
-        return $newView->getPluginName() . '.' . $newView->getViewName() . '.' . $newView->getNewViewPath();
+        return $newView->getPluginName() . '.' . $newView->getViewName() . '.' . $newView->getNewView();
     }
 }
 
