@@ -57,23 +57,82 @@
 
                 <div class="row">
                     <div class="col-md-8">
+                        <div id="components-container">
+                            @foreach($componentsForms as $form)
+                                <div class="card component-item" id="{{ $form['id'] }}-{{ $form['name'] }}">
+                                    {{ Form::hidden('components_order['.$form['id'].']', $form['order']) }}
+                                    <div class="card-header p-10 d-flex justify-content-between">
+                                        <div>
+                                            <span class="text-dark">
+                                                @if(isset($form['settings']['compTitle']) && !empty($form['settings']['compTitle']))
+                                                    {{ $form['settings']['compTitle'] }}
+                                                    ({{  \Illuminate\Support\Str::title($form['name']) }})
+                                                @else
 
-                        @foreach($componentsForms as $form)
-                            <div class="card" id="{{ $form['id'] }}-{{ $form['name'] }}">
-                                <div class="card-header p-10 d-flex justify-content-between">
-                                    <div>
-                                        {{ \Illuminate\Support\Str::title($form['name']) }}
+                                                    {{  \Illuminate\Support\Str::title($form['name']) }}
+                                                @endif
+                                            </span>
+                                            <ul class="list-unstyled list-inline d-inline-block ml-2">
+                                                @if(isset($form['settings']['isHidden']) && $form['settings']['isHidden'])
+                                                    <li class="list-inline-item" title="{{ __('Component is not displayed on the page.') }}"><i class="fa fa-eye-slash" id="hidden-comp-{{ $form['id'] }}"></i></li>
+                                                @endif
+                                                @if(isset($form['settings']['isWrapped']) && !$form['settings']['isWrapped'])
+                                                    <li class="list-inline-item" data-toggle="tooltip" title="{{ __('Component will be rendered full width.') }}"><i class="fas fa-arrows-alt-h" id="fullwidth-comp-{{ $form['id'] }}"></i></li>
+                                                @endif
+                                                @if(isset($form['settings']['pluginTemplate']) && !empty($form['settings']['pluginTemplate']))
+                                                    <li class="list-inline-item" data-toggle="tooltip" title="{{ __('A component template is applied.') }}"><i class="fa fa-exclamation-circle" id="template-comp-{{ $form['id'] }}"></i></li>
+                                                @endif
+                                                @if(isset($form['settings']['compId']) && !empty($form['settings']['compId']))
+                                                    <li class="list-inline-item"><i class="fa fa-hashtag" id="id-comp-{{ $form['id'] }}"></i>{{ $form['settings']['compId'] }}</li>
+                                                @endif
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <span class="grab-sortable mr-2" style="cursor:grab;"><i class="fas fa-arrows-alt"></i></span>
+                                            <a class="mr-2" href="#" wire:click="showSettingsComponentForm({{ $form['id'] }})"><i class="fas fa-cog"></i></a>
+                                            <a class="text-danger" href="#" wire:click="deleteComponent({{ $form['id'] }})"><i class="fas fa-trash"></i></a>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <a class="mr-2" href="#" wire:click="showSettingsComponentForm({{ $form['id'] }})"><i class="fas fa-cog"></i></a>
-                                        <a class="text-danger" href="#" wire:click="deleteComponent({{ $form['id'] }})"><i class="fas fa-trash"></i></a>
+                                    <div class="card-body p-10" wire:ignore>
+                                        {!! $form['html'] !!}
                                     </div>
                                 </div>
-                                <div class="card-body p-10" wire:ignore>
-                                    {!! $form['html'] !!}
-                                </div>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        </div>
+                        <script>
+                            $(function() {
+                                createSortable();
+                                function createSortable(){
+                                    var sortable = document.getElementById('components-container');
+                                    Sortable.create(sortable, {
+                                        group: 'sort-components',
+                                        animation: 100,
+                                        handle: '.grab-sortable',
+                                        ghostClass: 'sort-components-sortable-ghost',  // Class name for the drop placeholder
+                                        draggable: '.component-item',  // Specifies which items inside the element should be draggable
+                                        // Changed sorting within list
+                                        onEnd: function (/**Event*/evt) {
+                                            console.log('sehs');
+                                            $('#components-container .component-item').each(function(i) {
+                                                console.log(i);
+                                                $(this).find('input[name^="components_order"]').val(i);
+                                            });
+                                            $('#components-container .component-item').each(function(i) {
+                                                console.log($(this).find('input[name^="components_order"]').val());
+
+                                            });
+                                        },
+
+
+                                    });
+                                }
+                            });
+                        </script>
+                        <style>
+                            .sort-components-sortable-ghost {
+                                background-color: #cccccc;
+                            }
+                        </style>
 
                     </div>
                     <div class="col-md-4">

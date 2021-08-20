@@ -44,11 +44,14 @@ class PageController extends Controller
 
         $action = $request->input('action') ?? 'save';
 
+        $inputs = $request->validated();
+
         if($action == 'save') {
             foreach($page->components as $component) {
                 Type::FormSave($component->plugin_form_id, $component->id, $component->page_id);
+                $component->order = $inputs['components_order'][$component->id] ?? 0;
+                $component->save();
             }
-
             $page->update($request->validated());
         }
         if($action == 'publish') {

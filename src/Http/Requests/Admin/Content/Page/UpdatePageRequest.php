@@ -35,6 +35,7 @@ class UpdatePageRequest extends FormRequest
             'model' => 'nullable|string',
             'menu_id' => 'nullable|exists:menus,id',
             'keyword' => 'nullable|string',
+            'components_order.*' => 'nullable|numeric',
         ];
     }
 }

@@ -95,6 +95,8 @@ class EditPageComponent extends LivewireComponent
             $components[] = [
                 'id' => $component->id,
                 'name' => $component->plugin_form->plugin->name,
+                'settings' => $component->param['settings'] ?? [],
+                'order' => $component->order,
                 'html' => Type::FormRender($component->plugin_form_id, $component->id, $component->page_id, $formRenderer),
             ];
         }
