@@ -65,6 +65,11 @@ class Media extends Model
             ->orderBy('name');
     }
 
+    public function children_by_type($types) {
+        return $this->children()
+            ->whereIn('type', $types);
+    }
+
     public function owner() {
         return $this->belongsTo(User::class, 'owner_id');
     }

@@ -30,15 +30,23 @@ abstract class OvertPluginController extends Controller
 
     protected function view($name, $data = []) {
 
-        dd($this->forceView);
-        if(isset($this->forceView[$name])){
-            $name = $this->forceView[$name];
+        $viewName = $this->getViewFileNameFromFullViewName('display');
+        if(isset($this->forceView[$viewName])){
+            $name = $this->forceView[$viewName];
         }
         else if(isset($this->forceView['default'])) {
             $name = $this->forceView['default'];
         }
 
+        if(!view()->exists($name)) return view('omega::overt.components.template.notfound', compact('name'));
+
         return view($name, $data);
+    }
+
+    private function getViewFileNameFromFullViewName($name) {
+        $strrpos = strrpos($name, '.');
+        if($strrpos === false) return $name;
+        return substr($name,  $strrpos + 1);
     }
 
 

@@ -115,7 +115,7 @@ if(!function_exists('theme_encode_components_template')) {
      */
     function theme_encode_components_template($newView)
     {
-        return $newView->getPluginName() . '.' . $newView->getViewName() . '.' . $newView->getNewView();
+        return $newView->getPluginName() . '|' . $newView->getViewName() . '|' . $newView->getNewView();
     }
 }
 
@@ -130,7 +130,12 @@ if(!function_exists('theme_decode_components_template')) {
             return null;
         }
 
-        $t = explode('.',  $componentsTemplateString);
+        $t = explode('|',  $componentsTemplateString);
+
+        if(sizeof($t) !== 3) {
+            return null;
+        }
+
         $pluginName = $t[0];
         $viewName = $t[1];
         $newViewPath = $t[2];

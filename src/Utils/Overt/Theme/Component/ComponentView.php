@@ -1,10 +1,6 @@
 <?php
-
-
 namespace rohsyl\OmegaCore\Utils\Overt\Theme\Component;
 
-
-use Omega\Utils\Path;
 
 class ComponentView
 {
