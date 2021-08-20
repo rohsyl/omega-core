@@ -13,6 +13,10 @@ require('./omega/admin/index')
 require('bs4-summernote')
 require('daterangepicker/daterangepicker');
 
+import { Sortable, AutoScroll } from 'sortablejs/modular/sortable.core.esm.js';
+Sortable.mount(new AutoScroll());
+window.Sortable = Sortable;
+
 import Swal from 'sweetalert2';
 window.Swal = Swal;
 
