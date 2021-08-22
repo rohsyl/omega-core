@@ -6,12 +6,20 @@ namespace rohsyl\OmegaCore\Utils\Overt\Theme;
 use Illuminate\Support\Facades\View;
 use rohsyl\OmegaCore\ServiceProvider;
 use Omega\Utils\Path;
+use rohsyl\OmegaCore\Utils\Common\Widget\WidgetAreaManager;
 
 class ThemeManager
 {
     private $installerPath;
     private $registerPath;
     private $themePath;
+
+    private $widgetAreaManager
+
+    public function __construct()
+    {
+        $this->widgetAreaManager = new WidgetAreaManager();
+    }
 
     public function setInstallerPath(string $installerPath) {
 
@@ -111,5 +119,12 @@ class ThemeManager
 
     public function getName() {
         return $this->getRegister()->getName();
+    }
+
+    /**
+     * @return WidgetAreaManager
+     */
+    public function widgetArea() {
+        return $this->widgetAreaManager;
     }
 }
