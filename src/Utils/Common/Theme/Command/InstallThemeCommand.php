@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Artisan;
 use rohsyl\OmegaCore\Models\Theme;
 use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 use rohsyl\OmegaCore\Utils\Overt\Theme\Installer\Installer;
+use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
 
 class InstallThemeCommand extends Command
 {
@@ -22,7 +23,7 @@ class InstallThemeCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Install the registera theme';
+    protected $description = 'Install the registered theme';
 
     /**
      * Create a new command instance.
@@ -64,7 +65,7 @@ class InstallThemeCommand extends Command
         $postInstallCallable = $installer->getPostInstall();
 
         if(is_callable($postInstallCallable)) {
-            call_user_func($postInstallCallable, $installer->getName());
+            call_user_func($postInstallCallable, OmegaTheme::get());
         }
 
         $this->info('Theme installed !');

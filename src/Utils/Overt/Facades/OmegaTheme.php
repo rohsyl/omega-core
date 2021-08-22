@@ -4,6 +4,7 @@ namespace rohsyl\OmegaCore\Utils\Overt\Facades;
 
 use Illuminate\Support\Facades\Facade;
 use rohsyl\OmegaCore\ServiceProvider;
+use rohsyl\OmegaCore\Utils\Common\Widget\WidgetAreaManager;
 use rohsyl\OmegaCore\Utils\Overt\Theme\Component\Template;
 use rohsyl\OmegaCore\Utils\Overt\Theme\Installer\Installer;
 use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
@@ -23,6 +24,7 @@ use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
  * @method static Installer getInstaller()
  * @method static array getThemeTemplate()
  * @method static string getName()
+ * @method static WidgetAreaManager widgetArea()
  *
  * @see ThemeManager
  */

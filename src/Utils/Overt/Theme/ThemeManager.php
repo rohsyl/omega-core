@@ -14,7 +14,7 @@ class ThemeManager
     private $registerPath;
     private $themePath;
 
-    private $widgetAreaManager
+    private $widgetAreaManager;
 
     public function __construct()
     {
@@ -119,6 +119,10 @@ class ThemeManager
 
     public function getName() {
         return $this->getRegister()->getName();
+    }
+
+    public function get() {
+        return $this;
     }
 
     /**

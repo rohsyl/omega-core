@@ -9,17 +9,24 @@ use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 
 class WidgetAreaManager
 {
+    private $themeName;
+
+    public function __construct()
+    {
+        $this->themeName = OmegaTheme::getName();
+    }
+
     public function getAll() {
 
         return WidgetArea::query()
-            ->where('theme', OmegaTheme::getName())
+            ->where('theme', $this->themeName)
             ->get();
     }
 
-    public function create($name, $theme) {
+    public function create($name) {
         WidgetArea::create([
             'name' => $name,
-            'theme' => $theme
+            'theme' => $this->themeName
         ]);
     }
 
