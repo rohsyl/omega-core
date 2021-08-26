@@ -125,7 +125,7 @@ class ServiceProvider extends SP
             return new PluginManager();
         });
 
-        $this->app->bind('omega:theme', function () {
+        $this->app->singleton('omega:theme', function () {
             return new ThemeManager();
         });
 
@@ -139,10 +139,6 @@ class ServiceProvider extends SP
 
         $this->app->bind('omega:member', function () {
             return new MemberManager();
-        });
-
-        $this->app->bind('omega:widgetarea', function () {
-            return new WidgetAreaManager();
         });
     }
 

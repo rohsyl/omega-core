@@ -18,7 +18,7 @@ class ThemeManager
 
     public function __construct()
     {
-        $this->widgetAreaManager = new WidgetAreaManager();
+        $this->widgetAreaManager = new WidgetAreaManager($this);
     }
 
     public function setInstallerPath(string $installerPath) {

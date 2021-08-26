@@ -6,27 +6,28 @@ namespace rohsyl\OmegaCore\Utils\Common\Widget;
 
 use rohsyl\OmegaCore\Models\WidgetArea;
 use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
+use rohsyl\OmegaCore\Utils\Overt\Theme\ThemeManager;
 
 class WidgetAreaManager
 {
-    private $themeName;
+    private $themeManager;
 
-    public function __construct()
+    public function __construct(ThemeManager $themeManager)
     {
-        $this->themeName = OmegaTheme::getName();
+        $this->themeManager = $themeManager;
     }
 
     public function getAll() {
 
         return WidgetArea::query()
-            ->where('theme', $this->themeName)
+            ->where('theme', $this->themeManager->getName())
             ->get();
     }
 
     public function create($name) {
         WidgetArea::create([
             'name' => $name,
-            'theme' => $this->themeName
+            'theme' => $this->themeManager->getName()
         ]);
     }
 

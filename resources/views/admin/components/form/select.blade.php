@@ -9,6 +9,7 @@
         },
         ARRAY_FILTER_USE_KEY
     );
+    $hasLivewire = sizeof($wireAttributes) > 0;
 @endphp
 <div class="form-group">
     @if (!isset($attributes['no-label']) || !$attributes['no-label'])
@@ -21,13 +22,13 @@
         @endforeach
     >
 
-        <option disabled {{ ($value != null) ? 'value="' . $value . '"' : 'selected'   }}
+        <option {{ ($value != null) ? 'value="' . $value . '"' : 'selected'   }}
             data-placeholder="true">{{ isset($attributes['placeholder']) ? $attributes['placeholder'] : '' }}</option>
         @foreach($data as $key=>$line)
             @if (($value != null) && $value == $key)
-                <option selected value="{{ $key }}">{{ $line }}</option>
+                <option selected value="{{ $key }}" @if($hasLivewire) wire:key="{{ $key }}" @endif>{{ $line }}</option>
             @else
-                <option class="" value="{{ $key }}">{{ $line }}</option>
+                <option value="{{ $key }}" @if($hasLivewire) wire:key="{{ $key }}" @endif>{{ $line }}</option>
             @endif
         @endforeach
     </select>
