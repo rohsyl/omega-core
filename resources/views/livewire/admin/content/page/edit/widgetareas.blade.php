@@ -79,7 +79,7 @@
         @endif
 
         @if($showEditWidgetForm)
-            <div class="card">
+            <div class="card" id="form-edit-widget">
                 <div class="card-body">
 
 
@@ -88,13 +88,16 @@
                         {{ __('Add a widget to an area') }}
                     </p>
 
+                    <input type="hidden" name="id" value="{{ $editableWidget->id }}"
+
+                    {!! $editableWidgetForm['html'] !!}
 
                     <div class="mt-4 text-right">
                         <button class="btn btn-primary btn-sm"
-                                type="button"
-                                wire:click="updateWidget"
-                                wire:target="updateWidget"
-                                wire:loading.attr="disabled">
+                                id="updateWidget"
+                                wire:target="hideEditWidgetForm"
+                                wire:loading.attr="disabled"
+                                type="button">
                             <i class="fas fa-save"></i>
                             {{ __('Update') }}
                         </button>
@@ -109,6 +112,45 @@
                     </div>
                 </div>
             </div>
+            <script>
+                $(function() {
+                    let formContainer = $('#form-edit-widget');
+                    let $btn = $('#updateWidget');
+
+                    $btn.click(function(e) {
+
+                        let data = getAllValues()
+
+                        axios.put(route('omega.admin.content.pages.widgetarea.widgets.save', {
+                            page: {{ $pageId }},
+                            component: {{ $editableWidget->id }}
+                        }), data)
+                        .then(function(res) {
+                            console.log(res)
+                        });
+                        @this.emit('updatedWidget')
+                    });
+
+                    function getAllValues() {
+                        let inputValues = {};
+                        formContainer.find(':input').each(function() {
+                            let type = $(this).prop('type');
+                            let name = $(this).prop('name');
+
+
+                            // checked radios/checkboxes
+                            if ((type === 'checkbox' || type === 'radio') && this.checked) {
+                                inputValues[name] = $(this).val();
+                            }
+                            // all other fields, except buttons
+                            else if (type !== 'button' && type !== 'submit') {
+                                inputValues[name] = $(this).val();
+                            }
+                        })
+                        return inputValues;
+                    }
+                });
+            </script>
         @endif
 
     </div>

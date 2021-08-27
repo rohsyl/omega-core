@@ -160,8 +160,6 @@ class EditPageComponent extends LivewireComponent
 
     public function setTab($tab) {
         $this->tab = $tab;
-        $this->hideAddWidgetForm();
-        $this->hideEditWidgetForm();
     }
 
 

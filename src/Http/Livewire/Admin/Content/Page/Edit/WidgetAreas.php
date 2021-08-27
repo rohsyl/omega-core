@@ -13,7 +13,9 @@ use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 
 class WidgetAreas extends LivewireComponent
 {
-    public $page_id;
+    protected $listeners = ['updatedWidget'];
+
+    public $pageId;
     public $widgetAreas;
 
     public function render() {
@@ -32,6 +34,7 @@ class WidgetAreas extends LivewireComponent
     public $creatableWidgetPluginForms;
     public $showAddWidgetForm = false;
     public function showAddWidgetForm($widgetAreaId) {
+        $this->hideEditWidgetForm();
         $this->widgetarea_id = $widgetAreaId;
         $this->showAddWidgetForm = true;
         $this->creatableWidgetPluginForms = PluginForm::query()
@@ -53,12 +56,12 @@ class WidgetAreas extends LivewireComponent
         ]);
 
         $pluginForm = PluginForm::find($this->widget_plugin_form_id);
-        $maxOrder = Component::query()->where('page_id', $this->page->id)->max('order');
-        $maxId = Component::query()->where('page_id', $this->page->id)->max('id');
+        $maxOrder = Component::query()->where('pageId', $this->pageId)->max('order');
+        $maxId = Component::query()->where('pageId', $this->pageId)->max('id');
 
         $component = Component::create([
             'plugin_form_id' => $pluginForm->id,
-            'page_id' => $this->page_id,
+            'pageId' => $this->pageId,
             'name' => $this->widget_name,
             'param' => [
                 'settings' => [
@@ -70,11 +73,11 @@ class WidgetAreas extends LivewireComponent
             'order' => $maxOrder ?? 0,
         ]);
 
-        $maxOrder = ComponentWidgetArea::query()->where('page_id', $this->page->id)->max('order');
+        $maxOrder = ComponentWidgetArea::query()->where('pageId', $this->pageId)->max('order');
         ComponentWidgetArea::create([
             'widget_area_id' => $this->widgetarea_id,
             'component_id' => $component->id,
-            'page_id' => $this->page->id,
+            'pageId' => $this->pageId,
             'order' => $maxOrder+1,
         ]);
 
@@ -90,22 +93,21 @@ class WidgetAreas extends LivewireComponent
     public function showEditWidgetForm($widget_id) {
         $this->editableWidget = Component::find($widget_id);
         $this->showEditWidgetForm = true;
-
+        $this->hideAddWidgetForm();
 
         $plugin = Plugin::getPlugin($this->editableWidget->plugin_form->plugin->name);
         $formRenderer = $plugin->getFormRendererComponent();
         $this->editableWidgetForm = [
             'settings' => $this->editableWidget->param['settings'] ?? [],
-            'html' => Type::FormRender($this->editableWidget->plugin_form_id, $this->editableWidget->id, $this->editableWidget->page_id, $formRenderer),
+            'html' => Type::FormRender($this->editableWidget->plugin_form_id, $this->editableWidget->id, $this->pageId, $formRenderer),
         ];
     }
     public function hideEditWidgetForm() {
         $this->showEditWidgetForm = false;
         $this->editableWidget = null;
-
-
+        $this->editableWidgetForm = null;
     }
-    public function updateWidget() {
-
+    public function updatedWidget() {
+        $this->hideEditWidgetForm();
     }
 }
