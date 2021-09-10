@@ -9,7 +9,7 @@
         {{ Form::otext('compId', null, ['wire:model.defer' => 'compId', 'label' => __('Component ID'), 'helper' => __('Set the #id of the component\'s section.')]) }}
         {{ Form::otext('compTitle', null, ['wire:model.defer' => 'compTitle', 'label' => __('Component Title'), 'helper' => __('A title for the component.')]) }}
         <div class="form-group">
-            <label for="compTemplate">{{ __('Component Title') }}</label>
+            <label for="compTemplate">{{ __('Component Template') }}</label>
             <select wire:model.defer="compTemplate" id="compTemplate" class="form-control">
                 @foreach($componentTemplates as $value => $label)
                     <option value="{{ $value }}" wire:key="{{ $value}}">{{ $label }}</option>

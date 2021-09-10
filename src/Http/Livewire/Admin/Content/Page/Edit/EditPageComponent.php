@@ -41,6 +41,7 @@ class EditPageComponent extends LivewireComponent
     protected $listeners = [
         'settingsEditSaved',
         'settingsEditCancelled',
+        'orderUpdated',
     ];
 
     public function mount() {
@@ -162,5 +163,12 @@ class EditPageComponent extends LivewireComponent
         $this->tab = $tab;
     }
 
-
+    public function orderUpdated($orders) {
+        foreach($orders as $id => $order) {
+            $component = Component::find($id);
+            $component->order = $order ?? 0;
+            $component->save();
+        }
+        $this->page->load('components');
+    }
 }

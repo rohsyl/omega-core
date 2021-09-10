@@ -92,7 +92,7 @@
 
                     {!! $editableWidgetForm['html'] !!}
 
-                    <div class="mt-4 text-right">
+                    <div class="mt-4 mb-2 text-right">
                         <button class="btn btn-primary btn-sm"
                                 id="updateWidget"
                                 wire:target="hideEditWidgetForm"

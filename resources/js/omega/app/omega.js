@@ -101,7 +101,8 @@ let OmegaLocation = require('./omegaLocation');
 
                     var editor = $this.summernote(param);
                     var $toolbar = $this.next('.note-editor').find('.note-toolbar');
-                    var $btngroup = $('<div class="note-omega btn-group"></div>');
+
+                    /*var $btngroup = $('<div class="note-omega btn-group"></div>');
                     var $btnL = $('<button class="btn btn-default btn-sm btn-small" data-toggle="summernote-tooltip" title="' + __('Media Library') + '"><i class="fa fa-folder"></i></button>');
                     var $btnM = $('<button class="btn btn-default btn-sm btn-small" data-toggle="summernote-tooltip" title="' + __('Insert a module') + '"><i class="fa fa-object-group"></i></button>');
 
@@ -151,7 +152,7 @@ let OmegaLocation = require('./omegaLocation');
 
                     $btngroup.append($btnL);
                     $btngroup.append($btnM);
-                    $toolbar.append($btngroup);
+                    $toolbar.append($btngroup);*/
 
                     $('[data-toggle="summernote-tooltip"]').tooltip({
                         placement: 'bottom'

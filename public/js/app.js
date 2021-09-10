@@ -77200,55 +77200,53 @@ var OmegaLocation = __webpack_require__(/*! ./omegaLocation */ "./resources/js/o
           };
           var editor = $this.summernote(param);
           var $toolbar = $this.next('.note-editor').find('.note-toolbar');
-          var $btngroup = $('<div class="note-omega btn-group"></div>');
+          /*var $btngroup = $('<div class="note-omega btn-group"></div>');
           var $btnL = $('<button class="btn btn-default btn-sm btn-small" data-toggle="summernote-tooltip" title="' + __('Media Library') + '"><i class="fa fa-folder"></i></button>');
           var $btnM = $('<button class="btn btn-default btn-sm btn-small" data-toggle="summernote-tooltip" title="' + __('Insert a module') + '"><i class="fa fa-object-group"></i></button>');
-          $btnL.rsMediaChooser({
-            multiple: false,
-            allowedMedia: ['picture', 'music', 'video', 'document'],
-            doneFunction: function doneFunction(data) {
-              var html = '';
-
-              switch (data.type) {
-                case 'picture':
-                  html = '<img src="' + data.path + '" title="' + data.name + '" />';
-                  break;
-
-                case 'music':
-                  html = '\
-								<audio controls>\
-									<source type="' + data.mime + '" src="' + data.path + '">\
-									' + __('Your browser does not support the audio tag') + '.\
-								</audio>\
-							';
-                  break;
-
-                case 'video':
-                  html = '\
-								<video controls>\
-									<source src="' + data.path + '" type="' + data.mime + '">\
-									' + __('Your browser does not support the video tag') + '.\
-								</video>\
-							';
-                  break;
-
-                default:
-                  html = '<a href="' + data.path + '">' + data.name + '</a>';
-                  break;
+            $btnL.rsMediaChooser({
+              multiple: false,
+              allowedMedia: [
+                  'picture', 'music', 'video', 'document'
+              ],
+              doneFunction: function (data) {
+                  var html = '';
+                  switch (data.type) {
+                      case 'picture':
+                          html = '<img src="' + data.path + '" title="' + data.name + '" />';
+                          break;
+                      case 'music':
+                          html = '\
+          <audio controls>\
+          <source type="' + data.mime + '" src="' + data.path + '">\
+          ' + __('Your browser does not support the audio tag') + '.\
+          </audio>\
+          ';
+                          break;
+                      case 'video':
+                          html = '\
+          <video controls>\
+          <source src="' + data.path + '" type="' + data.mime + '">\
+          ' + __('Your browser does not support the video tag') + '.\
+          </video>\
+          ';
+                          break;
+                      default:
+                          html = '<a href="' + data.path + '">' + data.name + '</a>';
+                          break;
+                  }
+                  $this.summernote('editor.insertText', html);
+                }
+          });
+            $btnM.rsModuleChooser({
+              doneFunction: function (id) {
+                  var module = '[module=' + id + '][/module]';
+                    $this.summernote('editor.insertText', module);
               }
-
-              $this.summernote('editor.insertText', html);
-            }
           });
-          $btnM.rsModuleChooser({
-            doneFunction: function doneFunction(id) {
-              var module = '[module=' + id + '][/module]';
-              $this.summernote('editor.insertText', module);
-            }
-          });
-          $btngroup.append($btnL);
+            $btngroup.append($btnL);
           $btngroup.append($btnM);
-          $toolbar.append($btngroup);
+          $toolbar.append($btngroup);*/
+
           $('[data-toggle="summernote-tooltip"]').tooltip({
             placement: 'bottom'
           });

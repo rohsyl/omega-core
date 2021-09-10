@@ -59,7 +59,7 @@
                     <div class="col-md-8">
                         <div id="components-container">
                             @foreach($componentsForms as $form)
-                                <div class="card component-item" id="{{ $form['id'] }}-{{ $form['name'] }}">
+                                <div class="card component-item" id="{{ $form['id'] }}-{{ $form['name'] }}" data-id="{{ $form['id'] }}">
                                     {{ Form::hidden('components_order['.$form['id'].']', $form['order']) }}
                                     <div class="card-header p-10 d-flex justify-content-between">
                                         <div>
@@ -112,18 +112,14 @@
                                         draggable: '.component-item',  // Specifies which items inside the element should be draggable
                                         // Changed sorting within list
                                         onEnd: function (/**Event*/evt) {
-                                            console.log('sehs');
+                                            let orders = {};
                                             $('#components-container .component-item').each(function(i) {
-                                                console.log(i);
+                                                orders[$(this).data('id')] = i;
                                                 $(this).find('input[name^="components_order"]').val(i);
-                                            });
-                                            $('#components-container .component-item').each(function(i) {
-                                                console.log($(this).find('input[name^="components_order"]').val());
 
                                             });
+                                            Livewire.emit('orderUpdated', orders)
                                         },
-
-
                                     });
                                 }
                             });
@@ -179,7 +175,7 @@
                             @endif
 
                             @if($showSettingsComponentForm)
-                                <livewire:omega_edit-page-componentsettings :component="$settingsEditableComponent" wire:settingsSaved="hideSettingsComponentForm" />
+                                <livewire:omega_edit-page-componentsettings key="{{ now() }}" :component="$settingsEditableComponent" wire:settingsSaved="hideSettingsComponentForm" />
                             @endif
                         </div>
                     </div>
