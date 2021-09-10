@@ -191,10 +191,10 @@ trait OvertPageTrait
 
                 $views[] = [
                     'title' => $title,
-                    'html' => view()->first(['theme::template.section', 'public.section'])->with([
+                    'html' => view()->first(['theme::template.section', 'omega::overt.section'])->with([
                         'compId' => $compId,
                         'style' => $style,
-                        'plugin' => $component->plugin,
+                        'plugin' => $component->plugin_form,
                         'isWrapped' => $isWrapped,
                         'content' => $content,
                     ])->render(),

@@ -56,12 +56,12 @@ class WidgetAreas extends LivewireComponent
         ]);
 
         $pluginForm = PluginForm::find($this->widget_plugin_form_id);
-        $maxOrder = Component::query()->where('pageId', $this->pageId)->max('order');
-        $maxId = Component::query()->where('pageId', $this->pageId)->max('id');
+        $maxOrder = Component::query()->where('page_id', $this->pageId)->max('order');
+        $maxId = Component::query()->where('page_id', $this->pageId)->max('id');
 
         $component = Component::create([
             'plugin_form_id' => $pluginForm->id,
-            'pageId' => $this->pageId,
+            'page_id' => $this->pageId,
             'name' => $this->widget_name,
             'param' => [
                 'settings' => [
@@ -73,11 +73,11 @@ class WidgetAreas extends LivewireComponent
             'order' => $maxOrder ?? 0,
         ]);
 
-        $maxOrder = ComponentWidgetArea::query()->where('pageId', $this->pageId)->max('order');
+        $maxOrder = ComponentWidgetArea::query()->where('page_id', $this->pageId)->max('order');
         ComponentWidgetArea::create([
             'widget_area_id' => $this->widgetarea_id,
             'component_id' => $component->id,
-            'pageId' => $this->pageId,
+            'page_id' => $this->pageId,
             'order' => $maxOrder+1,
         ]);
 
