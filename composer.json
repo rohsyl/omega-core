@@ -51,11 +51,5 @@
                 "Entity": "rohsyl\\OmegaCore\\Utils\\Overt\\Facades\\Entity"
             }
         }
-    },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../omega-plugins-bundle"
-        }
-    ]
+    }
 }

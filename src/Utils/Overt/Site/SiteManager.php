@@ -4,6 +4,8 @@
 namespace rohsyl\OmegaCore\Utils\Overt\Site;
 
 
+use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
+
 class SiteManager
 {
     public $name;
@@ -18,5 +20,12 @@ class SiteManager
         $this->name = om_config('om_site_title');
         $this->slogan = om_config('om_site_slogan');
         $this->url = url('/');
+    }
+
+    /**
+     * @return \rohsyl\OmegaCore\Utils\Common\Widget\WidgetAreaManager
+     */
+    public function widgetArea() {
+        return OmegaTheme::widgetArea();
     }
 }

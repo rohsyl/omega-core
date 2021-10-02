@@ -110,4 +110,16 @@ class WidgetAreas extends LivewireComponent
     public function updatedWidget() {
         $this->hideEditWidgetForm();
     }
+
+    public function publish($component_widget_area_id) {
+        ComponentWidgetArea::find($component_widget_area_id)
+            ->update(['published_at' => now()]);
+        $this->loadWidetAreas();
+    }
+
+    public function unpublish($component_widget_area_id) {
+        ComponentWidgetArea::find($component_widget_area_id)
+            ->update(['published_at' => null]);
+        $this->loadWidetAreas();
+    }
 }

@@ -23,6 +23,12 @@
                                     <div>
                                         <a type="button" href="javascript:void()" wire:click="showEditWidgetForm({{ $component_widget_area->component->id }})"><i class="fas fa-edit"></i></a>
                                         &nbsp;
+                                        @if(isset($component_widget_area->published_at))
+                                            <a type="button" href="javascript:void()" wire:click="unpublish({{ $component_widget_area->id }})" class="text-muted"><i class="fas fa-eye-slash"></i></a>
+                                        @else
+                                            <a type="button" href="javascript:void()" wire:click="publish({{ $component_widget_area->id }})" class="text-success"><i class="fas fa-globe"></i></a>
+                                        @endif
+                                        &nbsp;
                                         <a type="button" href="javascript:void()" class="text-danger"><i class="fas fa-trash"></i></a>
                                     </div>
                                 </div>

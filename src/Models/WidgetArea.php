@@ -22,6 +22,6 @@ class WidgetArea extends Model
     public function visible_component_widget_areas(){
         return $this->component_widget_areas()
             ->whereNotNull('published_at')
-            ->where('published_at', '>', now());
+            ->where('published_at', '<=', now());
     }
 }
