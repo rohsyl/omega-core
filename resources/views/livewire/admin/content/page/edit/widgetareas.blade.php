@@ -21,15 +21,29 @@
                                         {{ $component_widget_area->component->name }}
                                     </div>
                                     <div>
-                                        <a type="button" href="javascript:void()" wire:click="showEditWidgetForm({{ $component_widget_area->component->id }})"><i class="fas fa-edit"></i></a>
+                                        <a type="button" href="javascript:void(0)" wire:click="showEditWidgetForm({{ $component_widget_area->component->id }})"><i class="fas fa-edit"></i></a>
                                         &nbsp;
                                         @if(isset($component_widget_area->published_at))
-                                            <a type="button" href="javascript:void()" wire:click="unpublish({{ $component_widget_area->id }})" class="text-muted"><i class="fas fa-eye-slash"></i></a>
+                                            <a type="button"
+                                               href="javascript:void(0)"
+                                               wire:click="unpublish({{ $component_widget_area->id }})"
+                                               class="text-success"
+                                               data-toggle="tooltip"
+                                               title="Published at {{ $component_widget_area->published_at->format(DATETIMEFORMAT) }}. Click here to unpublish the widget">
+                                                <i class="fas fa-globe"></i>
+                                            </a>
                                         @else
-                                            <a type="button" href="javascript:void()" wire:click="publish({{ $component_widget_area->id }})" class="text-success"><i class="fas fa-globe"></i></a>
+                                            <a type="button"
+                                               href="javascript:void(0)"
+                                               wire:click="publish({{ $component_widget_area->id }})"
+                                               class="text-muted"
+                                               data-toggle="tooltip"
+                                               title="Click here to publish the widget">
+                                                <i class="fas fa-eye-slash"></i>
+                                            </a>
                                         @endif
                                         &nbsp;
-                                        <a type="button" href="javascript:void()" class="text-danger"><i class="fas fa-trash"></i></a>
+                                        <a type="button" href="javascript:void(0)" class="text-danger"><i class="fas fa-trash"></i></a>
                                     </div>
                                 </div>
                             @empty
@@ -143,6 +157,11 @@
                             let type = $(this).prop('type');
                             let name = $(this).prop('name');
 
+                            // if the input is a codemirror, then force to save the content of the
+                            // codemirror instance back to the textarea
+                            if($(this).hasClass('codemirror-editor')) {
+                                $(this).data('codemirror').save()
+                            }
 
                             // checked radios/checkboxes
                             if ((type === 'checkbox' || type === 'radio') && this.checked) {
