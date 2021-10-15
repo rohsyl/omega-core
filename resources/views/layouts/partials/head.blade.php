@@ -10,9 +10,8 @@
 
     @preload
     <!-- Styles -->
-    <link href="{{ asset('vendor/omega/css/app.css') }}" rel="stylesheet">
+    <link href="{{ asset('vendor/omega/css/app.css?1') }}" rel="stylesheet">
 
-    <!--<link href="{{ asset('vendor/omega/css/app.css') }}" rel="stylesheet">-->
     {{-- <link href="{{ mix('/css/rtl.css') }}" rel="stylesheet"> --}}
     
     <!-- Global css content -->
@@ -25,7 +24,7 @@
     <!-- End of specific css content placeholder -->
 
     <!-- Global js content -->
-    <script src="{{ asset('vendor/omega/js/app.js?2') }}"></script>
+    <script src="{{ asset('vendor/omega/js/app.js?3') }}"></script>
     <!-- End of global js content-->
 
     <!-- Specific js content placeholder -->

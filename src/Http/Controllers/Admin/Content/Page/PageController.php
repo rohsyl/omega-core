@@ -7,6 +7,7 @@ namespace rohsyl\OmegaCore\Http\Controllers\Admin\Content\Page;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use rohsyl\OmegaCore\Extensions\Filters\Admin\Page\PageAdvancedQueryFilter;
 use rohsyl\OmegaCore\Http\Requests\Admin\Content\Page\CreatePageRequest;
 use rohsyl\OmegaCore\Http\Requests\Admin\Content\Page\UpdatePageRequest;
 use rohsyl\OmegaCore\Models\Page;
@@ -17,9 +18,7 @@ class PageController extends Controller
 {
 
     public function index() {
-        $pages = Page::query()
-                    ->with(['author'])
-                    ->paginate(50);
+        $pages = (new PageAdvancedQueryFilter())->filter();
         return view('omega::admin.content.page.index', compact('pages'));
     }
 

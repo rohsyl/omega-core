@@ -1,13 +1,18 @@
 <?php
 namespace rohsyl\OmegaCore;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider as SP;
+use Illuminate\Support\Str;
 use rohsyl\LaravelAcl\ServiceProvider as LaravelAclServiceProvider;
+use rohsyl\LaravelAdvancedQueryFilter\Filters;
 use rohsyl\OmegaCore\Utils\Common\Command\VendorPublishCommand;
 use rohsyl\OmegaCore\Utils\Common\Widget\WidgetAreaManager;
 use rohsyl\OmegaPlugin\Bundle\ServiceProvider as PluginsBundleServiceProvider;
+use rohsyl\LaravelAdvancedQueryFilter\ServiceProvider as LaravelAqfServiceProvider;
 use rohsyl\OmegaCore\Http\Middleware\AdminLocale;
 use rohsyl\OmegaCore\Http\Middleware\OmegaIsInstalled;
 use rohsyl\OmegaCore\Http\Middleware\OmegaLoadConfiguration;
@@ -94,6 +99,31 @@ class ServiceProvider extends SP
         $router->aliasMiddleware('om_load_entity', OmegaLoadEntity::class);
         $router->aliasMiddleware('auth_member', Authenticate::class);
 
+        Builder::macro('whereLike', function ($attributes, string $searchTerm) {
+            $this->where(function (Builder $query) use ($attributes, $searchTerm) {
+                foreach (Arr::wrap($attributes) as $attribute) {
+                    $query->when(
+                        Str::contains($attribute, '.'),
+                        function (Builder $query) use ($attribute, $searchTerm) {
+                            [$relationName, $relationAttribute] = explode('.', $attribute);
+
+                            $query->orWhereHas($relationName, function (Builder $query) use ($relationAttribute, $searchTerm) {
+                                $query->where($relationAttribute, 'LIKE', "%{$searchTerm}%");
+                            });
+                        },
+                        function (Builder $query) use ($attribute, $searchTerm) {
+                            $query->orWhere($attribute, 'LIKE', "%{$searchTerm}%");
+                        }
+                    );
+                }
+            });
+
+            return $this;
+        });
+
+        // Override aqf views
+        Filters::viewNamespace('omega');
+        Filters::theme('common.aqf.default');
     }
 
 
@@ -109,6 +139,8 @@ class ServiceProvider extends SP
 
         $this->app->register(PluginsBundleServiceProvider::class);
         $this->app->register(LaravelAclServiceProvider::class);
+        $this->app->register(LaravelAqfServiceProvider::class);
+
     }
 
     private function registerFacades() {

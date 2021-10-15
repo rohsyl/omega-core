@@ -9,6 +9,22 @@
 @endsection
 
 @section('content')
+
+    <x-aqf-filters>
+
+        <div class="row gutters-tiny">
+            <div class="col-sm-4">
+                <x-aqf-plain />
+            </div>
+            <div class="col-sm-4">
+                <x-aqf-model name="test" :list="[]" />
+            </div>
+        </div>
+
+
+        <x-aqf-buttons></x-aqf-buttons>
+    </x-aqf-filters>
+
     <div class="card">
         <div class="card-header">
             {{ __('Pages') }}

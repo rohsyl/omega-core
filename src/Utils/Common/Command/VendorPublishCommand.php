@@ -51,7 +51,8 @@ class VendorPublishCommand extends Command
 
         $code = Artisan::call('vendor:publish', [
             '--provider' => 'rohsyl\OmegaCore\ServiceProvider',
-            '--tag' => 'public'
+            '--tag' => 'public',
+            '--force' => true,
         ]);
 
         $this->info(Artisan::output());

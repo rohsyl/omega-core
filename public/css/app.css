@@ -76366,6 +76366,28 @@ table.dataTable.no-footer {
   color: #222 !important;
 }
 
+.row.gutters-tiny {
+  margin-right: -3px;
+  margin-left: -3px;
+}
+.row.gutters-tiny > .col,
+.row.gutters-tiny > [class*=col-] {
+  padding-left: 3px;
+  padding-right: 3px;
+}
+.row.gutters-tiny .push,
+.row.gutters-tiny .block {
+  margin-bottom: 6px;
+}
+
+.row.row-deck > div {
+  display: flex;
+  align-items: stretch;
+}
+.row.row-deck > div > .block {
+  min-width: 100%;
+}
+
 .ss-main {
   position: relative;
   display: inline-block;

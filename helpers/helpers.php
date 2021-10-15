@@ -6,6 +6,7 @@ use rohsyl\OmegaCore\Models\Media;
 
 define('DATEFORMAT', 'Y-m-d');
 define('DATETIMEFORMAT', 'Y-m-d H:i:s');
+define('DEFAULT_PAGINATION', 50);
 
 // Authorized extensions for upload
 // Pictures
