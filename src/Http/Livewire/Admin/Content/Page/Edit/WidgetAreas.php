@@ -129,9 +129,10 @@ class WidgetAreas extends LivewireComponent
 
 
     public function widgetOrderUpdated($orders) {
-        foreach($orders as $id => $order) {
+        foreach($orders as $id => $inputs) {
             $component = ComponentWidgetArea::find($id);
-            $component->order = $order ?? 0;
+            $component->order = $inputs['order'] ?? 0;
+            $component->widget_area_id = $inputs['widget_area_id'];
             $component->save();
         }
         $this->loadWidetAreas();

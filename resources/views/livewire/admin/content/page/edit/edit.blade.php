@@ -111,14 +111,16 @@
                                         ghostClass: 'sort-components-sortable-ghost',  // Class name for the drop placeholder
                                         draggable: '.component-item',  // Specifies which items inside the element should be draggable
                                         // Changed sorting within list
-                                        onEnd: function (/**Event*/evt) {
+                                        onSort: function (/**Event*/evt) {
                                             let orders = {};
                                             $('#components-container .component-item').each(function(i) {
                                                 orders[$(this).data('id')] = i;
                                                 $(this).find('input[name^="components_order"]').val(i);
 
                                             });
-                                            Livewire.emit('orderUpdated', orders)
+                                            setTimeout(function () {
+                                                Livewire.emit('orderUpdated', orders)
+                                            }, 500)
                                         },
                                     });
                                 }

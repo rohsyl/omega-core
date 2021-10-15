@@ -18,12 +18,12 @@
                             @forelse($widgetArea->component_widget_areas as $component_widget_area)
                                 <div class="d-flex justify-content-between border-bottom py-2 widget-item" data-id="{{ $component_widget_area->id }}">
                                     <div>
+                                        <span class="grab-sortable" style="cursor:grab;"><i class="fas fa-arrows-alt"></i></span>
                                         {{ $component_widget_area->component->name }}
                                         ({{ $component_widget_area->component->plugin_form->name }})
                                     </div>
                                     <div>
                                         <a type="button" href="javascript:void(0)" wire:click="showEditWidgetForm({{ $component_widget_area->component->id }})"><i class="fas fa-edit"></i></a>
-                                        <span class="grab-sortable" style="cursor:grab;"><i class="fas fa-arrows-alt"></i></span>
                                         @if(isset($component_widget_area->published_at))
                                             <a type="button"
                                                href="javascript:void(0)"
@@ -58,16 +58,19 @@
                             function createSortable(){
                                 var sortable = document.getElementById('widgets-container-{{ $widgetArea->id }}');
                                 Sortable.create(sortable, {
-                                    group: 'widgets-container-{{ $widgetArea->id }}',
+                                    group: 'widgets-container',
                                     animation: 100,
                                     handle: '.grab-sortable',
                                     ghostClass: 'sort-components-sortable-ghost',  // Class name for the drop placeholder
                                     draggable: '.widget-item',  // Specifies which items inside the element should be draggable
                                     // Changed sorting within list
-                                    onEnd: function (/**Event*/evt) {
+                                    onSort: function (/**Event*/evt) {
                                         let orders = {};
                                         $('#widgets-container-{{ $widgetArea->id }} .widget-item').each(function(i) {
-                                            orders[$(this).data('id')] = i;
+                                            orders[$(this).data('id')] = {
+                                                order: i,
+                                                widget_area_id: {{ $widgetArea->id }}
+                                            };
                                         });
                                         Livewire.emit('widgetOrderUpdated', orders)
                                     },
