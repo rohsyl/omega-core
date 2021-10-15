@@ -4,6 +4,8 @@
 namespace rohsyl\OmegaCore\Utils\Common\Widget;
 
 
+use rohsyl\OmegaCore\Models\Component;
+use rohsyl\OmegaCore\Models\ComponentWidgetArea;
 use rohsyl\OmegaCore\Models\WidgetArea;
 use rohsyl\OmegaCore\Utils\Common\Facades\OmegaUtils;
 use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
@@ -25,6 +27,11 @@ class WidgetAreaManager
     public function getAll() {
 
         return WidgetArea::query()
+            ->with([
+                'component_widget_areas',
+                'component_widget_areas.component',
+                'component_widget_areas.component.plugin_form',
+            ])
             ->where('theme', $this->themeManager->getName())
             ->get();
     }
@@ -107,5 +114,4 @@ class WidgetAreaManager
         }
         return $html;
     }
-
 }

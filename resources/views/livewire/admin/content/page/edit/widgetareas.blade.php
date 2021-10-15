@@ -14,15 +14,16 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body" id="widgets-container-{{ $widgetArea->id }}">
                             @forelse($widgetArea->component_widget_areas as $component_widget_area)
-                                <div class="d-flex justify-content-between border-bottom py-2">
+                                <div class="d-flex justify-content-between border-bottom py-2 widget-item" data-id="{{ $component_widget_area->id }}">
                                     <div>
                                         {{ $component_widget_area->component->name }}
+                                        ({{ $component_widget_area->component->plugin_form->name }})
                                     </div>
                                     <div>
                                         <a type="button" href="javascript:void(0)" wire:click="showEditWidgetForm({{ $component_widget_area->component->id }})"><i class="fas fa-edit"></i></a>
-                                        &nbsp;
+                                        <span class="grab-sortable" style="cursor:grab;"><i class="fas fa-arrows-alt"></i></span>
                                         @if(isset($component_widget_area->published_at))
                                             <a type="button"
                                                href="javascript:void(0)"
@@ -42,8 +43,7 @@
                                                 <i class="fas fa-eye-slash"></i>
                                             </a>
                                         @endif
-                                        &nbsp;
-                                        <a type="button" href="javascript:void(0)" class="text-danger"><i class="fas fa-trash"></i></a>
+                                        <a type="button" href="javascript:void(0)" wire:click="deleteWidget({{ $component_widget_area->id }})" class="text-danger"><i class="fas fa-trash"></i></a>
                                     </div>
                                 </div>
                             @empty
@@ -51,6 +51,30 @@
                             @endforelse
                         </div>
                     </div>
+
+                    <script>
+                        $(function() {
+                            createSortable();
+                            function createSortable(){
+                                var sortable = document.getElementById('widgets-container-{{ $widgetArea->id }}');
+                                Sortable.create(sortable, {
+                                    group: 'widgets-container-{{ $widgetArea->id }}',
+                                    animation: 100,
+                                    handle: '.grab-sortable',
+                                    ghostClass: 'sort-components-sortable-ghost',  // Class name for the drop placeholder
+                                    draggable: '.widget-item',  // Specifies which items inside the element should be draggable
+                                    // Changed sorting within list
+                                    onEnd: function (/**Event*/evt) {
+                                        let orders = {};
+                                        $('#widgets-container-{{ $widgetArea->id }} .widget-item').each(function(i) {
+                                            orders[$(this).data('id')] = i;
+                                        });
+                                        Livewire.emit('widgetOrderUpdated', orders)
+                                    },
+                                });
+                            }
+                        });
+                    </script>
                 </div>
             @empty
                 <div class="col">
@@ -72,11 +96,11 @@
 
                     <div class="form-group">
                         {{ Form::label('widget_plugin_form_id', __('Widget')) }}
-                        {{ Form::oselect('widget_plugin_form_id', $creatableWidgetPluginForms, $widget_plugin_form_id, ['wire:model.defer' => 'widget_plugin_form_id', 'wire:target' => 'createWidget', 'wire:loading.attr' => 'readonly', 'placeholder' => 'Choose a widget', 'class' => 'form-control', 'no-js' => true]) }}
+                        {{ Form::oselect('widget_plugin_form_id', $creatableWidgetPluginForms, $widget_plugin_form_id, ['wire:model.defer' => 'widget_plugin_form_id', 'wire:target' => 'createWidget', 'wire:loading.attr' => 'readonly', 'placeholder' => 'Choose a widget', 'class' => 'form-control', 'no-js' => true, 'no-label' => true]) }}
                     </div>
                     {{ Form::otext('widget_name', $widget_name, ['label' => __('Name'), 'wire:model.defer' => 'widget_name', 'wire:target' => 'createWidget', 'wire:loading.attr' => 'readonly']) }}
 
-                    <div class="mt-4 text-right">
+                    <div class="mt-4 text-right mr-2">
                         <button class="btn btn-primary btn-sm"
                                 type="button"
                                 wire:click="createWidget"
@@ -105,14 +129,14 @@
 
                     <h4>{{ __('Update') }}</h4>
                     <p>
-                        {{ __('Add a widget to an area') }}
+                        {{ __('Update this widget') }}
                     </p>
 
                     <input type="hidden" name="id" value="{{ $editableWidget->id }}"
 
                     {!! $editableWidgetForm['html'] !!}
 
-                    <div class="mt-4 mb-2 text-right">
+                    <div class="mt-4 mb-2 text-right mr-2">
                         <button class="btn btn-primary btn-sm"
                                 id="updateWidget"
                                 wire:target="hideEditWidgetForm"

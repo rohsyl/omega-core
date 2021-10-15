@@ -13,7 +13,10 @@ use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 
 class WidgetAreas extends LivewireComponent
 {
-    protected $listeners = ['updatedWidget'];
+    protected $listeners = [
+        'updatedWidget',
+        'widgetOrderUpdated',
+    ];
 
     public $pageId;
     public $widgetAreas;
@@ -120,6 +123,22 @@ class WidgetAreas extends LivewireComponent
     public function unpublish($component_widget_area_id) {
         ComponentWidgetArea::find($component_widget_area_id)
             ->update(['published_at' => null]);
+        $this->loadWidetAreas();
+    }
+
+
+
+    public function widgetOrderUpdated($orders) {
+        foreach($orders as $id => $order) {
+            $component = ComponentWidgetArea::find($id);
+            $component->order = $order ?? 0;
+            $component->save();
+        }
+        $this->loadWidetAreas();
+    }
+
+    public function deleteWidget($component_id) {
+        ComponentWidgetArea::destroy($component_id);
         $this->loadWidetAreas();
     }
 }
