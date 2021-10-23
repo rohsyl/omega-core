@@ -11,7 +11,7 @@ use rohsyl\OmegaCore\Models\User;
  * @method static void updateIfExists(Config $config)
  * @method static void loadUserPermissionsInSession(User $user)
  *
- * @see \Omega\Utils\Entity\OmegaConfig
+ * @see rohsyl\OmegaCore\Utils\Common\Entity\OmegaConfig
  */
 class OmegaConfig extends Facade
 {

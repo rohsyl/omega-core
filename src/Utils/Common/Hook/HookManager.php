@@ -1,5 +1,5 @@
 <?php
-
+namespace rohsyl\OmegaCore\Utils\Common\Hook;
 
 class HookManager
 {
@@ -10,7 +10,7 @@ class HookManager
 
     public function __construct()
     {
-
+        $this->hooks = [];
     }
 
     public function addAction(string $hook, callable $callback, string $tag = null, int $priority = 10) {
@@ -33,8 +33,15 @@ class HookManager
         return false;
     }
 
-
     public function callActions($hook, ...$args) {
+        $priorites = $this->hooks[$hook];
 
+        $out = [];
+        foreach($priorites as $callback) {
+            if(is_callable($callback)) {
+                $out[] = call_user_func_array($callback, $args);
+            }
+        }
+        return $out;
     }
 }

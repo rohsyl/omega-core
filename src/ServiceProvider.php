@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use rohsyl\LaravelAcl\ServiceProvider as LaravelAclServiceProvider;
 use rohsyl\LaravelAdvancedQueryFilter\Filters;
 use rohsyl\OmegaCore\Utils\Common\Command\VendorPublishCommand;
+use rohsyl\OmegaCore\Utils\Common\Hook\HookManager;
 use rohsyl\OmegaCore\Utils\Common\Widget\WidgetAreaManager;
 use rohsyl\OmegaPlugin\Bundle\ServiceProvider as PluginsBundleServiceProvider;
 use rohsyl\LaravelAdvancedQueryFilter\ServiceProvider as LaravelAqfServiceProvider;
@@ -171,6 +172,10 @@ class ServiceProvider extends SP
 
         $this->app->bind('omega:member', function () {
             return new MemberManager();
+        });
+
+        $this->app->bind('omega:hook', function () {
+            return new HookManager();
         });
     }
 

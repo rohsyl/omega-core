@@ -11,6 +11,7 @@ use rohsyl\OmegaCore\Utils\Common\Widget\WidgetAreaManager;
 class ThemeManager
 {
     private $installerPath;
+    private $functionPath;
     private $registerPath;
     private $themePath;
 
@@ -26,6 +27,11 @@ class ThemeManager
         $this->installerPath = $installerPath;
     }
 
+    public function setFunctionPath(string $functionPath) {
+
+        $this->functionPath = $functionPath;
+    }
+
     public function setTemplateRegisterPath(string $registerPath) {
 
         $this->registerPath = $registerPath;
@@ -36,6 +42,10 @@ class ThemeManager
     }
 
     public function boot(ServiceProvider $provider) {
+
+        if(isset($this->functionPath)) {
+            $this->includeFunctionFile();
+        }
 
         // Add a namespace to access theme views
         View::addNamespace('theme', $this->themePath);
@@ -69,7 +79,9 @@ class ThemeManager
         return $this->themePath . DIRECTORY_SEPARATOR . $this->installerPath;
     }
 
-
+    public function getFunctionPath() {
+        return $this->themePath . DIRECTORY_SEPARATOR . $this->functionPath;
+    }
 
     /**
      * @return string
@@ -89,6 +101,14 @@ class ThemeManager
 
     public function getInstaller() {
         $path = $this->getInstallerPath();
+        if(!file_exists($path)){
+            return null;
+        }
+        return include($path);
+    }
+
+    public function includeFunctionFile() {
+        $path = $this->getFunctionPath();
         if(!file_exists($path)){
             return null;
         }
