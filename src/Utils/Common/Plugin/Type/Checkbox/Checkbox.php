@@ -18,13 +18,17 @@ class Checkbox extends TypeEntry {
 
     public function getPostedValue()
     {
-        return $this->getPost($this->getUniqId());
+        return $this->getBooleanValue($this->getPost($this->getUniqId()));
     }
 
     public  function getObjectValue() {
         $param = $this->getParam();
         $v = $this->getValue();
-        return $v ?? ($param['checked'] ?? false);
+        return $this->getBooleanValue($v, $param['checked'] ?? false);
+    }
+
+    private function getBooleanValue($value, $default = false) {
+        return filter_var($value ?? $default, FILTER_VALIDATE_BOOLEAN);
     }
 
     public function getDoc(){

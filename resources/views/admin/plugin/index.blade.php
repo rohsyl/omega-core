@@ -23,9 +23,12 @@
                         <td>
                             {{ $plugin->isInstalled() ? __('Yes') : __('No') }}
                         </td>
-                        <td>
+                        <td class="text-right">
                             @if(!$plugin->isInstalled())
                                 <a href="{{ route('omega.admin.plugins.install', $plugin->name()) }}">{{ __('Install') }}</a>
+                            @endif
+                            @if($plugin->adminIndex() !== null)
+                                <a href="{{ $plugin->adminIndex() }}">{{ __('Open') }}</a>
                             @endif
                         </td>
                     </tr>

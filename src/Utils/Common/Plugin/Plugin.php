@@ -25,6 +25,14 @@ abstract class Plugin
     abstract function name() : string;
     abstract function overtController() : string;
 
+    /**
+     * Return the admin index url
+     * @return string|null
+     */
+    public function adminIndex() {
+        return null;
+    }
+
     public function makeForm($callback) {
         $builder = new PluginFormFactory($this->name());
         call_user_func_array($callback, [$builder]);
