@@ -4,6 +4,7 @@
 namespace rohsyl\OmegaCore\Utils\Common\Plugin\Form;
 
 
+use Illuminate\Support\Arr;
 use rohsyl\OmegaCore\Models\PluginForm;
 use rohsyl\OmegaCore\Models\PluginFormEntry;
 use rohsyl\OmegaCore\Utils\Common\Facades\Plugin;
@@ -45,17 +46,29 @@ class PluginFormFactory
         ];
     }
 
+    /**
+     * This method will create or update an existing PluginForm
+     */
     public function make() {
-
-        $pluginForm = PluginForm::create($this->form);
-
+        // Find the plugin form or instance a new one if already exists
+        $pluginForm = PluginForm::firstOrNew(Arr::only($this->form, ['plugin_id', 'name']));
+        $pluginForm->fill(Arr::except($this->form, ['plugin_id', 'name']));
+        $pluginForm->save();
+        $createdEntries = [];
         foreach($this->entries as $entry) {
-            PluginFormEntry::create(array_merge(
-                [
-                    'plugin_form_id' => $pluginForm->id
-                ],
-                $entry
-            ));
+            $entry = array_merge(['plugin_form_id' => $pluginForm->id], $entry);
+            // Find the plugin form entry or instance a new one if already exists
+            $pluginFormEntry = PluginFormEntry::firstOrNew(Arr::only($entry, ['plugin_form_id', 'name']));
+            $pluginFormEntry->fill(Arr::except($entry, ['plugin_form_id', 'name']));
+            $pluginFormEntry->save();
+            $createdEntries[] = $pluginFormEntry->name;
         }
+        PluginFormEntry::query()
+            ->where('plugin_form_id', $pluginForm->id)
+            ->whereNotIn('name', $createdEntries)
+            ->get()->each(function($entry) {
+                $entry->delete();
+            });
+
     }
 }

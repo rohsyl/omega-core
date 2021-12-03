@@ -73,6 +73,15 @@ class PluginInstallCommand extends Command
             return 0;
         }
 
+        // Updating given plugins form
+        if($this->hasOption('update-form') && $this->option('update-form')) {
+            $this->info('Updating plugin forms ('.sizeof($names).')');
+            foreach($names as $name) {
+                $this->updatePluginForm($name);
+            }
+            $this->info('[ DONE ]');
+            return 0;
+        }
 
         $this->info('Installing plugins ('.sizeof($names).')');
         foreach($names as $name) {
@@ -129,6 +138,30 @@ class PluginInstallCommand extends Command
             [ 'name' => $name ],
             [ 'parent_id' => null, 'is_enabled' => true ]
         );
+
+        $result = $plugin->install();
+        if(!$result) {
+            $this->warn('[ FAILED ]');
+            return;
+        }
+        $this->info('[ SUCCESS ]');
+    }
+
+    private function updatePluginForm($name) {
+        $this->line(' ');
+        $plugin = Plugin::getPlugin($name);
+        if(!isset($plugin)) {
+            $this->warn('Plugin ' . $name . ' not found. Have you installed it with composer ?');
+            return;
+        }
+
+        $model = Plugin::getModel($name, true);
+        if(!isset($model)) {
+            $this->warn('Plugin ' . $name . ' not installed !');
+            return;
+        }
+
+        $this->info('Updating : ' . $name);
 
         $result = $plugin->install();
         if(!$result) {
