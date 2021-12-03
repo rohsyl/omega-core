@@ -127,13 +127,17 @@ class OmegaUtils{
             $this->htmlRequireHelper->renderJs();
     }
 
+    /**
+     * @return string
+     * @deprecated
+     */
     public function renderOmegaAssets(){
         $css = asset('css/public.css');
         $js = asset('js/public.js');
 
         $html = '';
         $html .= '<link href="'.$css.'" rel="stylesheet" />';
-        $html .= '<script language="JavaScript" src="'.$js.'"></script>';
+        $html .= '<script src="'.$js.'"></script>';
 
         return $html;
     }

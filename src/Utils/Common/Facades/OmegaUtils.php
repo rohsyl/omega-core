@@ -14,7 +14,6 @@ use rohsyl\OmegaCore\Models\User;
  * @method static boolean isInstalled()
  * @method static void addDependencies(array $dependencies)
  * @method static string renderDependencies()
- * @method static string renderOmegaAssets()
  *
  * @see \rohsyl\OmegaCore\Utils\Common\OmegaUtils
  */
