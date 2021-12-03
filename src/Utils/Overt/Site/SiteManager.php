@@ -10,9 +10,6 @@ class SiteManager
 {
     public $name;
     public $slogan;
-    public $template_directory_uri;
-    public  $template_name;
-    public  $php_template_path;
     private $url;
 
     public function __construct($template_name = null){
@@ -27,5 +24,32 @@ class SiteManager
      */
     public function widgetArea() {
         return OmegaTheme::widgetArea();
+    }
+
+    /**
+     * Get the name of the website
+     * @return string|null
+     */
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    /**
+     * Get the slogan of the website
+     * @return string|null
+     */
+    public function getSlogan(): ?string
+    {
+        return $this->slogan;
+    }
+
+    /**
+     * Get the URL of the website
+     * @return string
+     */
+    public function getUrl(): string
+    {
+        return $this->url;
     }
 }
