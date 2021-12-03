@@ -135,7 +135,7 @@
                         {{ __('Update this widget') }}
                     </p>
 
-                    <input type="hidden" name="id" value="{{ $editableWidget->id }}"
+                    <input type="hidden" name="id" value="{{ $editableWidget->id }}" />
 
                     {!! $editableWidgetForm['html'] !!}
 
