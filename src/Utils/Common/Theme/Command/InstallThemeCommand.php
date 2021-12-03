@@ -42,13 +42,28 @@ class InstallThemeCommand extends Command
      */
     public function handle()
     {
+        $installer_path = OmegaTheme::getInstallerPath();
         $installer = OmegaTheme::getInstaller();
         $path = OmegaTheme::getThemePath();
 
         $this->info('Installing theme : ' . $path);
 
+
+
         if(!isset($installer) || !$installer instanceof Installer){
-            $this->error(__('There is no valid installation file (install/install.php) for the theme ('.$path.').'));
+            $this->error(__('There is no valid installation file ('.$installer_path.') for the theme ('.$path.'). Check the the file exists and check your AppServiceProvider::register()'));
+            return 1;
+        }
+
+        $register_path = OmegaTheme::getRegisterPath();
+        if(isset($register_path) && !file_exists($register_path)) {
+            $this->error(__('There is a template register file set but file not found under : '.$register_path.' for the theme ('.$path.'). Check the the file exists and check your AppServiceProvider::register()'));
+            return 1;
+        }
+
+        if(Theme::query()->where('name', $installer->getName())->exists()) {
+            $this->warn(__('Theme "'.$installer->getName().'" alreay installed...'));
+            $this->info('[DONE]!');
             return 1;
         }
 
@@ -68,7 +83,7 @@ class InstallThemeCommand extends Command
             call_user_func($postInstallCallable, OmegaTheme::get());
         }
 
-        $this->info('Theme installed !');
+        $this->info('[DONE]!');
 
         return 0;
 
