@@ -11,7 +11,7 @@ class Checkbox extends TypeEntry {
         $uid = $this->getUniqId();
         $v = $this->getValue();
         $checkboxValue = ($v ?? false ) || $param["checked"] ? 'checked="true"' : '';
-        $html = '<br><input class="" type="checkbox" name="'.$uid.'" '. $checkboxValue . '" id="'.$uid.'">';
+        $html = '<br><input class="" type="checkbox" name="'.$uid.'" '. $checkboxValue . '" id="'.$uid.'"><br />';
 
         return $html;
     }

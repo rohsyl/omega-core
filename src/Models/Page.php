@@ -11,7 +11,6 @@ class Page extends Model
     use SoftDeletes;
     use OvertPageTrait;
 
-
     protected $fillable = [
         'parent_id',
         'author_id',

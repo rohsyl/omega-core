@@ -14,7 +14,11 @@ class PluginInstallCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'omega:plugin-install {name*}';
+    protected $signature = 'omega:plugin-install 
+                                {name*} 
+                                {--U|uninstall   : Uninstall the given plugin(s)} 
+                                {--R|reinstall   : Reinstall the given plugin(s)} 
+                                {--a|update-form : Update given plugins form}';
 
     /**
      * The console command description.
@@ -42,38 +46,95 @@ class PluginInstallCommand extends Command
     {
         $names = $this->argument('name');
 
-        $this->info('Installing plugins ('.sizeof($names).')');
-
-        foreach($names as $name) {
-            $this->line(' ');
-            $plugin = Plugin::getPlugin($name);
-            if(!isset($plugin)) {
-                $this->warn('Plugin ' . $name . ' not found. Have you installed it with composer ?');
-                continue;
+        // Uninstall the gives plugins
+        if($this->hasOption('uninstall') && $this->option('uninstall')) {
+            if (!$this->confirm('Do you wish to continue?')) {
+                return -1;
             }
-
-            $model = Plugin::getModel($name); {
-                if(isset($model)) {
-                    $this->warn('Plugin ' . $name . ' already installed !');
-                    continue;
-                }
+            $this->info('Uninstalling plugins ('.sizeof($names).')');
+            foreach($names as $name) {
+                $this->deletePlugin($name);
             }
-
-            $this->info('Installing : ' . $name);
-
-            \rohsyl\OmegaCore\Models\Plugin::firstOrCreate(
-                [ 'name' => $name ],
-                [ 'parent_id' => null, 'is_enabled' => true ]
-            );
-
-            $result = $plugin->install();
-            if(!$result) {
-                $this->warn('[ FAILED ]');
-                continue;
-            }
-            $this->info('[ SUCCESS ]');
+            $this->info('[ DONE ]');
+            return 0;
         }
 
+        // Uninstall and re-install the gives plugins
+        if($this->hasOption('reinstall') && $this->option('reinstall')) {
+            if (!$this->confirm('Do you wish to continue?')) {
+                return -1;
+            }
+            $this->info('Re-installing plugins ('.sizeof($names).')');
+            foreach($names as $name) {
+                $this->deletePlugin($name);
+                $this->installPlugin($name);
+            }
+            $this->info('[ DONE ]');
+            return 0;
+        }
+
+
+        $this->info('Installing plugins ('.sizeof($names).')');
+        foreach($names as $name) {
+            $this->installPlugin($name);
+        }
+        $this->info('[ DONE ]');
+
+
         return 0;
+    }
+
+    private function deletePlugin($name) {
+        $this->line(' ');
+        $plugin = Plugin::getPlugin($name);
+        if(!isset($plugin)) {
+            $this->warn('Plugin ' . $name . ' not found. Have you installed it with composer ?');
+            return;
+        }
+        $model = Plugin::getModel($name, true);
+        if(!isset($model)) {
+            $this->warn('Plugin ' . $name . ' not installed !');
+            return;
+        }
+
+        $this->info('Uninstalling : ' . $name);
+
+        $model->delete();
+
+        $result = $plugin->uninstall();
+        if(!$result) {
+            $this->warn('[ FAILED ]');
+            return;
+        }
+        $this->info('[ SUCCESS ]');
+    }
+
+    private function installPlugin($name) {
+        $this->line(' ');
+        $plugin = Plugin::getPlugin($name);
+        if(!isset($plugin)) {
+            $this->warn('Plugin ' . $name . ' not found. Have you installed it with composer ?');
+            return;
+        }
+
+        $model = Plugin::getModel($name, true);
+        if(isset($model)) {
+            $this->warn('Plugin ' . $name . ' already installed !');
+            return;
+        }
+
+        $this->info('Installing : ' . $name);
+
+        \rohsyl\OmegaCore\Models\Plugin::firstOrCreate(
+            [ 'name' => $name ],
+            [ 'parent_id' => null, 'is_enabled' => true ]
+        );
+
+        $result = $plugin->install();
+        if(!$result) {
+            $this->warn('[ FAILED ]');
+            return;
+        }
+        $this->info('[ SUCCESS ]');
     }
 }

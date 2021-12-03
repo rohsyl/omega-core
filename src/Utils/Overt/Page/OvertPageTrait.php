@@ -22,6 +22,7 @@ trait OvertPageTrait
     public function render()
     {
         if(!isset($this->content)) {
+            $this->content = '';
             $this->renderComponent();
 
             // TODO : page securities
