@@ -14,10 +14,10 @@ use rohsyl\OmegaCore\Utils\Overt\Theme\Component\ComponentView;
 trait OvertPageTrait
 {
 
+    public string $content;
 
     private $needRedirect = false;
     private $redirectTo = null;
-
 
     public function render()
     {
@@ -279,6 +279,97 @@ trait OvertPageTrait
         return $this->redirectTo;
     }
 
+    /**
+     * Get the id of the parent page.
+     * Return null when no parent page.
+     * @return integer|null
+     */
+    public function getParentId()
+    {
+        return $this->parent_id;
+    }
+
+    /**
+     * Get the id of the author of the page
+     * @return integer
+     */
+    public function getAuthorId()
+    {
+        return $this->author_id;
+    }
+
+    /**
+     * Get the id of the menu configured for this page
+     * Return null when no menu configured
+     * @return integer|null
+     */
+    public function getMenuId()
+    {
+        return $this->menu_id;
+    }
+
+    /**
+     * Get the slug of the page
+     * @return string
+     */
+    public function getSlug()
+    {
+        return $this->slug;
+    }
+
+    /**
+     * Get title of the page
+     * @return string
+     */
+    public function getTitle()
+    {
+        return $this->title;
+    }
+
+    /**
+     * Get sub-title of the page
+     * @return string
+     */
+    public function getSubtitle()
+    {
+        return $this->subtitle;
+    }
+
+    /**
+     * Should the title be shown on the page
+     * @return boolean
+     */
+    public function getShowTitle()
+    {
+        return $this->show_title;
+    }
+
+    /**
+     * Should the sub-title be shown on the page
+     * @return boolean
+     */
+    public function getShowSubtitle()
+    {
+        return $this->show_subtitle;
+    }
+
+    /**
+     * Get the keywords of this page
+     * @return string|null
+     */
+    public function getKeywords()
+    {
+        return $this->keywords;
+    }
+
+    /**
+     * Get the content of the page
+     * @return string
+     */
+    public function getContent()
+    {
+        return $this->content;
+    }
 
 
     public static function RenderSpecialContent($content)
