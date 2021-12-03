@@ -3,6 +3,7 @@
 namespace rohsyl\OmegaCore\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class PluginFormEntry extends Model
 {
@@ -28,4 +29,11 @@ class PluginFormEntry extends Model
         return $this->hasMany(PluginFormEntryValue::class);
     }
 
+
+    protected static function booted()
+    {
+        static::deleting(function ($plugin_form_entry) {
+            $plugin_form_entry->plugin_form_entry_values()->delete();
+        });
+    }
 }

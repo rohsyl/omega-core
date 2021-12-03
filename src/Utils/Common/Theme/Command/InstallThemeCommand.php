@@ -16,7 +16,9 @@ class InstallThemeCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'omega:theme-install';
+    protected $signature = 'omega:theme-install
+                                {--U|uninstall   : Uninstall the theme} 
+                                {--R|reinstall   : Reinstall the theme} ';
 
     /**
      * The console command description.
@@ -42,13 +44,43 @@ class InstallThemeCommand extends Command
      */
     public function handle()
     {
+
+        // Uninstall the gives plugins
+        if($this->hasOption('uninstall') && $this->option('uninstall')) {
+
+            $this->info('Uninstalling theme');
+            $this->uninstall();
+            $this->info('[ DONE ]');
+            return 0;
+        }
+
+        // Uninstall and re-install the gives plugins
+        if($this->hasOption('reinstall') && $this->option('reinstall')) {
+
+            $this->info('Re-installing theme');
+            $this->info('Uninstalling theme');
+            $this->uninstall();
+            $this->info('Installing theme');
+            $this->install();
+            $this->info('[ DONE ]');
+            return 0;
+        }
+
+        $this->info('Installing theme');
+        $this->install();
+        $this->info('[DONE]!');
+
+        return 0;
+
+    }
+
+    public function install() {
+
+        $path = OmegaTheme::getThemePath();
         $installer_path = OmegaTheme::getInstallerPath();
         $installer = OmegaTheme::getInstaller();
-        $path = OmegaTheme::getThemePath();
 
-        $this->info('Installing theme : ' . $path);
-
-
+        $this->line($path);
 
         if(!isset($installer) || !$installer instanceof Installer){
             $this->error(__('There is no valid installation file ('.$installer_path.') for the theme ('.$path.'). Check the the file exists and check your AppServiceProvider::register()'));
@@ -74,7 +106,7 @@ class InstallThemeCommand extends Command
             'website' => isset($data['website']) ? $data['website'] : '',
             'param' => [
                 'colors' => json_encode(isset($data['colors']) ? $data['colors'] : []),
-                ]
+            ]
         ]);
 
         $postInstallCallable = $installer->getPostInstall();
@@ -82,10 +114,29 @@ class InstallThemeCommand extends Command
         if(is_callable($postInstallCallable)) {
             call_user_func($postInstallCallable, OmegaTheme::get());
         }
+    }
 
-        $this->info('[DONE]!');
+    public function uninstall() {
 
-        return 0;
+        $path = OmegaTheme::getThemePath();
+        $installer_path = OmegaTheme::getInstallerPath();
+        $installer = OmegaTheme::getInstaller();
+
+        $this->line($path);
+
+        if(!isset($installer) || !$installer instanceof Installer){
+            $this->error(__('There is no valid installation file ('.$installer_path.') for the theme ('.$path.'). Check the the file exists and check your AppServiceProvider::register()'));
+            return 1;
+        }
+
+        $theme = Theme::query()->where('name', $installer->getName())->first();
+
+        if(!isset($theme)) {
+            $this->error(__('Theme not installed ('.$installer_path.')'));
+            return 1;
+        }
+
+        $theme->delete();
 
     }
 }
