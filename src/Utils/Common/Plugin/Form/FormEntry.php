@@ -4,12 +4,13 @@
 namespace rohsyl\OmegaCore\Utils\Common\Plugin\Form;
 
 
+use Illuminate\Contracts\Support\Renderable;
 use rohsyl\OmegaCore\Models\PluginFormEntry;
 use rohsyl\OmegaCore\Models\PluginFormEntryValue;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Type\Type;
 use rohsyl\OmegaCore\Utils\Common\Plugin\Type\TypeEntry;
 
-class FormEntry
+class FormEntry implements Renderable
 {
     protected $entry;
     private $component_id;
@@ -102,5 +103,15 @@ class FormEntry
             'description' => $this->entry->description,
             'type' => $this->type,
         ]);
+    }
+
+
+    public function render() {
+        return $this->getHtml();
+    }
+
+    public function __toString(): string
+    {
+        return $this->render();
     }
 }
