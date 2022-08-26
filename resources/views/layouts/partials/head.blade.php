@@ -30,6 +30,7 @@
     <!-- Specific js content placeholder -->
     @routes()
     @livewireScripts()
+    @livewire('livewire-ui-modal')
     @stack('js')
     <!-- End of specific js content placeholder -->
 </head>
