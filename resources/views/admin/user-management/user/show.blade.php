@@ -8,6 +8,10 @@
 @section('actions')
     <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.users.index') }}"><i class="fas fa-arrow-left"></i> {{ __('Back') }}</a>
     <a class="btn btn-outline-primary btn-sm" href="{{ route('omega.admin.users.edit', $user) }}"><i class="fas fa-edit"></i> {{ __('Edit user') }}</a>
+    <div class="btn-group">
+        <a class="btn btn-outline-primary btn-sm" href="{{ route('omega.admin.users.password.edit', $user) }}"><i class="fas fa-key"></i> {{ __('Edit password') }}</a>
+    <!--<a class="btn btn-outline-primary btn-sm"><i class="fas fa-envelope"></i> {{ __('Send reset link') }}</a>-->
+    </div>
     {{ Form::odelete(route('omega.admin.users.destroy', $user), ['class' => 'btn btn-outline-danger btn-sm', 'label' => __('Delete user')]) }}
 @endsection
 
