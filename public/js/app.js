@@ -80871,8 +80871,6 @@ window.omega = __webpack_require__(/*! ./omega/app/omega */ "./resources/js/omeg
 window.__ = function (value) {
   return value;
 };
-
-alpinejs__WEBPACK_IMPORTED_MODULE_1__["default"].start();
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js")))
 
 /***/ }),
@@ -82455,6 +82453,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (defin
     init: function init() {
       var $this = this;
       if ($this.settings.url == undefined) $this.settings.url = route('omega.admin.content.media.index.modal');
+      this.$button.off('click');
       this.$button.click(function (e) {
         e.preventDefault();
         var args = {

@@ -37,14 +37,15 @@
 
             <!-- ### $App Screen Footer ### -->
             <footer class="bdT ta-c p-30 lh-0 fsz-sm c-grey-600">
-                <span>Copyright © {{ date('Y') }} Designed by
-                    <a href="https://colorlib.com" target='_blank' title="Colorlib">Colorlib</a>. All rights
-                    reserved.</span>
+                <span>Copyright © {{ date('Y') }}</span>
             </footer>
         </div>
     </div>
 
-
+    @livewire('livewire-ui-modal2')
+    <script>
+        Alpine.start()
+    </script>
 </body>
 
 </html>

@@ -42,5 +42,3 @@ window.omega = require('./omega/app/omega');
 
 // quickfix, let's not talk about it ok ?
 window.__ = function(value) { return value; };
-
-Alpine.start()

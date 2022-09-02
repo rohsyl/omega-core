@@ -24,13 +24,13 @@
     <!-- End of specific css content placeholder -->
 
     <!-- Global js content -->
-    <script src="{{ asset('vendor/omega/js/app.js?3') }}"></script>
+    @livewireScripts()
+    <script src="{{ asset('vendor/omega/js/app.js?4') }}"></script>
+
     <!-- End of global js content-->
 
     <!-- Specific js content placeholder -->
     @routes()
-    @livewireScripts()
-    @livewire('livewire-ui-modal')
     @stack('js')
     <!-- End of specific js content placeholder -->
 </head>

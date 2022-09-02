@@ -55,11 +55,25 @@
         <div class="tab-content" id="myTabContent">
             <div class="tab-pane fade @if($tab == 'content') show active @endif" id="content" role="tabpanel" aria-labelledby="content-tab">
 
+                <div class="row mt-2">
+                    <div class="col-sm-12 text-right">
+
+                        <button wire:click="$emit('openModal', 'omega_edit_modal_add-component', {{ json_encode(['page' => $page->id]) }})" type="button" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus"></i>
+                            {{ __('Add component') }}
+                        </button>
+                    </div>
+                </div>
+
                 <div class="row">
-                    <div class="col-md-8">
+                    <div class="col-md-12">
                         <div id="components-container">
                             @foreach($componentsForms as $form)
-                                <div class="card component-item" id="{{ $form['id'] }}-{{ $form['name'] }}" data-id="{{ $form['id'] }}">
+                                <div class="card component-item"
+                                     id="{{ $form['id'] }}-{{ $form['name'] }}"
+                                     data-id="{{ $form['id'] }}"
+                                    wire:key="{{ $form['id'] }}-{{ $form['updated_at'] }}"
+                                >
                                     {{ Form::hidden('components_order['.$form['id'].']', $form['order']) }}
                                     <div class="card-header p-10 d-flex justify-content-between">
                                         <div>
@@ -89,8 +103,12 @@
                                         </div>
                                         <div>
                                             <span class="grab-sortable mr-2" style="cursor:grab;"><i class="fas fa-arrows-alt"></i></span>
-                                            <a class="mr-2" href="#" wire:click="showSettingsComponentForm({{ $form['id'] }})"><i class="fas fa-cog"></i></a>
-                                            <a class="text-danger" href="#" wire:click="deleteComponent({{ $form['id'] }})"><i class="fas fa-trash"></i></a>
+                                            <a class="mr-2" href="#" wire:click="$emit('openModal', 'omega_edit_modal_settings-component', {{ json_encode(['componentItem' => $form['id']]) }})">
+                                                <i class="fas fa-cog"></i>
+                                            </a>
+                                            <a class="text-danger" href="#" wire:click="deleteComponent({{ $form['id'] }})">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
                                         </div>
                                     </div>
                                     <div class="card-body p-10" wire:ignore>
@@ -132,60 +150,6 @@
                             }
                         </style>
 
-                    </div>
-                    <div class="col-md-4">
-                        <div class="mt-3">
-
-                            <button wire:click="$emit('openModal', 'omega_edit_modal_add-component', {{ json_encode(['page' => $page->id]) }})">
-                                <i class="fas fa-plus"></i>
-                                {{ __('Add component') }}
-                            </button>
-
-
-                            <button class="btn btn-outline-primary btn-sm"
-                                    type="button"
-                                    wire:click="showAddComponentForm"
-                                    wire:target="showAddComponentForm"
-                                    wire:loading.attr="disabled"
-                            >
-
-                            </button>
-
-                            @if($showAddComponentForm)
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h4>{{ __('Add component') }}</h4>
-                                        <p>
-                                            {{ __('Click on any component in the list below to add it to the content of your page') }}
-                                        </p>
-                                        <div class="list-group">
-                                            @foreach($creatablePluginForms as $pluginForm)
-                                                <button class="list-group-item list-group-item-action"
-                                                        wire:click="createComponent({{ $pluginForm->id }})">
-                                                    {{ $pluginForm->name }}
-                                                </button>
-                                            @endforeach
-                                        </div>
-
-                                        <div class="mt-4 text-right">
-                                            <button class="btn btn-outline-secondary btn-sm"
-                                                    type="button"
-                                                    wire:click="hideAddComponentForm"
-                                                    wire:target="hideAddComponentForm"
-                                                    wire:loading.attr="disabled"
-                                            >
-                                                {{ __('Cancel') }}
-                                            </button>
-                                        </div>
-
-                                    </div>
-                                </div>
-                            @endif
-
-                            @if($showSettingsComponentForm)
-                                <livewire:omega_edit-page-componentsettings key="{{ now() }}" :component="$settingsEditableComponent" wire:settingsSaved="hideSettingsComponentForm" />
-                            @endif
-                        </div>
                     </div>
                 </div>
 

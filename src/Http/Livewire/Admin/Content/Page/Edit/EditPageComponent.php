@@ -42,6 +42,7 @@ class EditPageComponent extends LivewireComponent
         'settingsEditSaved',
         'settingsEditCancelled',
         'orderUpdated',
+        'page:reload-components' => 'reloadComponents'
     ];
 
     public function mount() {
@@ -55,6 +56,9 @@ class EditPageComponent extends LivewireComponent
         return view('omega::livewire.admin.content.page.edit.edit', compact('componentsForms'));
     }
 
+    public function reloadComponents() {
+        $this->page->load('components');
+    }
 
     public function init() {
         $this->readyToLoad = true;
@@ -92,71 +96,15 @@ class EditPageComponent extends LivewireComponent
                 'settings' => $component->param['settings'] ?? [],
                 'order' => $component->order,
                 'html' => Type::FormRender($component->plugin_form_id, $component->id, $component->page_id, $formRenderer),
+                'updated_at' => $component->updated_at
             ];
         }
         return $components;
     }
 
-    public $creatablePluginForms;
-    public $showAddComponentForm = false;
-    public function showAddComponentForm() {
-        $this->hideSidebarForms();
-        $this->showAddComponentForm = true;
-        $this->creatablePluginForms = PluginForm::query()->where('componentable', true)->get();
-    }
-    public function hideAddComponentForm() {
-        $this->showAddComponentForm = false;
-    }
-    public function createComponent($plugin_form_id) {
-
-        $pluginForm = PluginForm::find($plugin_form_id);
-
-        $maxOrder = Component::query()->where('page_id', $this->page->id)->max('order');
-        $maxId = Component::query()->where('page_id', $this->page->id)->max('id');
-
-        Component::create([
-            'plugin_form_id' => $pluginForm->id,
-            'page_id' => $this->page->id,
-            'name' => $pluginForm->name . $maxId ?? 0,
-            'param' => [
-                'settings' => [
-                    'compId' => $pluginForm->name . $maxId ?? 0
-                ],
-            ],
-            'is_enabled' => true,
-            'is_widget' => false,
-            'order' => $maxOrder ?? 0,
-        ]);
-
-        $this->page->load('components');
-        $this->hideAddComponentForm();
-    }
     public function deleteComponent($component_id) {
         Component::destroy($component_id);
         $this->page->load('components');
-    }
-
-    public $settingsEditableComponent;
-    public $showSettingsComponentForm = false;
-    public function showSettingsComponentForm($component_id) {
-        $this->hideSidebarForms();
-        $this->settingsEditableComponent = Component::find($component_id);
-        $this->showSettingsComponentForm = true;
-    }
-    public function settingsEditSaved() {
-        $this->hideSettingsComponentForm();
-    }
-    public function settingsEditCancelled() {
-        $this->hideSettingsComponentForm();
-    }
-    public function hideSettingsComponentForm() {
-        $this->settingsEditableComponent = null;
-        $this->showSettingsComponentForm = false;
-    }
-
-    public function hideSidebarForms() {
-        $this->hideAddComponentForm();
-        $this->hideSettingsComponentForm();
     }
 
     public function setTab($tab) {
