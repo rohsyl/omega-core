@@ -3,7 +3,7 @@ var mediaChooserInstance = 0;
 (function($){
   var RsMediaChooser = function(elem, options){
       this.$button = $(elem);
-      
+
       this.settings = $.extend({}, $.fn.rsMediaChooser.defaults, options || {});
 
     };
@@ -18,6 +18,7 @@ var mediaChooserInstance = 0;
 		if($this.settings.url == undefined)
 			$this.settings.url = route('omega.admin.content.media.index.modal');
 
+		this.$button.off('click');
 		this.$button.click(function(e){
             e.preventDefault();
 			var args = {

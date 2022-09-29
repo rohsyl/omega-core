@@ -11,11 +11,12 @@ class MediaLibraryComponent extends LivewireComponent
 {
     protected $listeners = ['fileUploaded', 'fileUploadCancelled', 'selectMedia'];
 
+    public $directory_id = null;
     public $directory = null;
 
-    protected $queryString = [
+    /*protected $queryString = [
         'directory' => ['except' => null]
-    ];
+    ];*/
 
     public $media = null;
 
@@ -43,36 +44,40 @@ class MediaLibraryComponent extends LivewireComponent
     }
 
     public function refresh() {
-        $this->loadDirectory($this->directory);
+        $this->loadDirectory($this->directory->id);
         $this->selectMedia(null);
+    }
+
+    public function back() {
+        if(isset($this->directory)) {
+            $parent = $this->directory->parent;
+            if(isset($parent)) {
+                $this->loadDirectory($parent->id);
+            }
+        }
     }
 
     private function loadDirectory($media_id = null) {
 
         if(isset($media_id)) {
-            $this->directory = $media_id;
-        }
+            $this->directory = Media::query()
+                ->with(['children'])
+                ->find($media_id);
 
-        if($this->directory == null) {
-            $this->media = Media::query()
+            if(!isset($this->directory)) {
+                throw new \Exception('Directory not found');
+            }
+        }
+        else {
+            $this->directory = Media::query()
                 ->with('children')
                 ->where('is_system', true)
                 ->whereNull('parent_id')
                 ->where('name', Media::ROOT_DIRECTORY)
                 ->first();
 
-            if(!isset($this->media)) {
+            if(!isset($this->directory)) {
                 throw new \Exception('Error: No ROOT directory set. TODO.');
-            }
-
-        }
-        else {
-            $this->media = Media::query()
-                ->with('children')
-                ->find($this->directory);
-
-            if(!isset($this->media)) {
-                throw new \Exception('Directory not found');
             }
         }
 
@@ -161,7 +166,7 @@ class MediaLibraryComponent extends LivewireComponent
         ]);
 
         Media::create([
-            'parent_id' => $this->media->id,
+            'parent_id' => $this->directory->id,
             'owner_id' => auth()->id(),
             'type' => Media::TYPE_DIRECTORY,
             'name' => $inputs['directory_name'],

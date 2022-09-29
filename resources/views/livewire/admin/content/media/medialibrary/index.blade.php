@@ -1,6 +1,4 @@
 <div wire:init="init">
-
-
     <div>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
@@ -11,15 +9,9 @@
     </div>
 
     <div>
-        @if($media->parent !== null)
-            <a href="{{ route('omega.admin.content.media.index', ['directory' => $media->parent->id]) }}" class=" btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> {{ __('Back') }}
-            </a>
-        @else
-            <a href="javascript:void(0)" disabled class="disabled btn btn-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> {{ __('Back') }}
-            </a>
-        @endif
+        <a href="#" class="btn btn-secondary btn-sm @if($directory->parent === null) disabled @endif" wire:click="back()" wire:key="back-button">
+            <i class="fas fa-arrow-left"></i> {{ __('Back') }}
+        </a>
         <a href="#" class="btn btn-outline-secondary btn-sm" wire:click="showCreateDirectoryForm">
             <i class="fas fa-folder-plus"></i>
             {{ __('Create directory') }}
@@ -32,10 +24,10 @@
 
     <div class="row mt-4">
         <div class="col-md-8">
-            @if(isset($media))
+            @if(isset($directory))
 
                 <div class="d-flex justify-content-start flex-wrap medias-container">
-                    @forelse($media->children as $child)
+                    @forelse($directory->children as $child)
 
                         <div title="{{ $child->title ?? $child->name }}"
                              class="mr-2 mb-2 pt-3 pb-0 border media-item

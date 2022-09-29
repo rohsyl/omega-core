@@ -16,7 +16,7 @@
 
                 <ul class="dropdown-menu" aria-labelledby="dropdown-user-menu">
                     <li>
-                       <a class="dropdown-item" href="#">{{ __('Profile') }}</a>
+                       <a class="dropdown-item" href="{{ route('omega.admin.users.show', auth()->id()) }}">{{ __('Profile') }}</a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="{{ route('logout') }}"

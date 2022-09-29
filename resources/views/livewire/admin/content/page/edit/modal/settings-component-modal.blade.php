@@ -1,11 +1,10 @@
-<div class="card">
-    <div class="card-body">
+<x-oix-modal title="{{ __('Settings') }} - {{ \Illuminate\Support\Str::title($componentItem->plugin_form->plugin->name) }}" size="modal-lg">
 
-        <h4>{{ __('Edit') }} {{ \Illuminate\Support\Str::title($component->plugin_form->plugin->name) }}'s {{ __('settings') }}</h4>
+
+    <div>
         <p>
             {{ __('Here you can configure your component\'s settings...') }}
         </p>
-
 
         {{ Form::otext('compId', null, ['wire:model.defer' => 'compId', 'label' => __('Component ID'), 'helper' => __('Set the #id of the component\'s section.')]) }}
         {{ Form::otext('compTitle', null, ['wire:model.defer' => 'compTitle', 'label' => __('Component Title'), 'helper' => __('A title for the component.')]) }}
@@ -29,23 +28,20 @@
                 @endforeach
             </select>
         </div>
-        <div class="mt-4 text-right">
-            <button class="btn btn-outline-primary btn-sm"
-                    type="button"
-                    wire:click="saveSettings"
-                    wire:target="saveSettings"
-                    wire:loading.attr="disabled"
-            >
-                {{ __('Save') }}
-            </button>
-            <button class="btn btn-outline-secondary btn-sm"
-                    type="button"
-                    wire:click="cancelSettings"
-                    wire:target="cancelSettings"
-                    wire:loading.attr="disabled"
-            >
-                {{ __('Cancel') }}
-            </button>
-        </div>
+
     </div>
-</div>
+
+    <x-slot:actions>
+        <button wire:click="$emit('closeModal')" type="button" class="btn btn-outline-secondary" aria-label="Close">
+            {{ __('Close') }}
+        </button>
+        <button class="btn btn-primary"
+                type="button"
+                wire:click="saveSettings"
+                wire:target="saveSettings"
+                wire:loading.attr="disabled"
+        >
+            {{ __('Save') }}
+        </button>
+    </x-slot:actions>
+</x-oix-modal>

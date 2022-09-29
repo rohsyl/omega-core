@@ -7,8 +7,8 @@
 @section('actions')
     <a class="btn btn-outline-secondary btn-sm" href="{{ route('omega.admin.users.show', $user) }}"><i class="fas fa-arrow-left"></i> Back</a>
     <div class="btn-group">
-        <a class="btn btn-outline-primary btn-sm"><i class="fas fa-key"></i> {{ __('Edit password') }}</a>
-        <a class="btn btn-outline-primary btn-sm"><i class="fas fa-envelope"></i> {{ __('Send reset link') }}</a>
+        <a class="btn btn-outline-primary btn-sm" href="{{ route('omega.admin.users.password.edit', $user) }}"><i class="fas fa-key"></i> {{ __('Edit password') }}</a>
+        <!--<a class="btn btn-outline-primary btn-sm"><i class="fas fa-envelope"></i> {{ __('Send reset link') }}</a>-->
     </div>
 @endsection
 

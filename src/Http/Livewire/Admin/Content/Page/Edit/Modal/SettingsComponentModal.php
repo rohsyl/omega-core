@@ -1,17 +1,17 @@
 <?php
 
-
-namespace rohsyl\OmegaCore\Http\Livewire\Admin\Content\Page\Edit;
-
+namespace rohsyl\OmegaCore\Http\Livewire\Admin\Content\Page\Edit\Modal;
 
 use Illuminate\Support\Str;
-use Livewire\Component as LivewireComponent;
+use rohsyl\OmegaCore\Extensions\Livewire\Modal\ModalComponent;
+use rohsyl\OmegaCore\Models\Component;
+use rohsyl\OmegaCore\Models\Page;
+use rohsyl\OmegaCore\Models\PluginForm;
 use rohsyl\OmegaCore\Utils\Overt\Facades\OmegaTheme;
 
-class ComponentSettings extends LivewireComponent
+class SettingsComponentModal extends ModalComponent
 {
-    public $component;
-
+    public $componentItem;
 
     public $compId;
     public $compTitle;
@@ -22,6 +22,7 @@ class ComponentSettings extends LivewireComponent
     public $componentTemplates;
     public $componentWidths;
 
+
     protected $rules = [
         'compId' => 'required|string',
         'compTitle' => 'nullable|string',
@@ -30,29 +31,30 @@ class ComponentSettings extends LivewireComponent
         'compWidth' => 'required|string',
     ];
 
-    public function mount() {
-
+    public function mount(Component $componentItem) {
+        $this->componentItem = $componentItem;
+        $this->init();
     }
 
-    public function render() {
+    private function init() {
         $this->loadSettings();
         $this->loadSettingsForm();
 
-        return view('omega::livewire.admin.content.page.edit.componentsettings');
     }
 
     public function loadSettings() {
-        $this->compId = $this->component->settings['compId'] ?? '';
-        $this->compTitle = $this->component->settings['compTitle'] ?? '';
-        $this->compTemplate = $this->component->settings['pluginTemplate'] ?? null;
-        $this->isHidden = $this->component->settings['isHidden'] ?? false;
-        $this->compWidth = isset($this->component->settings['isWrapped'])
-            ? ($this->component->settings['isWrapped'] ? 'wrapped' : 'full-width')
+        $this->compId = $this->componentItem->settings['compId'] ?? '';
+        $this->compTitle = $this->componentItem->settings['compTitle'] ?? '';
+        $this->compTemplate = $this->componentItem->settings['pluginTemplate'] ?? null;
+        $this->isHidden = $this->componentItem->settings['isHidden'] ?? false;
+        $this->compWidth = isset($this->componentItem->settings['isWrapped'])
+            ? ($this->componentItem->settings['isWrapped'] ? 'wrapped' : 'full-width')
             : 'wrapped';
     }
 
+
     public function loadSettingsForm() {
-        $pluginName = $this->component->plugin_form->plugin->name;
+        $pluginName = $this->componentItem->plugin_form->plugin->name;
         $themeName = OmegaTheme::getName();
         $componentsTemplates = OmegaTheme::getRegister()->getAllComponentsViewForPlugin($pluginName);
 
@@ -76,10 +78,15 @@ class ComponentSettings extends LivewireComponent
 
     }
 
+    public function render() {
+        return view('omega::livewire.admin.content.page.edit.modal.settings-component-modal');
+    }
+
+
     public function saveSettings() {
 
         $inputs = $this->validate();
-        $param = $this->component->param;
+        $param = $this->componentItem->param;
         $settings = $param['settings'] ?? [];
         $settings['compId'] = $inputs['compId'];
         $settings['compTitle'] = $inputs['compTitle'];
@@ -87,13 +94,11 @@ class ComponentSettings extends LivewireComponent
         $settings['isHidden'] = $inputs['isHidden'];
         $settings['isWrapped'] = $inputs['compWidth'] == 'wrapped' ? true : false;
         $param['settings'] = $settings;
-        $this->component->param = $param;
-        $this->component->save();
+        $this->componentItem->param = $param;
+        $this->componentItem->save();
 
-        $this->emitUp('settingsEditSaved');
+        $this->emit('page:reload-components');
+        $this->closeModal();
     }
 
-    public function cancelSettings() {
-        $this->emitUp('settingsEditCancelled');
-    }
 }
