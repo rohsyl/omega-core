@@ -23,7 +23,7 @@
         "rohsyl/laravel-acl": "^2.0",
         "rohsyl/omega-plugins-bundle": "dev-master",
         "spatie/laravel-mix-preload": "^1.2",
-        "rohsyl/laravel-advanced-query-filter": "dev-master",
+        "rohsyl/laravel-advanced-query-filter": "^2.0",
         "wire-elements/modal": "^1.0"
     },
     "require-dev": {
@@ -53,15 +53,5 @@
                 "Entity": "rohsyl\\OmegaCore\\Utils\\Overt\\Facades\\Entity"
             }
         }
-    },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../omega-plugins-bundle"
-        },
-        {
-            "type": "path",
-            "url": "../laravel-advanced-query-filter"
-        }
-    ]
+    }
 }
