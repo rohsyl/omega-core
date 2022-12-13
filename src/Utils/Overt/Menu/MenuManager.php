@@ -160,7 +160,6 @@ class MenuManager
     }
 
     private function getHtml(Menu $menu, $html, $lang = null, $level = -1, &$containesActive = false) {
-        $level++;
 
         $z = $this->getHtmlMenuItems($menu->items, $html, $lang, $level, $containesActive);
 
@@ -174,6 +173,7 @@ class MenuManager
     }
 
     private function getHtmlMenuItems(Collection $menuItems, $html, $lang = null, $level = -1, &$containesActive = false) {
+        $level++;
         $current_page = substr(strrchr(strtok($_SERVER["REQUEST_URI"],'?'), "/"), 1);
         $z = '';
         foreach($menuItems as $item) {
@@ -183,6 +183,7 @@ class MenuManager
             $isNewTab = isset($row['isnewtab']) ? $row['isnewtab'] : false;
 
             $target = $isNewTab ? 'target="_blank"' : '';
+
 
             if($item->children->count() > 0) {
 
