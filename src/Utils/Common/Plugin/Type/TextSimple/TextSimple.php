@@ -31,4 +31,11 @@ class TextSimple extends TypeEntry {
     public function getDoc(){
         return view('omega::common.plugin.type.textsimple.doc');
     }
+
+    /*public function getGTypeDefintion() {
+        return <<<'JS'
+            
+        JS;
+
+    }*/
 }

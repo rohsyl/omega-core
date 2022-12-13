@@ -39,6 +39,11 @@ class PageController extends Controller
         return view('omega::admin.content.page.edit', compact('page'));
     }
 
+    public function editv2(Page $page) {
+        $page->load(['components']);
+        return view('omega::admin.content.page.editv2', compact('page'));
+    }
+
     public function update(UpdatePageRequest $request, Page $page) {
 
         $action = $request->input('action') ?? 'save';

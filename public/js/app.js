@@ -3088,6 +3088,7 @@ module.exports = function xhrAdapter(config) {
   return new Promise(function dispatchXhrRequest(resolve, reject) {
     var requestData = config.data;
     var requestHeaders = config.headers;
+    var responseType = config.responseType;
 
     if (utils.isFormData(requestData)) {
       delete requestHeaders['Content-Type']; // Let the browser set it
@@ -3108,23 +3109,14 @@ module.exports = function xhrAdapter(config) {
     // Set the request timeout in MS
     request.timeout = config.timeout;
 
-    // Listen for ready state
-    request.onreadystatechange = function handleLoad() {
-      if (!request || request.readyState !== 4) {
+    function onloadend() {
+      if (!request) {
         return;
       }
-
-      // The request errored out and we didn't get a response, this will be
-      // handled by onerror instead
-      // With one exception: request that using file: protocol, most browsers
-      // will return status as 0 even though it's a successful request
-      if (request.status === 0 && !(request.responseURL && request.responseURL.indexOf('file:') === 0)) {
-        return;
-      }
-
       // Prepare the response
       var responseHeaders = 'getAllResponseHeaders' in request ? parseHeaders(request.getAllResponseHeaders()) : null;
-      var responseData = !config.responseType || config.responseType === 'text' ? request.responseText : request.response;
+      var responseData = !responseType || responseType === 'text' ||  responseType === 'json' ?
+        request.responseText : request.response;
       var response = {
         data: responseData,
         status: request.status,
@@ -3138,7 +3130,30 @@ module.exports = function xhrAdapter(config) {
 
       // Clean up request
       request = null;
-    };
+    }
+
+    if ('onloadend' in request) {
+      // Use onloadend if available
+      request.onloadend = onloadend;
+    } else {
+      // Listen for ready state to emulate onloadend
+      request.onreadystatechange = function handleLoad() {
+        if (!request || request.readyState !== 4) {
+          return;
+        }
+
+        // The request errored out and we didn't get a response, this will be
+        // handled by onerror instead
+        // With one exception: request that using file: protocol, most browsers
+        // will return status as 0 even though it's a successful request
+        if (request.status === 0 && !(request.responseURL && request.responseURL.indexOf('file:') === 0)) {
+          return;
+        }
+        // readystate handler is calling before onerror or ontimeout handlers,
+        // so we should call onloadend on the next 'tick'
+        setTimeout(onloadend);
+      };
+    }
 
     // Handle browser request cancellation (as opposed to a manual cancellation)
     request.onabort = function handleAbort() {
@@ -3168,7 +3183,10 @@ module.exports = function xhrAdapter(config) {
       if (config.timeoutErrorMessage) {
         timeoutErrorMessage = config.timeoutErrorMessage;
       }
-      reject(createError(timeoutErrorMessage, config, 'ECONNABORTED',
+      reject(createError(
+        timeoutErrorMessage,
+        config,
+        config.transitional && config.transitional.clarifyTimeoutError ? 'ETIMEDOUT' : 'ECONNABORTED',
         request));
 
       // Clean up request
@@ -3208,16 +3226,8 @@ module.exports = function xhrAdapter(config) {
     }
 
     // Add responseType to request if needed
-    if (config.responseType) {
-      try {
-        request.responseType = config.responseType;
-      } catch (e) {
-        // Expected DOMException thrown by browsers not compatible XMLHttpRequest Level 2.
-        // But, this can be suppressed for 'json' type as it can be parsed by default 'transformResponse' function.
-        if (config.responseType !== 'json') {
-          throw e;
-        }
-      }
+    if (responseType && responseType !== 'json') {
+      request.responseType = config.responseType;
     }
 
     // Handle progress if needed
@@ -3456,7 +3466,9 @@ var buildURL = __webpack_require__(/*! ../helpers/buildURL */ "./node_modules/ax
 var InterceptorManager = __webpack_require__(/*! ./InterceptorManager */ "./node_modules/axios/lib/core/InterceptorManager.js");
 var dispatchRequest = __webpack_require__(/*! ./dispatchRequest */ "./node_modules/axios/lib/core/dispatchRequest.js");
 var mergeConfig = __webpack_require__(/*! ./mergeConfig */ "./node_modules/axios/lib/core/mergeConfig.js");
+var validator = __webpack_require__(/*! ../helpers/validator */ "./node_modules/axios/lib/helpers/validator.js");
 
+var validators = validator.validators;
 /**
  * Create a new instance of Axios
  *
@@ -3496,20 +3508,71 @@ Axios.prototype.request = function request(config) {
     config.method = 'get';
   }
 
-  // Hook up interceptors middleware
-  var chain = [dispatchRequest, undefined];
-  var promise = Promise.resolve(config);
+  var transitional = config.transitional;
 
+  if (transitional !== undefined) {
+    validator.assertOptions(transitional, {
+      silentJSONParsing: validators.transitional(validators.boolean, '1.0.0'),
+      forcedJSONParsing: validators.transitional(validators.boolean, '1.0.0'),
+      clarifyTimeoutError: validators.transitional(validators.boolean, '1.0.0')
+    }, false);
+  }
+
+  // filter out skipped interceptors
+  var requestInterceptorChain = [];
+  var synchronousRequestInterceptors = true;
   this.interceptors.request.forEach(function unshiftRequestInterceptors(interceptor) {
-    chain.unshift(interceptor.fulfilled, interceptor.rejected);
+    if (typeof interceptor.runWhen === 'function' && interceptor.runWhen(config) === false) {
+      return;
+    }
+
+    synchronousRequestInterceptors = synchronousRequestInterceptors && interceptor.synchronous;
+
+    requestInterceptorChain.unshift(interceptor.fulfilled, interceptor.rejected);
   });
 
+  var responseInterceptorChain = [];
   this.interceptors.response.forEach(function pushResponseInterceptors(interceptor) {
-    chain.push(interceptor.fulfilled, interceptor.rejected);
+    responseInterceptorChain.push(interceptor.fulfilled, interceptor.rejected);
   });
 
-  while (chain.length) {
-    promise = promise.then(chain.shift(), chain.shift());
+  var promise;
+
+  if (!synchronousRequestInterceptors) {
+    var chain = [dispatchRequest, undefined];
+
+    Array.prototype.unshift.apply(chain, requestInterceptorChain);
+    chain = chain.concat(responseInterceptorChain);
+
+    promise = Promise.resolve(config);
+    while (chain.length) {
+      promise = promise.then(chain.shift(), chain.shift());
+    }
+
+    return promise;
+  }
+
+
+  var newConfig = config;
+  while (requestInterceptorChain.length) {
+    var onFulfilled = requestInterceptorChain.shift();
+    var onRejected = requestInterceptorChain.shift();
+    try {
+      newConfig = onFulfilled(newConfig);
+    } catch (error) {
+      onRejected(error);
+      break;
+    }
+  }
+
+  try {
+    promise = dispatchRequest(newConfig);
+  } catch (error) {
+    return Promise.reject(error);
+  }
+
+  while (responseInterceptorChain.length) {
+    promise = promise.then(responseInterceptorChain.shift(), responseInterceptorChain.shift());
   }
 
   return promise;
@@ -3572,10 +3635,12 @@ function InterceptorManager() {
  *
  * @return {Number} An ID used to remove interceptor later
  */
-InterceptorManager.prototype.use = function use(fulfilled, rejected) {
+InterceptorManager.prototype.use = function use(fulfilled, rejected, options) {
   this.handlers.push({
     fulfilled: fulfilled,
-    rejected: rejected
+    rejected: rejected,
+    synchronous: options ? options.synchronous : false,
+    runWhen: options ? options.runWhen : null
   });
   return this.handlers.length - 1;
 };
@@ -3711,7 +3776,8 @@ module.exports = function dispatchRequest(config) {
   config.headers = config.headers || {};
 
   // Transform request data
-  config.data = transformData(
+  config.data = transformData.call(
+    config,
     config.data,
     config.headers,
     config.transformRequest
@@ -3737,7 +3803,8 @@ module.exports = function dispatchRequest(config) {
     throwIfCancellationRequested(config);
 
     // Transform response data
-    response.data = transformData(
+    response.data = transformData.call(
+      config,
       response.data,
       response.headers,
       config.transformResponse
@@ -3750,7 +3817,8 @@ module.exports = function dispatchRequest(config) {
 
       // Transform response data
       if (reason && reason.response) {
-        reason.response.data = transformData(
+        reason.response.data = transformData.call(
+          config,
           reason.response.data,
           reason.response.headers,
           config.transformResponse
@@ -3966,6 +4034,7 @@ module.exports = function settle(resolve, reject, response) {
 
 
 var utils = __webpack_require__(/*! ./../utils */ "./node_modules/axios/lib/utils.js");
+var defaults = __webpack_require__(/*! ./../defaults */ "./node_modules/axios/lib/defaults.js");
 
 /**
  * Transform the data for a request or a response
@@ -3976,9 +4045,10 @@ var utils = __webpack_require__(/*! ./../utils */ "./node_modules/axios/lib/util
  * @returns {*} The resulting transformed data
  */
 module.exports = function transformData(data, headers, fns) {
+  var context = this || defaults;
   /*eslint no-param-reassign:0*/
   utils.forEach(fns, function transform(fn) {
-    data = fn(data, headers);
+    data = fn.call(context, data, headers);
   });
 
   return data;
@@ -3999,6 +4069,7 @@ module.exports = function transformData(data, headers, fns) {
 
 var utils = __webpack_require__(/*! ./utils */ "./node_modules/axios/lib/utils.js");
 var normalizeHeaderName = __webpack_require__(/*! ./helpers/normalizeHeaderName */ "./node_modules/axios/lib/helpers/normalizeHeaderName.js");
+var enhanceError = __webpack_require__(/*! ./core/enhanceError */ "./node_modules/axios/lib/core/enhanceError.js");
 
 var DEFAULT_CONTENT_TYPE = {
   'Content-Type': 'application/x-www-form-urlencoded'
@@ -4022,12 +4093,35 @@ function getDefaultAdapter() {
   return adapter;
 }
 
+function stringifySafely(rawValue, parser, encoder) {
+  if (utils.isString(rawValue)) {
+    try {
+      (parser || JSON.parse)(rawValue);
+      return utils.trim(rawValue);
+    } catch (e) {
+      if (e.name !== 'SyntaxError') {
+        throw e;
+      }
+    }
+  }
+
+  return (encoder || JSON.stringify)(rawValue);
+}
+
 var defaults = {
+
+  transitional: {
+    silentJSONParsing: true,
+    forcedJSONParsing: true,
+    clarifyTimeoutError: false
+  },
+
   adapter: getDefaultAdapter(),
 
   transformRequest: [function transformRequest(data, headers) {
     normalizeHeaderName(headers, 'Accept');
     normalizeHeaderName(headers, 'Content-Type');
+
     if (utils.isFormData(data) ||
       utils.isArrayBuffer(data) ||
       utils.isBuffer(data) ||
@@ -4044,20 +4138,32 @@ var defaults = {
       setContentTypeIfUnset(headers, 'application/x-www-form-urlencoded;charset=utf-8');
       return data.toString();
     }
-    if (utils.isObject(data)) {
-      setContentTypeIfUnset(headers, 'application/json;charset=utf-8');
-      return JSON.stringify(data);
+    if (utils.isObject(data) || (headers && headers['Content-Type'] === 'application/json')) {
+      setContentTypeIfUnset(headers, 'application/json');
+      return stringifySafely(data);
     }
     return data;
   }],
 
   transformResponse: [function transformResponse(data) {
-    /*eslint no-param-reassign:0*/
-    if (typeof data === 'string') {
+    var transitional = this.transitional;
+    var silentJSONParsing = transitional && transitional.silentJSONParsing;
+    var forcedJSONParsing = transitional && transitional.forcedJSONParsing;
+    var strictJSONParsing = !silentJSONParsing && this.responseType === 'json';
+
+    if (strictJSONParsing || (forcedJSONParsing && utils.isString(data) && data.length)) {
       try {
-        data = JSON.parse(data);
-      } catch (e) { /* Ignore */ }
+        return JSON.parse(data);
+      } catch (e) {
+        if (strictJSONParsing) {
+          if (e.name === 'SyntaxError') {
+            throw enhanceError(e, this, 'E_JSON_PARSE');
+          }
+          throw e;
+        }
+      }
     }
+
     return data;
   }],
 
@@ -4551,6 +4657,123 @@ module.exports = function spread(callback) {
 
 /***/ }),
 
+/***/ "./node_modules/axios/lib/helpers/validator.js":
+/*!*****************************************************!*\
+  !*** ./node_modules/axios/lib/helpers/validator.js ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var pkg = __webpack_require__(/*! ./../../package.json */ "./node_modules/axios/package.json");
+
+var validators = {};
+
+// eslint-disable-next-line func-names
+['object', 'boolean', 'number', 'function', 'string', 'symbol'].forEach(function(type, i) {
+  validators[type] = function validator(thing) {
+    return typeof thing === type || 'a' + (i < 1 ? 'n ' : ' ') + type;
+  };
+});
+
+var deprecatedWarnings = {};
+var currentVerArr = pkg.version.split('.');
+
+/**
+ * Compare package versions
+ * @param {string} version
+ * @param {string?} thanVersion
+ * @returns {boolean}
+ */
+function isOlderVersion(version, thanVersion) {
+  var pkgVersionArr = thanVersion ? thanVersion.split('.') : currentVerArr;
+  var destVer = version.split('.');
+  for (var i = 0; i < 3; i++) {
+    if (pkgVersionArr[i] > destVer[i]) {
+      return true;
+    } else if (pkgVersionArr[i] < destVer[i]) {
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * Transitional option validator
+ * @param {function|boolean?} validator
+ * @param {string?} version
+ * @param {string} message
+ * @returns {function}
+ */
+validators.transitional = function transitional(validator, version, message) {
+  var isDeprecated = version && isOlderVersion(version);
+
+  function formatMessage(opt, desc) {
+    return '[Axios v' + pkg.version + '] Transitional option \'' + opt + '\'' + desc + (message ? '. ' + message : '');
+  }
+
+  // eslint-disable-next-line func-names
+  return function(value, opt, opts) {
+    if (validator === false) {
+      throw new Error(formatMessage(opt, ' has been removed in ' + version));
+    }
+
+    if (isDeprecated && !deprecatedWarnings[opt]) {
+      deprecatedWarnings[opt] = true;
+      // eslint-disable-next-line no-console
+      console.warn(
+        formatMessage(
+          opt,
+          ' has been deprecated since v' + version + ' and will be removed in the near future'
+        )
+      );
+    }
+
+    return validator ? validator(value, opt, opts) : true;
+  };
+};
+
+/**
+ * Assert object's properties type
+ * @param {object} options
+ * @param {object} schema
+ * @param {boolean?} allowUnknown
+ */
+
+function assertOptions(options, schema, allowUnknown) {
+  if (typeof options !== 'object') {
+    throw new TypeError('options must be an object');
+  }
+  var keys = Object.keys(options);
+  var i = keys.length;
+  while (i-- > 0) {
+    var opt = keys[i];
+    var validator = schema[opt];
+    if (validator) {
+      var value = options[opt];
+      var result = value === undefined || validator(value, opt, options);
+      if (result !== true) {
+        throw new TypeError('option ' + opt + ' must be ' + result);
+      }
+      continue;
+    }
+    if (allowUnknown !== true) {
+      throw Error('Unknown option ' + opt);
+    }
+  }
+}
+
+module.exports = {
+  isOlderVersion: isOlderVersion,
+  assertOptions: assertOptions,
+  validators: validators
+};
+
+
+/***/ }),
+
 /***/ "./node_modules/axios/lib/utils.js":
 /*!*****************************************!*\
   !*** ./node_modules/axios/lib/utils.js ***!
@@ -4562,8 +4785,6 @@ module.exports = function spread(callback) {
 
 
 var bind = __webpack_require__(/*! ./helpers/bind */ "./node_modules/axios/lib/helpers/bind.js");
-
-/*global toString:true*/
 
 // utils is a library of generic helper functions non-specific to axios
 
@@ -4748,7 +4969,7 @@ function isURLSearchParams(val) {
  * @returns {String} The String freed of excess whitespace
  */
 function trim(str) {
-  return str.replace(/^\s*/, '').replace(/\s*$/, '');
+  return str.trim ? str.trim() : str.replace(/^\s+|\s+$/g, '');
 }
 
 /**
@@ -4911,6 +5132,17 @@ module.exports = {
   stripBOM: stripBOM
 };
 
+
+/***/ }),
+
+/***/ "./node_modules/axios/package.json":
+/*!*****************************************!*\
+  !*** ./node_modules/axios/package.json ***!
+  \*****************************************/
+/*! exports provided: name, version, description, main, scripts, repository, keywords, author, license, bugs, homepage, devDependencies, browser, jsdelivr, unpkg, typings, dependencies, bundlesize, default */
+/***/ (function(module) {
+
+module.exports = JSON.parse("{\"name\":\"axios\",\"version\":\"0.21.4\",\"description\":\"Promise based HTTP client for the browser and node.js\",\"main\":\"index.js\",\"scripts\":{\"test\":\"grunt test\",\"start\":\"node ./sandbox/server.js\",\"build\":\"NODE_ENV=production grunt build\",\"preversion\":\"npm test\",\"version\":\"npm run build && grunt version && git add -A dist && git add CHANGELOG.md bower.json package.json\",\"postversion\":\"git push && git push --tags\",\"examples\":\"node ./examples/server.js\",\"coveralls\":\"cat coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js\",\"fix\":\"eslint --fix lib/**/*.js\"},\"repository\":{\"type\":\"git\",\"url\":\"https://github.com/axios/axios.git\"},\"keywords\":[\"xhr\",\"http\",\"ajax\",\"promise\",\"node\"],\"author\":\"Matt Zabriskie\",\"license\":\"MIT\",\"bugs\":{\"url\":\"https://github.com/axios/axios/issues\"},\"homepage\":\"https://axios-http.com\",\"devDependencies\":{\"coveralls\":\"^3.0.0\",\"es6-promise\":\"^4.2.4\",\"grunt\":\"^1.3.0\",\"grunt-banner\":\"^0.6.0\",\"grunt-cli\":\"^1.2.0\",\"grunt-contrib-clean\":\"^1.1.0\",\"grunt-contrib-watch\":\"^1.0.0\",\"grunt-eslint\":\"^23.0.0\",\"grunt-karma\":\"^4.0.0\",\"grunt-mocha-test\":\"^0.13.3\",\"grunt-ts\":\"^6.0.0-beta.19\",\"grunt-webpack\":\"^4.0.2\",\"istanbul-instrumenter-loader\":\"^1.0.0\",\"jasmine-core\":\"^2.4.1\",\"karma\":\"^6.3.2\",\"karma-chrome-launcher\":\"^3.1.0\",\"karma-firefox-launcher\":\"^2.1.0\",\"karma-jasmine\":\"^1.1.1\",\"karma-jasmine-ajax\":\"^0.1.13\",\"karma-safari-launcher\":\"^1.0.0\",\"karma-sauce-launcher\":\"^4.3.6\",\"karma-sinon\":\"^1.0.5\",\"karma-sourcemap-loader\":\"^0.3.8\",\"karma-webpack\":\"^4.0.2\",\"load-grunt-tasks\":\"^3.5.2\",\"minimist\":\"^1.2.0\",\"mocha\":\"^8.2.1\",\"sinon\":\"^4.5.0\",\"terser-webpack-plugin\":\"^4.2.3\",\"typescript\":\"^4.0.5\",\"url-search-params\":\"^0.10.0\",\"webpack\":\"^4.44.2\",\"webpack-dev-server\":\"^3.11.0\"},\"browser\":{\"./lib/adapters/http.js\":\"./lib/adapters/xhr.js\"},\"jsdelivr\":\"dist/axios.min.js\",\"unpkg\":\"dist/axios.min.js\",\"typings\":\"./index.d.ts\",\"dependencies\":{\"follow-redirects\":\"^1.14.0\"},\"bundlesize\":[{\"path\":\"./dist/axios.min.js\",\"threshold\":\"5kB\"}]}");
 
 /***/ }),
 
@@ -16643,9 +16875,9 @@ $$1.summernote = $$1.extend($$1.summernote, {
 /***/ (function(module, exports, __webpack_require__) {
 
 // CodeMirror, copyright (c) by Marijn Haverbeke and others
-// Distributed under an MIT license: https://codemirror.net/LICENSE
+// Distributed under an MIT license: https://codemirror.net/5/LICENSE
 
-// This is CodeMirror (https://codemirror.net), a code editor
+// This is CodeMirror (https://codemirror.net/5), a code editor
 // implemented in JavaScript on top of the browser's DOM.
 //
 // You can find some technical background for some of the code below
@@ -16669,7 +16901,8 @@ $$1.summernote = $$1.extend($$1.summernote, {
   var ie_version = ie && (ie_upto10 ? document.documentMode || 6 : +(edge || ie_11up)[1]);
   var webkit = !edge && /WebKit\//.test(userAgent);
   var qtwebkit = webkit && /Qt\/\d+\.\d+/.test(userAgent);
-  var chrome = !edge && /Chrome\//.test(userAgent);
+  var chrome = !edge && /Chrome\/(\d+)/.exec(userAgent);
+  var chrome_version = chrome && +chrome[1];
   var presto = /Opera\//.test(userAgent);
   var safari = /Apple Computer/.test(navigator.vendor);
   var mac_geMountainLion = /Mac OS X 1\d\D([8-9]|\d\d)\D/.test(userAgent);
@@ -16754,15 +16987,15 @@ $$1.summernote = $$1.extend($$1.summernote, {
     } while (child = child.parentNode)
   }
 
-  function activeElt() {
+  function activeElt(doc) {
     // IE and Edge may throw an "Unspecified Error" when accessing document.activeElement.
     // IE < 10 will throw when accessed while the page is loading or in an iframe.
     // IE > 9 and Edge will throw when accessed in an iframe if document.body is unavailable.
     var activeElement;
     try {
-      activeElement = document.activeElement;
+      activeElement = doc.activeElement;
     } catch(e) {
-      activeElement = document.body || null;
+      activeElement = doc.body || null;
     }
     while (activeElement && activeElement.shadowRoot && activeElement.shadowRoot.activeElement)
       { activeElement = activeElement.shadowRoot.activeElement; }
@@ -16785,6 +17018,10 @@ $$1.summernote = $$1.extend($$1.summernote, {
     { selectInput = function(node) { node.selectionStart = 0; node.selectionEnd = node.value.length; }; }
   else if (ie) // Suppress mysterious IE10 errors
     { selectInput = function(node) { try { node.select(); } catch(_e) {} }; }
+
+  function doc(cm) { return cm.display.wrapper.ownerDocument }
+
+  function win(cm) { return doc(cm).defaultView }
 
   function bind(f) {
     var args = Array.prototype.slice.call(arguments, 1);
@@ -17967,7 +18204,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
   // Add a span to a line.
   function addMarkedSpan(line, span, op) {
     var inThisOp = op && window.WeakSet && (op.markedSpans || (op.markedSpans = new WeakSet));
-    if (inThisOp && inThisOp.has(line.markedSpans)) {
+    if (inThisOp && line.markedSpans && inThisOp.has(line.markedSpans)) {
       line.markedSpans.push(span);
     } else {
       line.markedSpans = line.markedSpans ? line.markedSpans.concat([span]) : [span];
@@ -18994,12 +19231,14 @@ $$1.summernote = $$1.extend($$1.summernote, {
   function mapFromLineView(lineView, line, lineN) {
     if (lineView.line == line)
       { return {map: lineView.measure.map, cache: lineView.measure.cache} }
-    for (var i = 0; i < lineView.rest.length; i++)
-      { if (lineView.rest[i] == line)
-        { return {map: lineView.measure.maps[i], cache: lineView.measure.caches[i]} } }
-    for (var i$1 = 0; i$1 < lineView.rest.length; i$1++)
-      { if (lineNo(lineView.rest[i$1]) > lineN)
-        { return {map: lineView.measure.maps[i$1], cache: lineView.measure.caches[i$1], before: true} } }
+    if (lineView.rest) {
+      for (var i = 0; i < lineView.rest.length; i++)
+        { if (lineView.rest[i] == line)
+          { return {map: lineView.measure.maps[i], cache: lineView.measure.caches[i]} } }
+      for (var i$1 = 0; i$1 < lineView.rest.length; i$1++)
+        { if (lineNo(lineView.rest[i$1]) > lineN)
+          { return {map: lineView.measure.maps[i$1], cache: lineView.measure.caches[i$1], before: true} } }
+    }
   }
 
   // Render a line into the hidden node display.externalMeasured. Used
@@ -19213,22 +19452,24 @@ $$1.summernote = $$1.extend($$1.summernote, {
     cm.display.lineNumChars = null;
   }
 
-  function pageScrollX() {
+  function pageScrollX(doc) {
     // Work around https://bugs.chromium.org/p/chromium/issues/detail?id=489206
     // which causes page_Offset and bounding client rects to use
     // different reference viewports and invalidate our calculations.
-    if (chrome && android) { return -(document.body.getBoundingClientRect().left - parseInt(getComputedStyle(document.body).marginLeft)) }
-    return window.pageXOffset || (document.documentElement || document.body).scrollLeft
+    if (chrome && android) { return -(doc.body.getBoundingClientRect().left - parseInt(getComputedStyle(doc.body).marginLeft)) }
+    return doc.defaultView.pageXOffset || (doc.documentElement || doc.body).scrollLeft
   }
-  function pageScrollY() {
-    if (chrome && android) { return -(document.body.getBoundingClientRect().top - parseInt(getComputedStyle(document.body).marginTop)) }
-    return window.pageYOffset || (document.documentElement || document.body).scrollTop
+  function pageScrollY(doc) {
+    if (chrome && android) { return -(doc.body.getBoundingClientRect().top - parseInt(getComputedStyle(doc.body).marginTop)) }
+    return doc.defaultView.pageYOffset || (doc.documentElement || doc.body).scrollTop
   }
 
   function widgetTopHeight(lineObj) {
+    var ref = visualLine(lineObj);
+    var widgets = ref.widgets;
     var height = 0;
-    if (lineObj.widgets) { for (var i = 0; i < lineObj.widgets.length; ++i) { if (lineObj.widgets[i].above)
-      { height += widgetHeight(lineObj.widgets[i]); } } }
+    if (widgets) { for (var i = 0; i < widgets.length; ++i) { if (widgets[i].above)
+      { height += widgetHeight(widgets[i]); } } }
     return height
   }
 
@@ -19248,8 +19489,8 @@ $$1.summernote = $$1.extend($$1.summernote, {
     else { yOff -= cm.display.viewOffset; }
     if (context == "page" || context == "window") {
       var lOff = cm.display.lineSpace.getBoundingClientRect();
-      yOff += lOff.top + (context == "window" ? 0 : pageScrollY());
-      var xOff = lOff.left + (context == "window" ? 0 : pageScrollX());
+      yOff += lOff.top + (context == "window" ? 0 : pageScrollY(doc(cm)));
+      var xOff = lOff.left + (context == "window" ? 0 : pageScrollX(doc(cm)));
       rect.left += xOff; rect.right += xOff;
     }
     rect.top += yOff; rect.bottom += yOff;
@@ -19263,8 +19504,8 @@ $$1.summernote = $$1.extend($$1.summernote, {
     var left = coords.left, top = coords.top;
     // First move into "page" coordinate system
     if (context == "page") {
-      left -= pageScrollX();
-      top -= pageScrollY();
+      left -= pageScrollX(doc(cm));
+      top -= pageScrollY(doc(cm));
     } else if (context == "local" || !context) {
       var localBox = cm.display.sizer.getBoundingClientRect();
       left += localBox.left;
@@ -19793,13 +20034,19 @@ $$1.summernote = $$1.extend($$1.summernote, {
     var curFragment = result.cursors = document.createDocumentFragment();
     var selFragment = result.selection = document.createDocumentFragment();
 
+    var customCursor = cm.options.$customCursor;
+    if (customCursor) { primary = true; }
     for (var i = 0; i < doc.sel.ranges.length; i++) {
       if (!primary && i == doc.sel.primIndex) { continue }
       var range = doc.sel.ranges[i];
       if (range.from().line >= cm.display.viewTo || range.to().line < cm.display.viewFrom) { continue }
       var collapsed = range.empty();
-      if (collapsed || cm.options.showCursorWhenSelecting)
-        { drawSelectionCursor(cm, range.head, curFragment); }
+      if (customCursor) {
+        var head = customCursor(cm, range);
+        if (head) { drawSelectionCursor(cm, head, curFragment); }
+      } else if (collapsed || cm.options.showCursorWhenSelecting) {
+        drawSelectionCursor(cm, range.head, curFragment);
+      }
       if (!collapsed)
         { drawSelectionRange(cm, range, selFragment); }
     }
@@ -19817,7 +20064,8 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
     if (/\bcm-fat-cursor\b/.test(cm.getWrapperElement().className)) {
       var charPos = charCoords(cm, head, "div", null, null);
-      cursor.style.width = Math.max(0, charPos.right - charPos.left) + "px";
+      var width = charPos.right - charPos.left;
+      cursor.style.width = (width > 0 ? width : cm.defaultCharWidth()) + "px";
     }
 
     if (pos.other) {
@@ -19992,10 +20240,14 @@ $$1.summernote = $$1.extend($$1.summernote, {
   function updateHeightsInViewport(cm) {
     var display = cm.display;
     var prevBottom = display.lineDiv.offsetTop;
+    var viewTop = Math.max(0, display.scroller.getBoundingClientRect().top);
+    var oldHeight = display.lineDiv.getBoundingClientRect().top;
+    var mustScroll = 0;
     for (var i = 0; i < display.view.length; i++) {
       var cur = display.view[i], wrapping = cm.options.lineWrapping;
       var height = (void 0), width = 0;
       if (cur.hidden) { continue }
+      oldHeight += cur.line.height;
       if (ie && ie_version < 8) {
         var bot = cur.node.offsetTop + cur.node.offsetHeight;
         height = bot - prevBottom;
@@ -20010,6 +20262,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
       }
       var diff = cur.line.height - height;
       if (diff > .005 || diff < -.005) {
+        if (oldHeight < viewTop) { mustScroll -= diff; }
         updateLineHeight(cur.line, height);
         updateWidgetHeight(cur.line);
         if (cur.rest) { for (var j = 0; j < cur.rest.length; j++)
@@ -20024,6 +20277,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
         }
       }
     }
+    if (Math.abs(mustScroll) > 2) { display.scroller.scrollTop += mustScroll; }
   }
 
   // Read and store the height of line widgets associated with the
@@ -20067,8 +20321,9 @@ $$1.summernote = $$1.extend($$1.summernote, {
     if (signalDOMEvent(cm, "scrollCursorIntoView")) { return }
 
     var display = cm.display, box = display.sizer.getBoundingClientRect(), doScroll = null;
+    var doc = display.wrapper.ownerDocument;
     if (rect.top + box.top < 0) { doScroll = true; }
-    else if (rect.bottom + box.top > (window.innerHeight || document.documentElement.clientHeight)) { doScroll = false; }
+    else if (rect.bottom + box.top > (doc.defaultView.innerHeight || doc.documentElement.clientHeight)) { doScroll = false; }
     if (doScroll != null && !phantom) {
       var scrollNode = elt("div", "\u200b", null, ("position: absolute;\n                         top: " + (rect.top - display.viewOffset - paddingTop(cm.display)) + "px;\n                         height: " + (rect.bottom - rect.top + scrollGap(cm) + display.barHeight) + "px;\n                         left: " + (rect.left) + "px; width: " + (Math.max(2, rect.right - rect.left)) + "px;"));
       cm.display.lineSpace.appendChild(scrollNode);
@@ -20284,6 +20539,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
       this.vert.firstChild.style.height =
         Math.max(0, measure.scrollHeight - measure.clientHeight + totalHeight) + "px";
     } else {
+      this.vert.scrollTop = 0;
       this.vert.style.display = "";
       this.vert.firstChild.style.height = "0";
     }
@@ -20321,13 +20577,13 @@ $$1.summernote = $$1.extend($$1.summernote, {
   NativeScrollbars.prototype.zeroWidthHack = function () {
     var w = mac && !mac_geMountainLion ? "12px" : "18px";
     this.horiz.style.height = this.vert.style.width = w;
-    this.horiz.style.pointerEvents = this.vert.style.pointerEvents = "none";
+    this.horiz.style.visibility = this.vert.style.visibility = "hidden";
     this.disableHoriz = new Delayed;
     this.disableVert = new Delayed;
   };
 
   NativeScrollbars.prototype.enableZeroWidthBar = function (bar, delay, type) {
-    bar.style.pointerEvents = "auto";
+    bar.style.visibility = "";
     function maybeDisable() {
       // To find out whether the scrollbar is still visible, we
       // check whether the element under the pixel in the bottom
@@ -20338,7 +20594,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
       var box = bar.getBoundingClientRect();
       var elt = type == "vert" ? document.elementFromPoint(box.right - 1, (box.top + box.bottom) / 2)
           : document.elementFromPoint((box.right + box.left) / 2, box.bottom - 1);
-      if (elt != bar) { bar.style.pointerEvents = "none"; }
+      if (elt != bar) { bar.style.visibility = "hidden"; }
       else { delay.set(1000, maybeDisable); }
     }
     delay.set(1000, maybeDisable);
@@ -20519,7 +20775,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
       cm.display.maxLineChanged = false;
     }
 
-    var takeFocus = op.focus && op.focus == activeElt();
+    var takeFocus = op.focus && op.focus == activeElt(doc(cm));
     if (op.preparedSelection)
       { cm.display.input.showSelection(op.preparedSelection, takeFocus); }
     if (op.updatedDisplay || op.startHeight != cm.doc.height)
@@ -20696,11 +20952,11 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
   function selectionSnapshot(cm) {
     if (cm.hasFocus()) { return null }
-    var active = activeElt();
+    var active = activeElt(doc(cm));
     if (!active || !contains(cm.display.lineDiv, active)) { return null }
     var result = {activeElt: active};
     if (window.getSelection) {
-      var sel = window.getSelection();
+      var sel = win(cm).getSelection();
       if (sel.anchorNode && sel.extend && contains(cm.display.lineDiv, sel.anchorNode)) {
         result.anchorNode = sel.anchorNode;
         result.anchorOffset = sel.anchorOffset;
@@ -20712,11 +20968,12 @@ $$1.summernote = $$1.extend($$1.summernote, {
   }
 
   function restoreSelection(snapshot) {
-    if (!snapshot || !snapshot.activeElt || snapshot.activeElt == activeElt()) { return }
+    if (!snapshot || !snapshot.activeElt || snapshot.activeElt == activeElt(snapshot.activeElt.ownerDocument)) { return }
     snapshot.activeElt.focus();
     if (!/^(INPUT|TEXTAREA)$/.test(snapshot.activeElt.nodeName) &&
         snapshot.anchorNode && contains(document.body, snapshot.anchorNode) && contains(document.body, snapshot.focusNode)) {
-      var sel = window.getSelection(), range = document.createRange();
+      var doc = snapshot.activeElt.ownerDocument;
+      var sel = doc.defaultView.getSelection(), range = doc.createRange();
       range.setEnd(snapshot.anchorNode, snapshot.anchorOffset);
       range.collapse(false);
       sel.removeAllRanges();
@@ -21134,7 +21391,24 @@ $$1.summernote = $$1.extend($$1.summernote, {
   }
 
   function onScrollWheel(cm, e) {
+    // On Chrome 102, viewport updates somehow stop wheel-based
+    // scrolling. Turning off pointer events during the scroll seems
+    // to avoid the issue.
+    if (chrome && chrome_version == 102) {
+      if (cm.display.chromeScrollHack == null) { cm.display.sizer.style.pointerEvents = "none"; }
+      else { clearTimeout(cm.display.chromeScrollHack); }
+      cm.display.chromeScrollHack = setTimeout(function () {
+        cm.display.chromeScrollHack = null;
+        cm.display.sizer.style.pointerEvents = "";
+      }, 100);
+    }
     var delta = wheelEventDelta(e), dx = delta.x, dy = delta.y;
+    var pixelsPerUnit = wheelPixelsPerUnit;
+    if (e.deltaMode === 0) {
+      dx = e.deltaX;
+      dy = e.deltaY;
+      pixelsPerUnit = 1;
+    }
 
     var display = cm.display, scroll = display.scroller;
     // Quit if there's nothing to scroll here
@@ -21163,10 +21437,10 @@ $$1.summernote = $$1.extend($$1.summernote, {
     // estimated pixels/delta value, we just handle horizontal
     // scrolling entirely here. It'll be slightly off from native, but
     // better than glitching out.
-    if (dx && !gecko && !presto && wheelPixelsPerUnit != null) {
+    if (dx && !gecko && !presto && pixelsPerUnit != null) {
       if (dy && canScrollY)
-        { updateScrollTop(cm, Math.max(0, scroll.scrollTop + dy * wheelPixelsPerUnit)); }
-      setScrollLeft(cm, Math.max(0, scroll.scrollLeft + dx * wheelPixelsPerUnit));
+        { updateScrollTop(cm, Math.max(0, scroll.scrollTop + dy * pixelsPerUnit)); }
+      setScrollLeft(cm, Math.max(0, scroll.scrollLeft + dx * pixelsPerUnit));
       // Only prevent default scrolling if vertical scrolling is
       // actually possible. Otherwise, it causes vertical scroll
       // jitter on OSX trackpads when deltaX is small and deltaY
@@ -21179,15 +21453,15 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
     // 'Project' the visible viewport to cover the area that is being
     // scrolled into view (if we know enough to estimate it).
-    if (dy && wheelPixelsPerUnit != null) {
-      var pixels = dy * wheelPixelsPerUnit;
+    if (dy && pixelsPerUnit != null) {
+      var pixels = dy * pixelsPerUnit;
       var top = cm.doc.scrollTop, bot = top + display.wrapper.clientHeight;
       if (pixels < 0) { top = Math.max(0, top + pixels - 50); }
       else { bot = Math.min(cm.doc.height, bot + pixels + 50); }
       updateDisplaySimple(cm, {top: top, bottom: bot});
     }
 
-    if (wheelSamples < 20) {
+    if (wheelSamples < 20 && e.deltaMode !== 0) {
       if (display.wheelStartX == null) {
         display.wheelStartX = scroll.scrollLeft; display.wheelStartY = scroll.scrollTop;
         display.wheelDX = dx; display.wheelDY = dy;
@@ -21811,7 +22085,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
       var range = sel.ranges[i];
       var old = sel.ranges.length == doc.sel.ranges.length && doc.sel.ranges[i];
       var newAnchor = skipAtomic(doc, range.anchor, old && old.anchor, bias, mayClear);
-      var newHead = skipAtomic(doc, range.head, old && old.head, bias, mayClear);
+      var newHead = range.head == range.anchor ? newAnchor : skipAtomic(doc, range.head, old && old.head, bias, mayClear);
       if (out || newAnchor != range.anchor || newHead != range.head) {
         if (!out) { out = sel.ranges.slice(0, i); }
         out[i] = new Range(newAnchor, newHead);
@@ -23863,7 +24137,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
   function onKeyDown(e) {
     var cm = this;
     if (e.target && e.target != cm.display.input.getField()) { return }
-    cm.curOp.focus = activeElt();
+    cm.curOp.focus = activeElt(doc(cm));
     if (signalDOMEvent(cm, e)) { return }
     // IE does strange things with escape.
     if (ie && ie_version < 11 && e.keyCode == 27) { e.returnValue = false; }
@@ -23970,7 +24244,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
     }
     if (clickInGutter(cm, e)) { return }
     var pos = posFromMouse(cm, e), button = e_button(e), repeat = pos ? clickRepeat(pos, button) : "single";
-    window.focus();
+    win(cm).focus();
 
     // #3261: make sure, that we're not starting a second selection
     if (button == 1 && cm.state.selectingText)
@@ -24025,7 +24299,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
   function leftButtonDown(cm, pos, repeat, event) {
     if (ie) { setTimeout(bind(ensureFocus, cm), 0); }
-    else { cm.curOp.focus = activeElt(); }
+    else { cm.curOp.focus = activeElt(doc(cm)); }
 
     var behavior = configureMouse(cm, repeat, event);
 
@@ -24095,19 +24369,19 @@ $$1.summernote = $$1.extend($$1.summernote, {
   // Normal selection, as opposed to text dragging.
   function leftButtonSelect(cm, event, start, behavior) {
     if (ie) { delayBlurEvent(cm); }
-    var display = cm.display, doc = cm.doc;
+    var display = cm.display, doc$1 = cm.doc;
     e_preventDefault(event);
 
-    var ourRange, ourIndex, startSel = doc.sel, ranges = startSel.ranges;
+    var ourRange, ourIndex, startSel = doc$1.sel, ranges = startSel.ranges;
     if (behavior.addNew && !behavior.extend) {
-      ourIndex = doc.sel.contains(start);
+      ourIndex = doc$1.sel.contains(start);
       if (ourIndex > -1)
         { ourRange = ranges[ourIndex]; }
       else
         { ourRange = new Range(start, start); }
     } else {
-      ourRange = doc.sel.primary();
-      ourIndex = doc.sel.primIndex;
+      ourRange = doc$1.sel.primary();
+      ourIndex = doc$1.sel.primIndex;
     }
 
     if (behavior.unit == "rectangle") {
@@ -24124,18 +24398,18 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
     if (!behavior.addNew) {
       ourIndex = 0;
-      setSelection(doc, new Selection([ourRange], 0), sel_mouse);
-      startSel = doc.sel;
+      setSelection(doc$1, new Selection([ourRange], 0), sel_mouse);
+      startSel = doc$1.sel;
     } else if (ourIndex == -1) {
       ourIndex = ranges.length;
-      setSelection(doc, normalizeSelection(cm, ranges.concat([ourRange]), ourIndex),
+      setSelection(doc$1, normalizeSelection(cm, ranges.concat([ourRange]), ourIndex),
                    {scroll: false, origin: "*mouse"});
     } else if (ranges.length > 1 && ranges[ourIndex].empty() && behavior.unit == "char" && !behavior.extend) {
-      setSelection(doc, normalizeSelection(cm, ranges.slice(0, ourIndex).concat(ranges.slice(ourIndex + 1)), 0),
+      setSelection(doc$1, normalizeSelection(cm, ranges.slice(0, ourIndex).concat(ranges.slice(ourIndex + 1)), 0),
                    {scroll: false, origin: "*mouse"});
-      startSel = doc.sel;
+      startSel = doc$1.sel;
     } else {
-      replaceOneSelection(doc, ourIndex, ourRange, sel_mouse);
+      replaceOneSelection(doc$1, ourIndex, ourRange, sel_mouse);
     }
 
     var lastPos = start;
@@ -24145,19 +24419,19 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
       if (behavior.unit == "rectangle") {
         var ranges = [], tabSize = cm.options.tabSize;
-        var startCol = countColumn(getLine(doc, start.line).text, start.ch, tabSize);
-        var posCol = countColumn(getLine(doc, pos.line).text, pos.ch, tabSize);
+        var startCol = countColumn(getLine(doc$1, start.line).text, start.ch, tabSize);
+        var posCol = countColumn(getLine(doc$1, pos.line).text, pos.ch, tabSize);
         var left = Math.min(startCol, posCol), right = Math.max(startCol, posCol);
         for (var line = Math.min(start.line, pos.line), end = Math.min(cm.lastLine(), Math.max(start.line, pos.line));
              line <= end; line++) {
-          var text = getLine(doc, line).text, leftPos = findColumn(text, left, tabSize);
+          var text = getLine(doc$1, line).text, leftPos = findColumn(text, left, tabSize);
           if (left == right)
             { ranges.push(new Range(Pos(line, leftPos), Pos(line, leftPos))); }
           else if (text.length > leftPos)
             { ranges.push(new Range(Pos(line, leftPos), Pos(line, findColumn(text, right, tabSize)))); }
         }
         if (!ranges.length) { ranges.push(new Range(start, start)); }
-        setSelection(doc, normalizeSelection(cm, startSel.ranges.slice(0, ourIndex).concat(ranges), ourIndex),
+        setSelection(doc$1, normalizeSelection(cm, startSel.ranges.slice(0, ourIndex).concat(ranges), ourIndex),
                      {origin: "*mouse", scroll: false});
         cm.scrollIntoView(pos);
       } else {
@@ -24172,8 +24446,8 @@ $$1.summernote = $$1.extend($$1.summernote, {
           anchor = maxPos(oldRange.to(), range.head);
         }
         var ranges$1 = startSel.ranges.slice(0);
-        ranges$1[ourIndex] = bidiSimplify(cm, new Range(clipPos(doc, anchor), head));
-        setSelection(doc, normalizeSelection(cm, ranges$1, ourIndex), sel_mouse);
+        ranges$1[ourIndex] = bidiSimplify(cm, new Range(clipPos(doc$1, anchor), head));
+        setSelection(doc$1, normalizeSelection(cm, ranges$1, ourIndex), sel_mouse);
       }
     }
 
@@ -24189,9 +24463,9 @@ $$1.summernote = $$1.extend($$1.summernote, {
       var cur = posFromMouse(cm, e, true, behavior.unit == "rectangle");
       if (!cur) { return }
       if (cmp(cur, lastPos) != 0) {
-        cm.curOp.focus = activeElt();
+        cm.curOp.focus = activeElt(doc(cm));
         extendTo(cur);
-        var visible = visibleLines(display, doc);
+        var visible = visibleLines(display, doc$1);
         if (cur.line >= visible.to || cur.line < visible.from)
           { setTimeout(operation(cm, function () {if (counter == curCount) { extend(e); }}), 150); }
       } else {
@@ -24216,7 +24490,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
       }
       off(display.wrapper.ownerDocument, "mousemove", move);
       off(display.wrapper.ownerDocument, "mouseup", up);
-      doc.history.lastSelOrigin = null;
+      doc$1.history.lastSelOrigin = null;
     }
 
     var move = operation(cm, function (e) {
@@ -24373,7 +24647,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
       for (var i = newBreaks.length - 1; i >= 0; i--)
         { replaceRange(cm.doc, val, newBreaks[i], Pos(newBreaks[i].line, newBreaks[i].ch + val.length)); }
     });
-    option("specialChars", /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200e\u200f\u2028\u2029\ufeff\ufff9-\ufffc]/g, function (cm, val, old) {
+    option("specialChars", /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u200b\u200e\u200f\u2028\u2029\u202d\u202e\u2066\u2067\u2069\ufeff\ufff9-\ufffc]/g, function (cm, val, old) {
       cm.state.specialChars = new RegExp(val.source + (val.test("\t") ? "" : "|\t"), "g");
       if (old != Init) { cm.refresh(); }
     });
@@ -24816,7 +25090,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
     var pasted = e.clipboardData && e.clipboardData.getData("Text");
     if (pasted) {
       e.preventDefault();
-      if (!cm.isReadOnly() && !cm.options.disableInput)
+      if (!cm.isReadOnly() && !cm.options.disableInput && cm.hasFocus())
         { runInOp(cm, function () { return applyTextInput(cm, pasted, 0, null, "paste"); }); }
       return true
     }
@@ -24864,7 +25138,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
   }
 
   function hiddenTextarea() {
-    var te = elt("textarea", null, null, "position: absolute; bottom: -1em; padding: 0; width: 1px; height: 1em; outline: none");
+    var te = elt("textarea", null, null, "position: absolute; bottom: -1em; padding: 0; width: 1px; height: 1em; min-height: 1em; outline: none");
     var div = elt("div", [te], null, "overflow: hidden; position: relative; width: 3px; height: 0px;");
     // The textarea is kept positioned near the cursor to prevent the
     // fact that it'll be scrolled into view on input from scrolling
@@ -24893,7 +25167,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
     CodeMirror.prototype = {
       constructor: CodeMirror,
-      focus: function(){window.focus(); this.display.input.focus();},
+      focus: function(){win(this).focus(); this.display.input.focus();},
 
       setOption: function(option, value) {
         var options = this.options, old = options[option];
@@ -25217,7 +25491,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
         signal(this, "overwriteToggle", this, this.state.overwrite);
       },
-      hasFocus: function() { return this.display.input.getField() == activeElt() },
+      hasFocus: function() { return this.display.input.getField() == activeElt(doc(this)) },
       isReadOnly: function() { return !!(this.options.readOnly || this.doc.cantEdit) },
 
       scrollTo: methodOp(function (x, y) { scrollToCoords(this, x, y); }),
@@ -25398,7 +25672,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
   function findPosV(cm, pos, dir, unit) {
     var doc = cm.doc, x = pos.left, y;
     if (unit == "page") {
-      var pageSize = Math.min(cm.display.wrapper.clientHeight, window.innerHeight || document.documentElement.clientHeight);
+      var pageSize = Math.min(cm.display.wrapper.clientHeight, win(cm).innerHeight || doc(cm).documentElement.clientHeight);
       var moveAmount = Math.max(pageSize - .5 * textHeight(cm.display), 3);
       y = (dir > 0 ? pos.bottom : pos.top) + dir * moveAmount;
 
@@ -25498,7 +25772,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
       var kludge = hiddenTextarea(), te = kludge.firstChild;
       cm.display.lineSpace.insertBefore(kludge, cm.display.lineSpace.firstChild);
       te.value = lastCopied.text.join("\n");
-      var hadFocus = activeElt();
+      var hadFocus = activeElt(div.ownerDocument);
       selectInput(te);
       setTimeout(function () {
         cm.display.lineSpace.removeChild(kludge);
@@ -25521,7 +25795,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
   ContentEditableInput.prototype.prepareSelection = function () {
     var result = prepareSelection(this.cm, false);
-    result.focus = activeElt() == this.div;
+    result.focus = activeElt(this.div.ownerDocument) == this.div;
     return result
   };
 
@@ -25617,7 +25891,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
   ContentEditableInput.prototype.focus = function () {
     if (this.cm.options.readOnly != "nocursor") {
-      if (!this.selectionInEditor() || activeElt() != this.div)
+      if (!this.selectionInEditor() || activeElt(this.div.ownerDocument) != this.div)
         { this.showSelection(this.prepareSelection(), true); }
       this.div.focus();
     }
@@ -25628,9 +25902,11 @@ $$1.summernote = $$1.extend($$1.summernote, {
   ContentEditableInput.prototype.supportsTouch = function () { return true };
 
   ContentEditableInput.prototype.receivedFocus = function () {
+      var this$1 = this;
+
     var input = this;
     if (this.selectionInEditor())
-      { this.pollSelection(); }
+      { setTimeout(function () { return this$1.pollSelection(); }, 20); }
     else
       { runInOp(this.cm, function () { return input.cm.curOp.selectionChanged = true; }); }
 
@@ -25967,6 +26243,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
     // Used to work around IE issue with selection being forgotten when focus moves away from textarea
     this.hasSelection = false;
     this.composing = null;
+    this.resetting = false;
   };
 
   TextareaInput.prototype.init = function (display) {
@@ -26099,8 +26376,9 @@ $$1.summernote = $$1.extend($$1.summernote, {
   // Reset the input to correspond to the selection (or to be empty,
   // when not typing and nothing is selected)
   TextareaInput.prototype.reset = function (typing) {
-    if (this.contextMenuPending || this.composing) { return }
+    if (this.contextMenuPending || this.composing && typing) { return }
     var cm = this.cm;
+    this.resetting = true;
     if (cm.somethingSelected()) {
       this.prevInput = "";
       var content = cm.getSelection();
@@ -26111,6 +26389,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
       this.prevInput = this.textarea.value = "";
       if (ie && ie_version >= 9) { this.hasSelection = null; }
     }
+    this.resetting = false;
   };
 
   TextareaInput.prototype.getField = function () { return this.textarea };
@@ -26118,7 +26397,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
   TextareaInput.prototype.supportsTouch = function () { return false };
 
   TextareaInput.prototype.focus = function () {
-    if (this.cm.options.readOnly != "nocursor" && (!mobile || activeElt() != this.textarea)) {
+    if (this.cm.options.readOnly != "nocursor" && (!mobile || activeElt(this.textarea.ownerDocument) != this.textarea)) {
       try { this.textarea.focus(); }
       catch (e) {} // IE8 will throw if the textarea is display: none or not in DOM
     }
@@ -26172,7 +26451,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
     // possible when it is clear that nothing happened. hasSelection
     // will be the case when there is a lot of text in the textarea,
     // in which case reading its value would be expensive.
-    if (this.contextMenuPending || !cm.state.focused ||
+    if (this.contextMenuPending || this.resetting || !cm.state.focused ||
         (hasSelection(input) && !prevInput && !this.composing) ||
         cm.isReadOnly() || cm.options.disableInput || cm.state.keySeq)
       { return false }
@@ -26241,9 +26520,9 @@ $$1.summernote = $$1.extend($$1.summernote, {
     input.wrapper.style.cssText = "position: static";
     te.style.cssText = "position: absolute; width: 30px; height: 30px;\n      top: " + (e.clientY - wrapperBox.top - 5) + "px; left: " + (e.clientX - wrapperBox.left - 5) + "px;\n      z-index: 1000; background: " + (ie ? "rgba(255, 255, 255, .05)" : "transparent") + ";\n      outline: none; border-width: 0; outline: none; overflow: hidden; opacity: .05; filter: alpha(opacity=5);";
     var oldScrollY;
-    if (webkit) { oldScrollY = window.scrollY; } // Work around Chrome issue (#2712)
+    if (webkit) { oldScrollY = te.ownerDocument.defaultView.scrollY; } // Work around Chrome issue (#2712)
     display.input.focus();
-    if (webkit) { window.scrollTo(null, oldScrollY); }
+    if (webkit) { te.ownerDocument.defaultView.scrollTo(null, oldScrollY); }
     display.input.reset();
     // Adds "Select all" to context menu in FF
     if (!cm.somethingSelected()) { te.value = input.prevInput = " "; }
@@ -26325,7 +26604,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
     // Set autofocus to true if this textarea is focused, or if it has
     // autofocus and no other element is focused.
     if (options.autofocus == null) {
-      var hasFocus = activeElt();
+      var hasFocus = activeElt(textarea.ownerDocument);
       options.autofocus = hasFocus == textarea ||
         textarea.getAttribute("autofocus") != null && hasFocus == document.body;
     }
@@ -26459,7 +26738,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
   addLegacyProps(CodeMirror);
 
-  CodeMirror.version = "5.62.3";
+  CodeMirror.version = "5.65.8";
 
   return CodeMirror;
 
@@ -26470,7 +26749,7 @@ $$1.summernote = $$1.extend($$1.summernote, {
 
 /***/ "./node_modules/css-loader/index.js?!./node_modules/postcss-loader/src/index.js?!./node_modules/select2/dist/css/select2.min.css":
 /*!***************************************************************************************************************************************!*\
-  !*** ./node_modules/css-loader??ref--6-1!./node_modules/postcss-loader/src??ref--6-2!./node_modules/select2/dist/css/select2.min.css ***!
+  !*** ./node_modules/css-loader??ref--7-1!./node_modules/postcss-loader/src??ref--7-2!./node_modules/select2/dist/css/select2.min.css ***!
   \***************************************************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
@@ -39665,9 +39944,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'يناير_فبراير_مارس_أبريل_ماي_يونيو_يوليوز_غشت_شتنبر_أكتوبر_نونبر_دجنبر'.split(
             '_'
         ),
-        monthsShort: 'يناير_فبراير_مارس_أبريل_ماي_يونيو_يوليوز_غشت_شتنبر_أكتوبر_نونبر_دجنبر'.split(
-            '_'
-        ),
+        monthsShort:
+            'يناير_فبراير_مارس_أبريل_ماي_يونيو_يوليوز_غشت_شتنبر_أكتوبر_نونبر_دجنبر'.split(
+                '_'
+            ),
         weekdays: 'الأحد_الإتنين_الثلاثاء_الأربعاء_الخميس_الجمعة_السبت'.split('_'),
         weekdaysShort: 'احد_اتنين_ثلاثاء_اربعاء_خميس_جمعة_سبت'.split('_'),
         weekdaysMin: 'ح_ن_ث_ر_خ_ج_س'.split('_'),
@@ -39725,7 +40005,7 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
-//! locale : Arabic (Lybia) [ar-ly]
+//! locale : Arabic (Libya) [ar-ly]
 //! author : Ali Hmer: https://github.com/kikoanis
 
 ;(function (global, factory) {
@@ -39931,9 +40211,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'يناير_فبراير_مارس_أبريل_ماي_يونيو_يوليوز_غشت_شتنبر_أكتوبر_نونبر_دجنبر'.split(
             '_'
         ),
-        monthsShort: 'يناير_فبراير_مارس_أبريل_ماي_يونيو_يوليوز_غشت_شتنبر_أكتوبر_نونبر_دجنبر'.split(
-            '_'
-        ),
+        monthsShort:
+            'يناير_فبراير_مارس_أبريل_ماي_يونيو_يوليوز_غشت_شتنبر_أكتوبر_نونبر_دجنبر'.split(
+                '_'
+            ),
         weekdays: 'الأحد_الإثنين_الثلاثاء_الأربعاء_الخميس_الجمعة_السبت'.split('_'),
         weekdaysShort: 'احد_اثنين_ثلاثاء_اربعاء_خميس_جمعة_سبت'.split('_'),
         weekdaysMin: 'ح_ن_ث_ر_خ_ج_س'.split('_'),
@@ -40030,9 +40311,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'يناير_فبراير_مارس_أبريل_مايو_يونيو_يوليو_أغسطس_سبتمبر_أكتوبر_نوفمبر_ديسمبر'.split(
             '_'
         ),
-        monthsShort: 'يناير_فبراير_مارس_أبريل_مايو_يونيو_يوليو_أغسطس_سبتمبر_أكتوبر_نوفمبر_ديسمبر'.split(
-            '_'
-        ),
+        monthsShort:
+            'يناير_فبراير_مارس_أبريل_مايو_يونيو_يوليو_أغسطس_سبتمبر_أكتوبر_نوفمبر_ديسمبر'.split(
+                '_'
+            ),
         weekdays: 'الأحد_الإثنين_الثلاثاء_الأربعاء_الخميس_الجمعة_السبت'.split('_'),
         weekdaysShort: 'أحد_إثنين_ثلاثاء_أربعاء_خميس_جمعة_سبت'.split('_'),
         weekdaysMin: 'ح_ن_ث_ر_خ_ج_س'.split('_'),
@@ -40129,9 +40411,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'جانفي_فيفري_مارس_أفريل_ماي_جوان_جويلية_أوت_سبتمبر_أكتوبر_نوفمبر_ديسمبر'.split(
             '_'
         ),
-        monthsShort: 'جانفي_فيفري_مارس_أفريل_ماي_جوان_جويلية_أوت_سبتمبر_أكتوبر_نوفمبر_ديسمبر'.split(
-            '_'
-        ),
+        monthsShort:
+            'جانفي_فيفري_مارس_أفريل_ماي_جوان_جويلية_أوت_سبتمبر_أكتوبر_نوفمبر_ديسمبر'.split(
+                '_'
+            ),
         weekdays: 'الأحد_الإثنين_الثلاثاء_الأربعاء_الخميس_الجمعة_السبت'.split('_'),
         weekdaysShort: 'أحد_إثنين_ثلاثاء_أربعاء_خميس_جمعة_سبت'.split('_'),
         weekdaysMin: 'ح_ن_ث_ر_خ_ج_س'.split('_'),
@@ -40434,9 +40717,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'yan_fev_mar_apr_may_iyn_iyl_avq_sen_okt_noy_dek'.split('_'),
-        weekdays: 'Bazar_Bazar ertəsi_Çərşənbə axşamı_Çərşənbə_Cümə axşamı_Cümə_Şənbə'.split(
-            '_'
-        ),
+        weekdays:
+            'Bazar_Bazar ertəsi_Çərşənbə axşamı_Çərşənbə_Cümə axşamı_Cümə_Şənbə'.split(
+                '_'
+            ),
         weekdaysShort: 'Baz_BzE_ÇAx_Çər_CAx_Cüm_Şən'.split('_'),
         weekdaysMin: 'Bz_BE_ÇA_Çə_CA_Cü_Şə'.split('_'),
         weekdaysParseExact: true,
@@ -40562,20 +40846,21 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             format: 'студзеня_лютага_сакавіка_красавіка_траўня_чэрвеня_ліпеня_жніўня_верасня_кастрычніка_лістапада_снежня'.split(
                 '_'
             ),
-            standalone: 'студзень_люты_сакавік_красавік_травень_чэрвень_ліпень_жнівень_верасень_кастрычнік_лістапад_снежань'.split(
-                '_'
-            ),
+            standalone:
+                'студзень_люты_сакавік_красавік_травень_чэрвень_ліпень_жнівень_верасень_кастрычнік_лістапад_снежань'.split(
+                    '_'
+                ),
         },
-        monthsShort: 'студ_лют_сак_крас_трав_чэрв_ліп_жнів_вер_каст_ліст_снеж'.split(
-            '_'
-        ),
+        monthsShort:
+            'студ_лют_сак_крас_трав_чэрв_ліп_жнів_вер_каст_ліст_снеж'.split('_'),
         weekdays: {
             format: 'нядзелю_панядзелак_аўторак_сераду_чацвер_пятніцу_суботу'.split(
                 '_'
             ),
-            standalone: 'нядзеля_панядзелак_аўторак_серада_чацвер_пятніца_субота'.split(
-                '_'
-            ),
+            standalone:
+                'нядзеля_панядзелак_аўторак_серада_чацвер_пятніца_субота'.split(
+                    '_'
+                ),
             isFormat: /\[ ?[Ууў] ?(?:мінулую|наступную)? ?\] ?dddd/,
         },
         weekdaysShort: 'нд_пн_ат_ср_чц_пт_сб'.split('_'),
@@ -40897,9 +41182,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'জানুয়ারি_ফেব্রুয়ারি_মার্চ_এপ্রিল_মে_জুন_জুলাই_আগস্ট_সেপ্টেম্বর_অক্টোবর_নভেম্বর_ডিসেম্বর'.split(
             '_'
         ),
-        monthsShort: 'জানু_ফেব্রু_মার্চ_এপ্রিল_মে_জুন_জুলাই_আগস্ট_সেপ্ট_অক্টো_নভে_ডিসে'.split(
-            '_'
-        ),
+        monthsShort:
+            'জানু_ফেব্রু_মার্চ_এপ্রিল_মে_জুন_জুলাই_আগস্ট_সেপ্ট_অক্টো_নভে_ডিসে'.split(
+                '_'
+            ),
         weekdays: 'রবিবার_সোমবার_মঙ্গলবার_বুধবার_বৃহস্পতিবার_শুক্রবার_শনিবার'.split(
             '_'
         ),
@@ -41045,9 +41331,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'জানুয়ারি_ফেব্রুয়ারি_মার্চ_এপ্রিল_মে_জুন_জুলাই_আগস্ট_সেপ্টেম্বর_অক্টোবর_নভেম্বর_ডিসেম্বর'.split(
             '_'
         ),
-        monthsShort: 'জানু_ফেব্রু_মার্চ_এপ্রিল_মে_জুন_জুলাই_আগস্ট_সেপ্ট_অক্টো_নভে_ডিসে'.split(
-            '_'
-        ),
+        monthsShort:
+            'জানু_ফেব্রু_মার্চ_এপ্রিল_মে_জুন_জুলাই_আগস্ট_সেপ্ট_অক্টো_নভে_ডিসে'.split(
+                '_'
+            ),
         weekdays: 'রবিবার_সোমবার_মঙ্গলবার_বুধবার_বৃহস্পতিবার_শুক্রবার_শনিবার'.split(
             '_'
         ),
@@ -41183,14 +41470,16 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ཟླ་བ་དང་པོ_ཟླ་བ་གཉིས་པ_ཟླ་བ་གསུམ་པ_ཟླ་བ་བཞི་པ_ཟླ་བ་ལྔ་པ_ཟླ་བ་དྲུག་པ_ཟླ་བ་བདུན་པ_ཟླ་བ་བརྒྱད་པ_ཟླ་བ་དགུ་པ_ཟླ་བ་བཅུ་པ_ཟླ་བ་བཅུ་གཅིག་པ_ཟླ་བ་བཅུ་གཉིས་པ'.split(
             '_'
         ),
-        monthsShort: 'ཟླ་1_ཟླ་2_ཟླ་3_ཟླ་4_ཟླ་5_ཟླ་6_ཟླ་7_ཟླ་8_ཟླ་9_ཟླ་10_ཟླ་11_ཟླ་12'.split(
-            '_'
-        ),
+        monthsShort:
+            'ཟླ་1_ཟླ་2_ཟླ་3_ཟླ་4_ཟླ་5_ཟླ་6_ཟླ་7_ཟླ་8_ཟླ་9_ཟླ་10_ཟླ་11_ཟླ་12'.split(
+                '_'
+            ),
         monthsShortRegex: /^(ཟླ་\d{1,2})/,
         monthsParseExact: true,
-        weekdays: 'གཟའ་ཉི་མ་_གཟའ་ཟླ་བ་_གཟའ་མིག་དམར་_གཟའ་ལྷག་པ་_གཟའ་ཕུར་བུ_གཟའ་པ་སངས་_གཟའ་སྤེན་པ་'.split(
-            '_'
-        ),
+        weekdays:
+            'གཟའ་ཉི་མ་_གཟའ་ཟླ་བ་_གཟའ་མིག་དམར་_གཟའ་ལྷག་པ་_གཟའ་ཕུར་བུ_གཟའ་པ་སངས་_གཟའ་སྤེན་པ་'.split(
+                '_'
+            ),
         weekdaysShort: 'ཉི་མ་_ཟླ་བ་_མིག་དམར་_ལྷག་པ་_ཕུར་བུ_པ་སངས་_སྤེན་པ་'.split(
             '_'
         ),
@@ -41354,9 +41643,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             /^du/i,
             /^ker/i,
         ],
-        monthsRegex = /^(genver|c[ʼ\']hwevrer|meurzh|ebrel|mae|mezheven|gouere|eost|gwengolo|here|du|kerzu|gen|c[ʼ\']hwe|meu|ebr|mae|eve|gou|eos|gwe|her|du|ker)/i,
-        monthsStrictRegex = /^(genver|c[ʼ\']hwevrer|meurzh|ebrel|mae|mezheven|gouere|eost|gwengolo|here|du|kerzu)/i,
-        monthsShortStrictRegex = /^(gen|c[ʼ\']hwe|meu|ebr|mae|eve|gou|eos|gwe|her|du|ker)/i,
+        monthsRegex =
+            /^(genver|c[ʼ\']hwevrer|meurzh|ebrel|mae|mezheven|gouere|eost|gwengolo|here|du|kerzu|gen|c[ʼ\']hwe|meu|ebr|mae|eve|gou|eos|gwe|her|du|ker)/i,
+        monthsStrictRegex =
+            /^(genver|c[ʼ\']hwevrer|meurzh|ebrel|mae|mezheven|gouere|eost|gwengolo|here|du|kerzu)/i,
+        monthsShortStrictRegex =
+            /^(gen|c[ʼ\']hwe|meu|ebr|mae|eve|gou|eos|gwe|her|du|ker)/i,
         fullWeekdaysParse = [
             /^sul/i,
             /^lun/i,
@@ -41548,9 +41840,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'januar_februar_mart_april_maj_juni_juli_august_septembar_oktobar_novembar_decembar'.split(
             '_'
         ),
-        monthsShort: 'jan._feb._mar._apr._maj._jun._jul._aug._sep._okt._nov._dec.'.split(
-            '_'
-        ),
+        monthsShort:
+            'jan._feb._mar._apr._maj._jun._jul._aug._sep._okt._nov._dec.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'nedjelja_ponedjeljak_utorak_srijeda_četvrtak_petak_subota'.split(
             '_'
@@ -41652,21 +41945,24 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     var ca = moment.defineLocale('ca', {
         months: {
-            standalone: 'gener_febrer_març_abril_maig_juny_juliol_agost_setembre_octubre_novembre_desembre'.split(
-                '_'
-            ),
+            standalone:
+                'gener_febrer_març_abril_maig_juny_juliol_agost_setembre_octubre_novembre_desembre'.split(
+                    '_'
+                ),
             format: "de gener_de febrer_de març_d'abril_de maig_de juny_de juliol_d'agost_de setembre_d'octubre_de novembre_de desembre".split(
                 '_'
             ),
             isFormat: /D[oD]?(\s)+MMMM/,
         },
-        monthsShort: 'gen._febr._març_abr._maig_juny_jul._ag._set._oct._nov._des.'.split(
-            '_'
-        ),
+        monthsShort:
+            'gen._febr._març_abr._maig_juny_jul._ag._set._oct._nov._des.'.split(
+                '_'
+            ),
         monthsParseExact: true,
-        weekdays: 'diumenge_dilluns_dimarts_dimecres_dijous_divendres_dissabte'.split(
-            '_'
-        ),
+        weekdays:
+            'diumenge_dilluns_dimarts_dimecres_dijous_divendres_dissabte'.split(
+                '_'
+            ),
         weekdaysShort: 'dg._dl._dt._dc._dj._dv._ds.'.split('_'),
         weekdaysMin: 'dg_dl_dt_dc_dj_dv_ds'.split('_'),
         weekdaysParseExact: true,
@@ -41767,9 +42063,15 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var months = 'leden_únor_březen_duben_květen_červen_červenec_srpen_září_říjen_listopad_prosinec'.split(
-            '_'
-        ),
+    var months = {
+            format: 'leden_únor_březen_duben_květen_červen_červenec_srpen_září_říjen_listopad_prosinec'.split(
+                '_'
+            ),
+            standalone:
+                'ledna_února_března_dubna_května_června_července_srpna_září_října_listopadu_prosince'.split(
+                    '_'
+                ),
+        },
         monthsShort = 'led_úno_bře_dub_kvě_čvn_čvc_srp_zář_říj_lis_pro'.split('_'),
         monthsParse = [
             /^led/i,
@@ -41787,7 +42089,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         ],
         // NOTE: 'červen' is substring of 'červenec'; therefore 'červenec' must precede 'červen' in the regex to be fully matched.
         // Otherwise parser matches '1. červenec' as '1. červen' + 'ec'.
-        monthsRegex = /^(leden|únor|březen|duben|květen|červenec|července|červen|června|srpen|září|říjen|listopad|prosinec|led|úno|bře|dub|kvě|čvn|čvc|srp|zář|říj|lis|pro)/i;
+        monthsRegex =
+            /^(leden|únor|březen|duben|květen|červenec|července|červen|června|srpen|září|říjen|listopad|prosinec|led|úno|bře|dub|kvě|čvn|čvc|srp|zář|říj|lis|pro)/i;
 
     function plural(n) {
         return n > 1 && n < 5 && ~~(n / 10) !== 1;
@@ -41853,8 +42156,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         monthsShortRegex: monthsRegex,
         // NOTE: 'červen' is substring of 'červenec'; therefore 'červenec' must precede 'červen' in the regex to be fully matched.
         // Otherwise parser matches '1. červenec' as '1. červen' + 'ec'.
-        monthsStrictRegex: /^(leden|ledna|února|únor|březen|března|duben|dubna|květen|května|červenec|července|červen|června|srpen|srpna|září|říjen|října|listopadu|listopad|prosinec|prosince)/i,
-        monthsShortStrictRegex: /^(led|úno|bře|dub|kvě|čvn|čvc|srp|zář|říj|lis|pro)/i,
+        monthsStrictRegex:
+            /^(leden|ledna|února|únor|březen|března|duben|dubna|květen|května|červenec|července|červen|června|srpen|srpna|září|říjen|října|listopadu|listopad|prosinec|prosince)/i,
+        monthsShortStrictRegex:
+            /^(led|úno|bře|dub|kvě|čvn|čvc|srp|zář|říj|lis|pro)/i,
         monthsParse: monthsParse,
         longMonthsParse: monthsParse,
         shortMonthsParse: monthsParse,
@@ -41963,9 +42268,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'кӑр_нар_пуш_ака_май_ҫӗр_утӑ_ҫур_авн_юпа_чӳк_раш'.split('_'),
-        weekdays: 'вырсарникун_тунтикун_ытларикун_юнкун_кӗҫнерникун_эрнекун_шӑматкун'.split(
-            '_'
-        ),
+        weekdays:
+            'вырсарникун_тунтикун_ытларикун_юнкун_кӗҫнерникун_эрнекун_шӑматкун'.split(
+                '_'
+            ),
         weekdaysShort: 'выр_тун_ытл_юн_кӗҫ_эрн_шӑм'.split('_'),
         weekdaysMin: 'вр_тн_ыт_юн_кҫ_эр_шм'.split('_'),
         longDateFormat: {
@@ -42048,9 +42354,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         monthsShort: 'Ion_Chwe_Maw_Ebr_Mai_Meh_Gor_Aws_Med_Hyd_Tach_Rhag'.split(
             '_'
         ),
-        weekdays: 'Dydd Sul_Dydd Llun_Dydd Mawrth_Dydd Mercher_Dydd Iau_Dydd Gwener_Dydd Sadwrn'.split(
-            '_'
-        ),
+        weekdays:
+            'Dydd Sul_Dydd Llun_Dydd Mawrth_Dydd Mercher_Dydd Iau_Dydd Gwener_Dydd Sadwrn'.split(
+                '_'
+            ),
         weekdaysShort: 'Sul_Llun_Maw_Mer_Iau_Gwe_Sad'.split('_'),
         weekdaysMin: 'Su_Ll_Ma_Me_Ia_Gw_Sa'.split('_'),
         weekdaysParseExact: true,
@@ -42252,13 +42559,13 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'Jänner_Februar_März_April_Mai_Juni_Juli_August_September_Oktober_November_Dezember'.split(
             '_'
         ),
-        monthsShort: 'Jän._Feb._März_Apr._Mai_Juni_Juli_Aug._Sep._Okt._Nov._Dez.'.split(
-            '_'
-        ),
+        monthsShort:
+            'Jän._Feb._März_Apr._Mai_Juni_Juli_Aug._Sep._Okt._Nov._Dez.'.split('_'),
         monthsParseExact: true,
-        weekdays: 'Sonntag_Montag_Dienstag_Mittwoch_Donnerstag_Freitag_Samstag'.split(
-            '_'
-        ),
+        weekdays:
+            'Sonntag_Montag_Dienstag_Mittwoch_Donnerstag_Freitag_Samstag'.split(
+                '_'
+            ),
         weekdaysShort: 'So._Mo._Di._Mi._Do._Fr._Sa.'.split('_'),
         weekdaysMin: 'So_Mo_Di_Mi_Do_Fr_Sa'.split('_'),
         weekdaysParseExact: true,
@@ -42348,13 +42655,13 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'Januar_Februar_März_April_Mai_Juni_Juli_August_September_Oktober_November_Dezember'.split(
             '_'
         ),
-        monthsShort: 'Jan._Feb._März_Apr._Mai_Juni_Juli_Aug._Sep._Okt._Nov._Dez.'.split(
-            '_'
-        ),
+        monthsShort:
+            'Jan._Feb._März_Apr._Mai_Juni_Juli_Aug._Sep._Okt._Nov._Dez.'.split('_'),
         monthsParseExact: true,
-        weekdays: 'Sonntag_Montag_Dienstag_Mittwoch_Donnerstag_Freitag_Samstag'.split(
-            '_'
-        ),
+        weekdays:
+            'Sonntag_Montag_Dienstag_Mittwoch_Donnerstag_Freitag_Samstag'.split(
+                '_'
+            ),
         weekdaysShort: 'So_Mo_Di_Mi_Do_Fr_Sa'.split('_'),
         weekdaysMin: 'So_Mo_Di_Mi_Do_Fr_Sa'.split('_'),
         weekdaysParseExact: true,
@@ -42446,13 +42753,13 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'Januar_Februar_März_April_Mai_Juni_Juli_August_September_Oktober_November_Dezember'.split(
             '_'
         ),
-        monthsShort: 'Jan._Feb._März_Apr._Mai_Juni_Juli_Aug._Sep._Okt._Nov._Dez.'.split(
-            '_'
-        ),
+        monthsShort:
+            'Jan._Feb._März_Apr._Mai_Juni_Juli_Aug._Sep._Okt._Nov._Dez.'.split('_'),
         monthsParseExact: true,
-        weekdays: 'Sonntag_Montag_Dienstag_Mittwoch_Donnerstag_Freitag_Samstag'.split(
-            '_'
-        ),
+        weekdays:
+            'Sonntag_Montag_Dienstag_Mittwoch_Donnerstag_Freitag_Samstag'.split(
+                '_'
+            ),
         weekdaysShort: 'So._Mo._Di._Mi._Do._Fr._Sa.'.split('_'),
         weekdaysMin: 'So_Mo_Di_Mi_Do_Fr_Sa'.split('_'),
         weekdaysParseExact: true,
@@ -42641,12 +42948,14 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
     }
 
     var el = moment.defineLocale('el', {
-        monthsNominativeEl: 'Ιανουάριος_Φεβρουάριος_Μάρτιος_Απρίλιος_Μάιος_Ιούνιος_Ιούλιος_Αύγουστος_Σεπτέμβριος_Οκτώβριος_Νοέμβριος_Δεκέμβριος'.split(
-            '_'
-        ),
-        monthsGenitiveEl: 'Ιανουαρίου_Φεβρουαρίου_Μαρτίου_Απριλίου_Μαΐου_Ιουνίου_Ιουλίου_Αυγούστου_Σεπτεμβρίου_Οκτωβρίου_Νοεμβρίου_Δεκεμβρίου'.split(
-            '_'
-        ),
+        monthsNominativeEl:
+            'Ιανουάριος_Φεβρουάριος_Μάρτιος_Απρίλιος_Μάιος_Ιούνιος_Ιούλιος_Αύγουστος_Σεπτέμβριος_Οκτώβριος_Νοέμβριος_Δεκέμβριος'.split(
+                '_'
+            ),
+        monthsGenitiveEl:
+            'Ιανουαρίου_Φεβρουαρίου_Μαρτίου_Απριλίου_Μαΐου_Ιουνίου_Ιουλίου_Αυγούστου_Σεπτεμβρίου_Οκτωβρίου_Νοεμβρίου_Δεκεμβρίου'.split(
+                '_'
+            ),
         months: function (momentToFormat, format) {
             if (!momentToFormat) {
                 return this._monthsNominativeEl;
@@ -43540,9 +43849,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var monthsShortDot = 'ene._feb._mar._abr._may._jun._jul._ago._sep._oct._nov._dic.'.split(
-            '_'
-        ),
+    var monthsShortDot =
+            'ene._feb._mar._abr._may._jun._jul._ago._sep._oct._nov._dic.'.split(
+                '_'
+            ),
         monthsShort = 'ene_feb_mar_abr_may_jun_jul_ago_sep_oct_nov_dic'.split('_'),
         monthsParse = [
             /^ene/i,
@@ -43558,7 +43868,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             /^nov/i,
             /^dic/i,
         ],
-        monthsRegex = /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i;
+        monthsRegex =
+            /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i;
 
     var esDo = moment.defineLocale('es-do', {
         months: 'enero_febrero_marzo_abril_mayo_junio_julio_agosto_septiembre_octubre_noviembre_diciembre'.split(
@@ -43575,8 +43886,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         },
         monthsRegex: monthsRegex,
         monthsShortRegex: monthsRegex,
-        monthsStrictRegex: /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i,
-        monthsShortStrictRegex: /^(ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i,
+        monthsStrictRegex:
+            /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i,
+        monthsShortStrictRegex:
+            /^(ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i,
         monthsParse: monthsParse,
         longMonthsParse: monthsParse,
         shortMonthsParse: monthsParse,
@@ -43665,9 +43978,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var monthsShortDot = 'ene._feb._mar._abr._may._jun._jul._ago._sep._oct._nov._dic.'.split(
-            '_'
-        ),
+    var monthsShortDot =
+            'ene._feb._mar._abr._may._jun._jul._ago._sep._oct._nov._dic.'.split(
+                '_'
+            ),
         monthsShort = 'ene_feb_mar_abr_may_jun_jul_ago_sep_oct_nov_dic'.split('_'),
         monthsParse = [
             /^ene/i,
@@ -43683,7 +43997,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             /^nov/i,
             /^dic/i,
         ],
-        monthsRegex = /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i;
+        monthsRegex =
+            /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i;
 
     var esMx = moment.defineLocale('es-mx', {
         months: 'enero_febrero_marzo_abril_mayo_junio_julio_agosto_septiembre_octubre_noviembre_diciembre'.split(
@@ -43700,8 +44015,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         },
         monthsRegex: monthsRegex,
         monthsShortRegex: monthsRegex,
-        monthsStrictRegex: /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i,
-        monthsShortStrictRegex: /^(ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i,
+        monthsStrictRegex:
+            /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i,
+        monthsShortStrictRegex:
+            /^(ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i,
         monthsParse: monthsParse,
         longMonthsParse: monthsParse,
         shortMonthsParse: monthsParse,
@@ -43792,9 +44109,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var monthsShortDot = 'ene._feb._mar._abr._may._jun._jul._ago._sep._oct._nov._dic.'.split(
-            '_'
-        ),
+    var monthsShortDot =
+            'ene._feb._mar._abr._may._jun._jul._ago._sep._oct._nov._dic.'.split(
+                '_'
+            ),
         monthsShort = 'ene_feb_mar_abr_may_jun_jul_ago_sep_oct_nov_dic'.split('_'),
         monthsParse = [
             /^ene/i,
@@ -43810,7 +44128,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             /^nov/i,
             /^dic/i,
         ],
-        monthsRegex = /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i;
+        monthsRegex =
+            /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i;
 
     var esUs = moment.defineLocale('es-us', {
         months: 'enero_febrero_marzo_abril_mayo_junio_julio_agosto_septiembre_octubre_noviembre_diciembre'.split(
@@ -43827,8 +44146,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         },
         monthsRegex: monthsRegex,
         monthsShortRegex: monthsRegex,
-        monthsStrictRegex: /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i,
-        monthsShortStrictRegex: /^(ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i,
+        monthsStrictRegex:
+            /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i,
+        monthsShortStrictRegex:
+            /^(ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i,
         monthsParse: monthsParse,
         longMonthsParse: monthsParse,
         shortMonthsParse: monthsParse,
@@ -43917,9 +44238,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var monthsShortDot = 'ene._feb._mar._abr._may._jun._jul._ago._sep._oct._nov._dic.'.split(
-            '_'
-        ),
+    var monthsShortDot =
+            'ene._feb._mar._abr._may._jun._jul._ago._sep._oct._nov._dic.'.split(
+                '_'
+            ),
         monthsShort = 'ene_feb_mar_abr_may_jun_jul_ago_sep_oct_nov_dic'.split('_'),
         monthsParse = [
             /^ene/i,
@@ -43935,7 +44257,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             /^nov/i,
             /^dic/i,
         ],
-        monthsRegex = /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i;
+        monthsRegex =
+            /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i;
 
     var es = moment.defineLocale('es', {
         months: 'enero_febrero_marzo_abril_mayo_junio_julio_agosto_septiembre_octubre_noviembre_diciembre'.split(
@@ -43952,8 +44275,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         },
         monthsRegex: monthsRegex,
         monthsShortRegex: monthsRegex,
-        monthsStrictRegex: /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i,
-        monthsShortStrictRegex: /^(ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i,
+        monthsStrictRegex:
+            /^(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i,
+        monthsShortStrictRegex:
+            /^(ene\.?|feb\.?|mar\.?|abr\.?|may\.?|jun\.?|jul\.?|ago\.?|sep\.?|oct\.?|nov\.?|dic\.?)/i,
         monthsParse: monthsParse,
         longMonthsParse: monthsParse,
         shortMonthsParse: monthsParse,
@@ -44068,12 +44393,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'jaanuar_veebruar_märts_aprill_mai_juuni_juuli_august_september_oktoober_november_detsember'.split(
             '_'
         ),
-        monthsShort: 'jaan_veebr_märts_apr_mai_juuni_juuli_aug_sept_okt_nov_dets'.split(
-            '_'
-        ),
-        weekdays: 'pühapäev_esmaspäev_teisipäev_kolmapäev_neljapäev_reede_laupäev'.split(
-            '_'
-        ),
+        monthsShort:
+            'jaan_veebr_märts_apr_mai_juuni_juuli_aug_sept_okt_nov_dets'.split('_'),
+        weekdays:
+            'pühapäev_esmaspäev_teisipäev_kolmapäev_neljapäev_reede_laupäev'.split(
+                '_'
+            ),
         weekdaysShort: 'P_E_T_K_N_R_L'.split('_'),
         weekdaysMin: 'P_E_T_K_N_R_L'.split('_'),
         longDateFormat: {
@@ -44145,13 +44470,15 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'urtarrila_otsaila_martxoa_apirila_maiatza_ekaina_uztaila_abuztua_iraila_urria_azaroa_abendua'.split(
             '_'
         ),
-        monthsShort: 'urt._ots._mar._api._mai._eka._uzt._abu._ira._urr._aza._abe.'.split(
-            '_'
-        ),
+        monthsShort:
+            'urt._ots._mar._api._mai._eka._uzt._abu._ira._urr._aza._abe.'.split(
+                '_'
+            ),
         monthsParseExact: true,
-        weekdays: 'igandea_astelehena_asteartea_asteazkena_osteguna_ostirala_larunbata'.split(
-            '_'
-        ),
+        weekdays:
+            'igandea_astelehena_asteartea_asteazkena_osteguna_ostirala_larunbata'.split(
+                '_'
+            ),
         weekdaysShort: 'ig._al._ar._az._og._ol._lr.'.split('_'),
         weekdaysMin: 'ig_al_ar_az_og_ol_lr'.split('_'),
         weekdaysParseExact: true,
@@ -44253,15 +44580,18 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ژانویه_فوریه_مارس_آوریل_مه_ژوئن_ژوئیه_اوت_سپتامبر_اکتبر_نوامبر_دسامبر'.split(
             '_'
         ),
-        monthsShort: 'ژانویه_فوریه_مارس_آوریل_مه_ژوئن_ژوئیه_اوت_سپتامبر_اکتبر_نوامبر_دسامبر'.split(
-            '_'
-        ),
-        weekdays: 'یک\u200cشنبه_دوشنبه_سه\u200cشنبه_چهارشنبه_پنج\u200cشنبه_جمعه_شنبه'.split(
-            '_'
-        ),
-        weekdaysShort: 'یک\u200cشنبه_دوشنبه_سه\u200cشنبه_چهارشنبه_پنج\u200cشنبه_جمعه_شنبه'.split(
-            '_'
-        ),
+        monthsShort:
+            'ژانویه_فوریه_مارس_آوریل_مه_ژوئن_ژوئیه_اوت_سپتامبر_اکتبر_نوامبر_دسامبر'.split(
+                '_'
+            ),
+        weekdays:
+            'یک\u200cشنبه_دوشنبه_سه\u200cشنبه_چهارشنبه_پنج\u200cشنبه_جمعه_شنبه'.split(
+                '_'
+            ),
+        weekdaysShort:
+            'یک\u200cشنبه_دوشنبه_سه\u200cشنبه_چهارشنبه_پنج\u200cشنبه_جمعه_شنبه'.split(
+                '_'
+            ),
         weekdaysMin: 'ی_د_س_چ_پ_ج_ش'.split('_'),
         weekdaysParseExact: true,
         longDateFormat: {
@@ -44354,9 +44684,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var numbersPast = 'nolla yksi kaksi kolme neljä viisi kuusi seitsemän kahdeksan yhdeksän'.split(
-            ' '
-        ),
+    var numbersPast =
+            'nolla yksi kaksi kolme neljä viisi kuusi seitsemän kahdeksan yhdeksän'.split(
+                ' '
+            ),
         numbersFuture = [
             'nolla',
             'yhden',
@@ -44418,12 +44749,14 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'tammikuu_helmikuu_maaliskuu_huhtikuu_toukokuu_kesäkuu_heinäkuu_elokuu_syyskuu_lokakuu_marraskuu_joulukuu'.split(
             '_'
         ),
-        monthsShort: 'tammi_helmi_maalis_huhti_touko_kesä_heinä_elo_syys_loka_marras_joulu'.split(
-            '_'
-        ),
-        weekdays: 'sunnuntai_maanantai_tiistai_keskiviikko_torstai_perjantai_lauantai'.split(
-            '_'
-        ),
+        monthsShort:
+            'tammi_helmi_maalis_huhti_touko_kesä_heinä_elo_syys_loka_marras_joulu'.split(
+                '_'
+            ),
+        weekdays:
+            'sunnuntai_maanantai_tiistai_keskiviikko_torstai_perjantai_lauantai'.split(
+                '_'
+            ),
         weekdaysShort: 'su_ma_ti_ke_to_pe_la'.split('_'),
         weekdaysMin: 'su_ma_ti_ke_to_pe_la'.split('_'),
         longDateFormat: {
@@ -44579,9 +44912,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'jan_feb_mar_apr_mai_jun_jul_aug_sep_okt_nov_des'.split('_'),
-        weekdays: 'sunnudagur_mánadagur_týsdagur_mikudagur_hósdagur_fríggjadagur_leygardagur'.split(
-            '_'
-        ),
+        weekdays:
+            'sunnudagur_mánadagur_týsdagur_mikudagur_hósdagur_fríggjadagur_leygardagur'.split(
+                '_'
+            ),
         weekdaysShort: 'sun_mán_týs_mik_hós_frí_ley'.split('_'),
         weekdaysMin: 'su_má_tý_mi_hó_fr_le'.split('_'),
         longDateFormat: {
@@ -44653,9 +44987,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'janvier_février_mars_avril_mai_juin_juillet_août_septembre_octobre_novembre_décembre'.split(
             '_'
         ),
-        monthsShort: 'janv._févr._mars_avr._mai_juin_juil._août_sept._oct._nov._déc.'.split(
-            '_'
-        ),
+        monthsShort:
+            'janv._févr._mars_avr._mai_juin_juil._août_sept._oct._nov._déc.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'dimanche_lundi_mardi_mercredi_jeudi_vendredi_samedi'.split('_'),
         weekdaysShort: 'dim._lun._mar._mer._jeu._ven._sam.'.split('_'),
@@ -44742,9 +45077,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'janvier_février_mars_avril_mai_juin_juillet_août_septembre_octobre_novembre_décembre'.split(
             '_'
         ),
-        monthsShort: 'janv._févr._mars_avr._mai_juin_juil._août_sept._oct._nov._déc.'.split(
-            '_'
-        ),
+        monthsShort:
+            'janv._févr._mars_avr._mai_juin_juil._août_sept._oct._nov._déc.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'dimanche_lundi_mardi_mercredi_jeudi_vendredi_samedi'.split('_'),
         weekdaysShort: 'dim._lun._mar._mer._jeu._ven._sam.'.split('_'),
@@ -44831,9 +45167,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var monthsStrictRegex = /^(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)/i,
-        monthsShortStrictRegex = /(janv\.?|févr\.?|mars|avr\.?|mai|juin|juil\.?|août|sept\.?|oct\.?|nov\.?|déc\.?)/i,
-        monthsRegex = /(janv\.?|févr\.?|mars|avr\.?|mai|juin|juil\.?|août|sept\.?|oct\.?|nov\.?|déc\.?|janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)/i,
+    var monthsStrictRegex =
+            /^(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)/i,
+        monthsShortStrictRegex =
+            /(janv\.?|févr\.?|mars|avr\.?|mai|juin|juil\.?|août|sept\.?|oct\.?|nov\.?|déc\.?)/i,
+        monthsRegex =
+            /(janv\.?|févr\.?|mars|avr\.?|mai|juin|juil\.?|août|sept\.?|oct\.?|nov\.?|déc\.?|janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)/i,
         monthsParse = [
             /^janv/i,
             /^févr/i,
@@ -44853,9 +45192,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'janvier_février_mars_avril_mai_juin_juillet_août_septembre_octobre_novembre_décembre'.split(
             '_'
         ),
-        monthsShort: 'janv._févr._mars_avr._mai_juin_juil._août_sept._oct._nov._déc.'.split(
-            '_'
-        ),
+        monthsShort:
+            'janv._févr._mars_avr._mai_juin_juil._août_sept._oct._nov._déc.'.split(
+                '_'
+            ),
         monthsRegex: monthsRegex,
         monthsShortRegex: monthsRegex,
         monthsStrictRegex: monthsStrictRegex,
@@ -44955,12 +45295,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var monthsShortWithDots = 'jan._feb._mrt._apr._mai_jun._jul._aug._sep._okt._nov._des.'.split(
-            '_'
-        ),
-        monthsShortWithoutDots = 'jan_feb_mrt_apr_mai_jun_jul_aug_sep_okt_nov_des'.split(
-            '_'
-        );
+    var monthsShortWithDots =
+            'jan._feb._mrt._apr._mai_jun._jul._aug._sep._okt._nov._des.'.split('_'),
+        monthsShortWithoutDots =
+            'jan_feb_mrt_apr_mai_jun_jul_aug_sep_okt_nov_des'.split('_');
 
     var fy = moment.defineLocale('fy', {
         months: 'jannewaris_febrewaris_maart_april_maaie_juny_july_augustus_septimber_oktober_novimber_desimber'.split(
@@ -45286,9 +45624,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'xaneiro_febreiro_marzo_abril_maio_xuño_xullo_agosto_setembro_outubro_novembro_decembro'.split(
             '_'
         ),
-        monthsShort: 'xan._feb._mar._abr._mai._xuñ._xul._ago._set._out._nov._dec.'.split(
-            '_'
-        ),
+        monthsShort:
+            'xan._feb._mar._abr._mai._xuñ._xul._ago._set._out._nov._dec.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'domingo_luns_martes_mércores_xoves_venres_sábado'.split('_'),
         weekdaysShort: 'dom._lun._mar._mér._xov._ven._sáb.'.split('_'),
@@ -45396,17 +45735,19 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     var gomDeva = moment.defineLocale('gom-deva', {
         months: {
-            standalone: 'जानेवारी_फेब्रुवारी_मार्च_एप्रील_मे_जून_जुलय_ऑगस्ट_सप्टेंबर_ऑक्टोबर_नोव्हेंबर_डिसेंबर'.split(
-                '_'
-            ),
+            standalone:
+                'जानेवारी_फेब्रुवारी_मार्च_एप्रील_मे_जून_जुलय_ऑगस्ट_सप्टेंबर_ऑक्टोबर_नोव्हेंबर_डिसेंबर'.split(
+                    '_'
+                ),
             format: 'जानेवारीच्या_फेब्रुवारीच्या_मार्चाच्या_एप्रीलाच्या_मेयाच्या_जूनाच्या_जुलयाच्या_ऑगस्टाच्या_सप्टेंबराच्या_ऑक्टोबराच्या_नोव्हेंबराच्या_डिसेंबराच्या'.split(
                 '_'
             ),
             isFormat: /MMMM(\s)+D[oD]?/,
         },
-        monthsShort: 'जाने._फेब्रु._मार्च_एप्री._मे_जून_जुल._ऑग._सप्टें._ऑक्टो._नोव्हें._डिसें.'.split(
-            '_'
-        ),
+        monthsShort:
+            'जाने._फेब्रु._मार्च_एप्री._मे_जून_जुल._ऑग._सप्टें._ऑक्टो._नोव्हें._डिसें.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'आयतार_सोमार_मंगळार_बुधवार_बिरेस्तार_सुक्रार_शेनवार'.split('_'),
         weekdaysShort: 'आयत._सोम._मंगळ._बुध._ब्रेस्त._सुक्र._शेन.'.split('_'),
@@ -45540,17 +45881,17 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     var gomLatn = moment.defineLocale('gom-latn', {
         months: {
-            standalone: 'Janer_Febrer_Mars_Abril_Mai_Jun_Julai_Agost_Setembr_Otubr_Novembr_Dezembr'.split(
-                '_'
-            ),
+            standalone:
+                'Janer_Febrer_Mars_Abril_Mai_Jun_Julai_Agost_Setembr_Otubr_Novembr_Dezembr'.split(
+                    '_'
+                ),
             format: 'Janerachea_Febrerachea_Marsachea_Abrilachea_Maiachea_Junachea_Julaiachea_Agostachea_Setembrachea_Otubrachea_Novembrachea_Dezembrachea'.split(
                 '_'
             ),
             isFormat: /MMMM(\s)+D[oD]?/,
         },
-        monthsShort: 'Jan._Feb._Mars_Abr._Mai_Jun_Jul._Ago._Set._Otu._Nov._Dez.'.split(
-            '_'
-        ),
+        monthsShort:
+            'Jan._Feb._Mars_Abr._Mai_Jun_Jul._Ago._Set._Otu._Nov._Dez.'.split('_'),
         monthsParseExact: true,
         weekdays: "Aitar_Somar_Mongllar_Budhvar_Birestar_Sukrar_Son'var".split('_'),
         weekdaysShort: 'Ait._Som._Mon._Bud._Bre._Suk._Son.'.split('_'),
@@ -45693,9 +46034,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'જાન્યુઆરી_ફેબ્રુઆરી_માર્ચ_એપ્રિલ_મે_જૂન_જુલાઈ_ઑગસ્ટ_સપ્ટેમ્બર_ઑક્ટ્બર_નવેમ્બર_ડિસેમ્બર'.split(
             '_'
         ),
-        monthsShort: 'જાન્યુ._ફેબ્રુ._માર્ચ_એપ્રિ._મે_જૂન_જુલા._ઑગ._સપ્ટે._ઑક્ટ્._નવે._ડિસે.'.split(
-            '_'
-        ),
+        monthsShort:
+            'જાન્યુ._ફેબ્રુ._માર્ચ_એપ્રિ._મે_જૂન_જુલા._ઑગ._સપ્ટે._ઑક્ટ્._નવે._ડિસે.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'રવિવાર_સોમવાર_મંગળવાર_બુધ્વાર_ગુરુવાર_શુક્રવાર_શનિવાર'.split(
             '_'
@@ -45811,9 +46153,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ינואר_פברואר_מרץ_אפריל_מאי_יוני_יולי_אוגוסט_ספטמבר_אוקטובר_נובמבר_דצמבר'.split(
             '_'
         ),
-        monthsShort: 'ינו׳_פבר׳_מרץ_אפר׳_מאי_יוני_יולי_אוג׳_ספט׳_אוק׳_נוב׳_דצמ׳'.split(
-            '_'
-        ),
+        monthsShort:
+            'ינו׳_פבר׳_מרץ_אפר׳_מאי_יוני_יולי_אוג׳_ספט׳_אוק׳_נוב׳_דצמ׳'.split('_'),
         weekdays: 'ראשון_שני_שלישי_רביעי_חמישי_שישי_שבת'.split('_'),
         weekdaysShort: 'א׳_ב׳_ג׳_ד׳_ה׳_ו׳_ש׳'.split('_'),
         weekdaysMin: 'א_ב_ג_ד_ה_ו_ש'.split('_'),
@@ -45875,7 +46216,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
                 return number + ' שנים';
             },
         },
-        meridiemParse: /אחה"צ|לפנה"צ|אחרי הצהריים|לפני הצהריים|לפנות בוקר|בבוקר|בערב/i,
+        meridiemParse:
+            /אחה"צ|לפנה"צ|אחרי הצהריים|לפני הצהריים|לפנות בוקר|בבוקר|בערב/i,
         isPM: function (input) {
             return /^(אחה"צ|אחרי הצהריים|בערב)$/.test(input);
         },
@@ -45977,13 +46319,13 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             format: 'जनवरी_फ़रवरी_मार्च_अप्रैल_मई_जून_जुलाई_अगस्त_सितम्बर_अक्टूबर_नवम्बर_दिसम्बर'.split(
                 '_'
             ),
-            standalone: 'जनवरी_फरवरी_मार्च_अप्रैल_मई_जून_जुलाई_अगस्त_सितंबर_अक्टूबर_नवंबर_दिसंबर'.split(
-                '_'
-            ),
+            standalone:
+                'जनवरी_फरवरी_मार्च_अप्रैल_मई_जून_जुलाई_अगस्त_सितंबर_अक्टूबर_नवंबर_दिसंबर'.split(
+                    '_'
+                ),
         },
-        monthsShort: 'जन._फ़र._मार्च_अप्रै._मई_जून_जुल._अग._सित._अक्टू._नव._दिस.'.split(
-            '_'
-        ),
+        monthsShort:
+            'जन._फ़र._मार्च_अप्रै._मई_जून_जुल._अग._सित._अक्टू._नव._दिस.'.split('_'),
         weekdays: 'रविवार_सोमवार_मंगलवार_बुधवार_गुरूवार_शुक्रवार_शनिवार'.split('_'),
         weekdaysShort: 'रवि_सोम_मंगल_बुध_गुरू_शुक्र_शनि'.split('_'),
         weekdaysMin: 'र_सो_मं_बु_गु_शु_श'.split('_'),
@@ -46000,13 +46342,17 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         longMonthsParse: monthsParse,
         shortMonthsParse: shortMonthsParse,
 
-        monthsRegex: /^(जनवरी|जन\.?|फ़रवरी|फरवरी|फ़र\.?|मार्च?|अप्रैल|अप्रै\.?|मई?|जून?|जुलाई|जुल\.?|अगस्त|अग\.?|सितम्बर|सितंबर|सित\.?|अक्टूबर|अक्टू\.?|नवम्बर|नवंबर|नव\.?|दिसम्बर|दिसंबर|दिस\.?)/i,
+        monthsRegex:
+            /^(जनवरी|जन\.?|फ़रवरी|फरवरी|फ़र\.?|मार्च?|अप्रैल|अप्रै\.?|मई?|जून?|जुलाई|जुल\.?|अगस्त|अग\.?|सितम्बर|सितंबर|सित\.?|अक्टूबर|अक्टू\.?|नवम्बर|नवंबर|नव\.?|दिसम्बर|दिसंबर|दिस\.?)/i,
 
-        monthsShortRegex: /^(जनवरी|जन\.?|फ़रवरी|फरवरी|फ़र\.?|मार्च?|अप्रैल|अप्रै\.?|मई?|जून?|जुलाई|जुल\.?|अगस्त|अग\.?|सितम्बर|सितंबर|सित\.?|अक्टूबर|अक्टू\.?|नवम्बर|नवंबर|नव\.?|दिसम्बर|दिसंबर|दिस\.?)/i,
+        monthsShortRegex:
+            /^(जनवरी|जन\.?|फ़रवरी|फरवरी|फ़र\.?|मार्च?|अप्रैल|अप्रै\.?|मई?|जून?|जुलाई|जुल\.?|अगस्त|अग\.?|सितम्बर|सितंबर|सित\.?|अक्टूबर|अक्टू\.?|नवम्बर|नवंबर|नव\.?|दिसम्बर|दिसंबर|दिस\.?)/i,
 
-        monthsStrictRegex: /^(जनवरी?|फ़रवरी|फरवरी?|मार्च?|अप्रैल?|मई?|जून?|जुलाई?|अगस्त?|सितम्बर|सितंबर|सित?\.?|अक्टूबर|अक्टू\.?|नवम्बर|नवंबर?|दिसम्बर|दिसंबर?)/i,
+        monthsStrictRegex:
+            /^(जनवरी?|फ़रवरी|फरवरी?|मार्च?|अप्रैल?|मई?|जून?|जुलाई?|अगस्त?|सितम्बर|सितंबर|सित?\.?|अक्टूबर|अक्टू\.?|नवम्बर|नवंबर?|दिसम्बर|दिसंबर?)/i,
 
-        monthsShortStrictRegex: /^(जन\.?|फ़र\.?|मार्च?|अप्रै\.?|मई?|जून?|जुल\.?|अग\.?|सित\.?|अक्टू\.?|नव\.?|दिस\.?)/i,
+        monthsShortStrictRegex:
+            /^(जन\.?|फ़र\.?|मार्च?|अप्रै\.?|मई?|जून?|जुल\.?|अग\.?|सित\.?|अक्टू\.?|नव\.?|दिस\.?)/i,
 
         calendar: {
             sameDay: '[आज] LT',
@@ -46170,13 +46516,15 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             format: 'siječnja_veljače_ožujka_travnja_svibnja_lipnja_srpnja_kolovoza_rujna_listopada_studenoga_prosinca'.split(
                 '_'
             ),
-            standalone: 'siječanj_veljača_ožujak_travanj_svibanj_lipanj_srpanj_kolovoz_rujan_listopad_studeni_prosinac'.split(
+            standalone:
+                'siječanj_veljača_ožujak_travanj_svibanj_lipanj_srpanj_kolovoz_rujan_listopad_studeni_prosinac'.split(
+                    '_'
+                ),
+        },
+        monthsShort:
+            'sij._velj._ožu._tra._svi._lip._srp._kol._ruj._lis._stu._pro.'.split(
                 '_'
             ),
-        },
-        monthsShort: 'sij._velj._ožu._tra._svi._lip._srp._kol._ruj._lis._stu._pro.'.split(
-            '_'
-        ),
         monthsParseExact: true,
         weekdays: 'nedjelja_ponedjeljak_utorak_srijeda_četvrtak_petak_subota'.split(
             '_'
@@ -46278,9 +46626,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var weekEndings = 'vasárnap hétfőn kedden szerdán csütörtökön pénteken szombaton'.split(
-        ' '
-    );
+    var weekEndings =
+        'vasárnap hétfőn kedden szerdán csütörtökön pénteken szombaton'.split(' ');
     function translate(number, withoutSuffix, key, isFuture) {
         var num = number;
         switch (key) {
@@ -46328,9 +46675,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'január_február_március_április_május_június_július_augusztus_szeptember_október_november_december'.split(
             '_'
         ),
-        monthsShort: 'jan._feb._márc._ápr._máj._jún._júl._aug._szept._okt._nov._dec.'.split(
-            '_'
-        ),
+        monthsShort:
+            'jan._feb._márc._ápr._máj._jún._júl._aug._szept._okt._nov._dec.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'vasárnap_hétfő_kedd_szerda_csütörtök_péntek_szombat'.split('_'),
         weekdaysShort: 'vas_hét_kedd_sze_csüt_pén_szo'.split('_'),
@@ -46420,14 +46768,16 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             format: 'հունվարի_փետրվարի_մարտի_ապրիլի_մայիսի_հունիսի_հուլիսի_օգոստոսի_սեպտեմբերի_հոկտեմբերի_նոյեմբերի_դեկտեմբերի'.split(
                 '_'
             ),
-            standalone: 'հունվար_փետրվար_մարտ_ապրիլ_մայիս_հունիս_հուլիս_օգոստոս_սեպտեմբեր_հոկտեմբեր_նոյեմբեր_դեկտեմբեր'.split(
-                '_'
-            ),
+            standalone:
+                'հունվար_փետրվար_մարտ_ապրիլ_մայիս_հունիս_հուլիս_օգոստոս_սեպտեմբեր_հոկտեմբեր_նոյեմբեր_դեկտեմբեր'.split(
+                    '_'
+                ),
         },
         monthsShort: 'հնվ_փտր_մրտ_ապր_մյս_հնս_հլս_օգս_սպտ_հկտ_նմբ_դկտ'.split('_'),
-        weekdays: 'կիրակի_երկուշաբթի_երեքշաբթի_չորեքշաբթի_հինգշաբթի_ուրբաթ_շաբաթ'.split(
-            '_'
-        ),
+        weekdays:
+            'կիրակի_երկուշաբթի_երեքշաբթի_չորեքշաբթի_հինգշաբթի_ուրբաթ_շաբաթ'.split(
+                '_'
+            ),
         weekdaysShort: 'կրկ_երկ_երք_չրք_հնգ_ուրբ_շբթ'.split('_'),
         weekdaysMin: 'կրկ_երկ_երք_չրք_հնգ_ուրբ_շբթ'.split('_'),
         longDateFormat: {
@@ -46712,9 +47062,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'jan_feb_mar_apr_maí_jún_júl_ágú_sep_okt_nóv_des'.split('_'),
-        weekdays: 'sunnudagur_mánudagur_þriðjudagur_miðvikudagur_fimmtudagur_föstudagur_laugardagur'.split(
-            '_'
-        ),
+        weekdays:
+            'sunnudagur_mánudagur_þriðjudagur_miðvikudagur_fimmtudagur_föstudagur_laugardagur'.split(
+                '_'
+            ),
         weekdaysShort: 'sun_mán_þri_mið_fim_fös_lau'.split('_'),
         weekdaysMin: 'Su_Má_Þr_Mi_Fi_Fö_La'.split('_'),
         longDateFormat: {
@@ -47262,9 +47613,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         ),
         monthsShort: 'იან_თებ_მარ_აპრ_მაი_ივნ_ივლ_აგვ_სექ_ოქტ_ნოე_დეკ'.split('_'),
         weekdays: {
-            standalone: 'კვირა_ორშაბათი_სამშაბათი_ოთხშაბათი_ხუთშაბათი_პარასკევი_შაბათი'.split(
-                '_'
-            ),
+            standalone:
+                'კვირა_ორშაბათი_სამშაბათი_ოთხშაბათი_ხუთშაბათი_პარასკევი_შაბათი'.split(
+                    '_'
+                ),
             format: 'კვირას_ორშაბათს_სამშაბათს_ოთხშაბათს_ხუთშაბათს_პარასკევს_შაბათს'.split(
                 '_'
             ),
@@ -47290,13 +47642,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         },
         relativeTime: {
             future: function (s) {
-                return s.replace(/(წამ|წუთ|საათ|წელ|დღ|თვ)(ი|ე)/, function (
-                    $0,
-                    $1,
-                    $2
-                ) {
-                    return $2 === 'ი' ? $1 + 'ში' : $1 + $2 + 'ში';
-                });
+                return s.replace(
+                    /(წამ|წუთ|საათ|წელ|დღ|თვ)(ი|ე)/,
+                    function ($0, $1, $2) {
+                        return $2 === 'ი' ? $1 + 'ში' : $1 + $2 + 'ში';
+                    }
+                );
             },
             past: function (s) {
                 if (/(წამი|წუთი|საათი|დღე|თვე)/.test(s)) {
@@ -47499,9 +47850,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'មករា_កុម្ភៈ_មីនា_មេសា_ឧសភា_មិថុនា_កក្កដា_សីហា_កញ្ញា_តុលា_វិច្ឆិកា_ធ្នូ'.split(
             '_'
         ),
-        monthsShort: 'មករា_កុម្ភៈ_មីនា_មេសា_ឧសភា_មិថុនា_កក្កដា_សីហា_កញ្ញា_តុលា_វិច្ឆិកា_ធ្នូ'.split(
-            '_'
-        ),
+        monthsShort:
+            'មករា_កុម្ភៈ_មីនា_មេសា_ឧសភា_មិថុនា_កក្កដា_សីហា_កញ្ញា_តុលា_វិច្ឆិកា_ធ្នូ'.split(
+                '_'
+            ),
         weekdays: 'អាទិត្យ_ច័ន្ទ_អង្គារ_ពុធ_ព្រហស្បតិ៍_សុក្រ_សៅរ៍'.split('_'),
         weekdaysShort: 'អា_ច_អ_ព_ព្រ_សុ_ស'.split('_'),
         weekdaysMin: 'អា_ច_អ_ព_ព្រ_សុ_ស'.split('_'),
@@ -47621,9 +47973,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ಜನವರಿ_ಫೆಬ್ರವರಿ_ಮಾರ್ಚ್_ಏಪ್ರಿಲ್_ಮೇ_ಜೂನ್_ಜುಲೈ_ಆಗಸ್ಟ್_ಸೆಪ್ಟೆಂಬರ್_ಅಕ್ಟೋಬರ್_ನವೆಂಬರ್_ಡಿಸೆಂಬರ್'.split(
             '_'
         ),
-        monthsShort: 'ಜನ_ಫೆಬ್ರ_ಮಾರ್ಚ್_ಏಪ್ರಿಲ್_ಮೇ_ಜೂನ್_ಜುಲೈ_ಆಗಸ್ಟ್_ಸೆಪ್ಟೆಂ_ಅಕ್ಟೋ_ನವೆಂ_ಡಿಸೆಂ'.split(
-            '_'
-        ),
+        monthsShort:
+            'ಜನ_ಫೆಬ್ರ_ಮಾರ್ಚ್_ಏಪ್ರಿಲ್_ಮೇ_ಜೂನ್_ಜುಲೈ_ಆಗಸ್ಟ್_ಸೆಪ್ಟೆಂ_ಅಕ್ಟೋ_ನವೆಂ_ಡಿಸೆಂ'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'ಭಾನುವಾರ_ಸೋಮವಾರ_ಮಂಗಳವಾರ_ಬುಧವಾರ_ಗುರುವಾರ_ಶುಕ್ರವಾರ_ಶನಿವಾರ'.split(
             '_'
@@ -47872,12 +48225,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
     var ku = moment.defineLocale('ku', {
         months: months,
         monthsShort: months,
-        weekdays: 'یه‌كشه‌ممه‌_دووشه‌ممه‌_سێشه‌ممه‌_چوارشه‌ممه‌_پێنجشه‌ممه‌_هه‌ینی_شه‌ممه‌'.split(
-            '_'
-        ),
-        weekdaysShort: 'یه‌كشه‌م_دووشه‌م_سێشه‌م_چوارشه‌م_پێنجشه‌م_هه‌ینی_شه‌ممه‌'.split(
-            '_'
-        ),
+        weekdays:
+            'یه‌كشه‌ممه‌_دووشه‌ممه‌_سێشه‌ممه‌_چوارشه‌ممه‌_پێنجشه‌ممه‌_هه‌ینی_شه‌ممه‌'.split(
+                '_'
+            ),
+        weekdaysShort:
+            'یه‌كشه‌م_دووشه‌م_سێشه‌م_چوارشه‌م_پێنجشه‌م_هه‌ینی_شه‌ممه‌'.split('_'),
         weekdaysMin: 'ی_د_س_چ_پ_ه_ش'.split('_'),
         weekdaysParseExact: true,
         longDateFormat: {
@@ -48143,13 +48496,15 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'Januar_Februar_Mäerz_Abrëll_Mee_Juni_Juli_August_September_Oktober_November_Dezember'.split(
             '_'
         ),
-        monthsShort: 'Jan._Febr._Mrz._Abr._Mee_Jun._Jul._Aug._Sept._Okt._Nov._Dez.'.split(
-            '_'
-        ),
+        monthsShort:
+            'Jan._Febr._Mrz._Abr._Mee_Jun._Jul._Aug._Sept._Okt._Nov._Dez.'.split(
+                '_'
+            ),
         monthsParseExact: true,
-        weekdays: 'Sonndeg_Méindeg_Dënschdeg_Mëttwoch_Donneschdeg_Freideg_Samschdeg'.split(
-            '_'
-        ),
+        weekdays:
+            'Sonndeg_Méindeg_Dënschdeg_Mëttwoch_Donneschdeg_Freideg_Samschdeg'.split(
+                '_'
+            ),
         weekdaysShort: 'So._Mé._Dë._Më._Do._Fr._Sa.'.split('_'),
         weekdaysMin: 'So_Mé_Dë_Më_Do_Fr_Sa'.split('_'),
         weekdaysParseExact: true,
@@ -48231,9 +48586,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ມັງກອນ_ກຸມພາ_ມີນາ_ເມສາ_ພຶດສະພາ_ມິຖຸນາ_ກໍລະກົດ_ສິງຫາ_ກັນຍາ_ຕຸລາ_ພະຈິກ_ທັນວາ'.split(
             '_'
         ),
-        monthsShort: 'ມັງກອນ_ກຸມພາ_ມີນາ_ເມສາ_ພຶດສະພາ_ມິຖຸນາ_ກໍລະກົດ_ສິງຫາ_ກັນຍາ_ຕຸລາ_ພະຈິກ_ທັນວາ'.split(
-            '_'
-        ),
+        monthsShort:
+            'ມັງກອນ_ກຸມພາ_ມີນາ_ເມສາ_ພຶດສະພາ_ມິຖຸນາ_ກໍລະກົດ_ສິງຫາ_ກັນຍາ_ຕຸລາ_ພະຈິກ_ທັນວາ'.split(
+                '_'
+            ),
         weekdays: 'ອາທິດ_ຈັນ_ອັງຄານ_ພຸດ_ພະຫັດ_ສຸກ_ເສົາ'.split('_'),
         weekdaysShort: 'ທິດ_ຈັນ_ອັງຄານ_ພຸດ_ພະຫັດ_ສຸກ_ເສົາ'.split('_'),
         weekdaysMin: 'ທ_ຈ_ອຄ_ພ_ພຫ_ສກ_ສ'.split('_'),
@@ -48366,9 +48722,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             format: 'sausio_vasario_kovo_balandžio_gegužės_birželio_liepos_rugpjūčio_rugsėjo_spalio_lapkričio_gruodžio'.split(
                 '_'
             ),
-            standalone: 'sausis_vasaris_kovas_balandis_gegužė_birželis_liepa_rugpjūtis_rugsėjis_spalis_lapkritis_gruodis'.split(
-                '_'
-            ),
+            standalone:
+                'sausis_vasaris_kovas_balandis_gegužė_birželis_liepa_rugpjūtis_rugsėjis_spalis_lapkritis_gruodis'.split(
+                    '_'
+                ),
             isFormat: /D[oD]?(\[[^\[\]]*\]|\s)+MMMM?|MMMM?(\[[^\[\]]*\]|\s)+D[oD]?/,
         },
         monthsShort: 'sau_vas_kov_bal_geg_bir_lie_rgp_rgs_spa_lap_grd'.split('_'),
@@ -48376,9 +48733,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             format: 'sekmadienį_pirmadienį_antradienį_trečiadienį_ketvirtadienį_penktadienį_šeštadienį'.split(
                 '_'
             ),
-            standalone: 'sekmadienis_pirmadienis_antradienis_trečiadienis_ketvirtadienis_penktadienis_šeštadienis'.split(
-                '_'
-            ),
+            standalone:
+                'sekmadienis_pirmadienis_antradienis_trečiadienis_ketvirtadienis_penktadienis_šeštadienis'.split(
+                    '_'
+                ),
             isFormat: /dddd HH:mm/,
         },
         weekdaysShort: 'Sek_Pir_Ant_Tre_Ket_Pen_Šeš'.split('_'),
@@ -48497,9 +48855,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'jan_feb_mar_apr_mai_jūn_jūl_aug_sep_okt_nov_dec'.split('_'),
-        weekdays: 'svētdiena_pirmdiena_otrdiena_trešdiena_ceturtdiena_piektdiena_sestdiena'.split(
-            '_'
-        ),
+        weekdays:
+            'svētdiena_pirmdiena_otrdiena_trešdiena_ceturtdiena_piektdiena_sestdiena'.split(
+                '_'
+            ),
         weekdaysShort: 'Sv_P_O_T_C_Pk_S'.split('_'),
         weekdaysMin: 'Sv_P_O_T_C_Pk_S'.split('_'),
         weekdaysParseExact: true,
@@ -48605,9 +48964,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'januar_februar_mart_april_maj_jun_jul_avgust_septembar_oktobar_novembar_decembar'.split(
             '_'
         ),
-        monthsShort: 'jan._feb._mar._apr._maj_jun_jul_avg._sep._okt._nov._dec.'.split(
-            '_'
-        ),
+        monthsShort:
+            'jan._feb._mar._apr._maj_jun_jul_avg._sep._okt._nov._dec.'.split('_'),
         monthsParseExact: true,
         weekdays: 'nedjelja_ponedjeljak_utorak_srijeda_četvrtak_petak_subota'.split(
             '_'
@@ -48710,9 +49068,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'Kohi-tāte_Hui-tanguru_Poutū-te-rangi_Paenga-whāwhā_Haratua_Pipiri_Hōngoingoi_Here-turi-kōkā_Mahuru_Whiringa-ā-nuku_Whiringa-ā-rangi_Hakihea'.split(
             '_'
         ),
-        monthsShort: 'Kohi_Hui_Pou_Pae_Hara_Pipi_Hōngoi_Here_Mahu_Whi-nu_Whi-ra_Haki'.split(
-            '_'
-        ),
+        monthsShort:
+            'Kohi_Hui_Pou_Pae_Hara_Pipi_Hōngoi_Here_Mahu_Whi-nu_Whi-ra_Haki'.split(
+                '_'
+            ),
         monthsRegex: /(?:['a-z\u0101\u014D\u016B]+\-?){1,3}/i,
         monthsStrictRegex: /(?:['a-z\u0101\u014D\u016B]+\-?){1,3}/i,
         monthsShortRegex: /(?:['a-z\u0101\u014D\u016B]+\-?){1,3}/i,
@@ -48895,13 +49254,15 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ജനുവരി_ഫെബ്രുവരി_മാർച്ച്_ഏപ്രിൽ_മേയ്_ജൂൺ_ജൂലൈ_ഓഗസ്റ്റ്_സെപ്റ്റംബർ_ഒക്ടോബർ_നവംബർ_ഡിസംബർ'.split(
             '_'
         ),
-        monthsShort: 'ജനു._ഫെബ്രു._മാർ._ഏപ്രി._മേയ്_ജൂൺ_ജൂലൈ._ഓഗ._സെപ്റ്റ._ഒക്ടോ._നവം._ഡിസം.'.split(
-            '_'
-        ),
+        monthsShort:
+            'ജനു._ഫെബ്രു._മാർ._ഏപ്രി._മേയ്_ജൂൺ_ജൂലൈ._ഓഗ._സെപ്റ്റ._ഒക്ടോ._നവം._ഡിസം.'.split(
+                '_'
+            ),
         monthsParseExact: true,
-        weekdays: 'ഞായറാഴ്ച_തിങ്കളാഴ്ച_ചൊവ്വാഴ്ച_ബുധനാഴ്ച_വ്യാഴാഴ്ച_വെള്ളിയാഴ്ച_ശനിയാഴ്ച'.split(
-            '_'
-        ),
+        weekdays:
+            'ഞായറാഴ്ച_തിങ്കളാഴ്ച_ചൊവ്വാഴ്ച_ബുധനാഴ്ച_വ്യാഴാഴ്ച_വെള്ളിയാഴ്ച_ശനിയാഴ്ച'.split(
+                '_'
+            ),
         weekdaysShort: 'ഞായർ_തിങ്കൾ_ചൊവ്വ_ബുധൻ_വ്യാഴം_വെള്ളി_ശനി'.split('_'),
         weekdaysMin: 'ഞാ_തി_ചൊ_ബു_വ്യാ_വെ_ശ'.split('_'),
         longDateFormat: {
@@ -49021,9 +49382,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'Нэгдүгээр сар_Хоёрдугаар сар_Гуравдугаар сар_Дөрөвдүгээр сар_Тавдугаар сар_Зургадугаар сар_Долдугаар сар_Наймдугаар сар_Есдүгээр сар_Аравдугаар сар_Арван нэгдүгээр сар_Арван хоёрдугаар сар'.split(
             '_'
         ),
-        monthsShort: '1 сар_2 сар_3 сар_4 сар_5 сар_6 сар_7 сар_8 сар_9 сар_10 сар_11 сар_12 сар'.split(
-            '_'
-        ),
+        monthsShort:
+            '1 сар_2 сар_3 сар_4 сар_5 сар_6 сар_7 сар_8 сар_9 сар_10 сар_11 сар_12 сар'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'Ням_Даваа_Мягмар_Лхагва_Пүрэв_Баасан_Бямба'.split('_'),
         weekdaysShort: 'Ням_Дав_Мяг_Лха_Пүр_Баа_Бям'.split('_'),
@@ -49224,9 +49586,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'जानेवारी_फेब्रुवारी_मार्च_एप्रिल_मे_जून_जुलै_ऑगस्ट_सप्टेंबर_ऑक्टोबर_नोव्हेंबर_डिसेंबर'.split(
             '_'
         ),
-        monthsShort: 'जाने._फेब्रु._मार्च._एप्रि._मे._जून._जुलै._ऑग._सप्टें._ऑक्टो._नोव्हें._डिसें.'.split(
-            '_'
-        ),
+        monthsShort:
+            'जाने._फेब्रु._मार्च._एप्रि._मे._जून._जुलै._ऑग._सप्टें._ऑक्टो._नोव्हें._डिसें.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'रविवार_सोमवार_मंगळवार_बुधवार_गुरूवार_शुक्रवार_शनिवार'.split('_'),
         weekdaysShort: 'रवि_सोम_मंगळ_बुध_गुरू_शुक्र_शनि'.split('_'),
@@ -49528,9 +49891,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'Jan_Fra_Mar_Apr_Mej_Ġun_Lul_Aww_Set_Ott_Nov_Diċ'.split('_'),
-        weekdays: 'Il-Ħadd_It-Tnejn_It-Tlieta_L-Erbgħa_Il-Ħamis_Il-Ġimgħa_Is-Sibt'.split(
-            '_'
-        ),
+        weekdays:
+            'Il-Ħadd_It-Tnejn_It-Tlieta_L-Erbgħa_Il-Ħamis_Il-Ġimgħa_Is-Sibt'.split(
+                '_'
+            ),
         weekdaysShort: 'Ħad_Tne_Tli_Erb_Ħam_Ġim_Sib'.split('_'),
         weekdaysMin: 'Ħa_Tn_Tl_Er_Ħa_Ġi_Si'.split('_'),
         longDateFormat: {
@@ -49715,9 +50079,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'januar_februar_mars_april_mai_juni_juli_august_september_oktober_november_desember'.split(
             '_'
         ),
-        monthsShort: 'jan._feb._mars_apr._mai_juni_juli_aug._sep._okt._nov._des.'.split(
-            '_'
-        ),
+        monthsShort:
+            'jan._feb._mars_apr._mai_juni_juli_aug._sep._okt._nov._des.'.split('_'),
         monthsParseExact: true,
         weekdays: 'søndag_mandag_tirsdag_onsdag_torsdag_fredag_lørdag'.split('_'),
         weekdaysShort: 'sø._ma._ti._on._to._fr._lø.'.split('_'),
@@ -49819,9 +50182,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'जनवरी_फेब्रुवरी_मार्च_अप्रिल_मई_जुन_जुलाई_अगष्ट_सेप्टेम्बर_अक्टोबर_नोभेम्बर_डिसेम्बर'.split(
             '_'
         ),
-        monthsShort: 'जन._फेब्रु._मार्च_अप्रि._मई_जुन_जुलाई._अग._सेप्ट._अक्टो._नोभे._डिसे.'.split(
-            '_'
-        ),
+        monthsShort:
+            'जन._फेब्रु._मार्च_अप्रि._मई_जुन_जुलाई._अग._सेप्ट._अक्टो._नोभे._डिसे.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'आइतबार_सोमबार_मङ्गलबार_बुधबार_बिहिबार_शुक्रबार_शनिबार'.split(
             '_'
@@ -49931,12 +50295,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var monthsShortWithDots = 'jan._feb._mrt._apr._mei_jun._jul._aug._sep._okt._nov._dec.'.split(
-            '_'
-        ),
-        monthsShortWithoutDots = 'jan_feb_mrt_apr_mei_jun_jul_aug_sep_okt_nov_dec'.split(
-            '_'
-        ),
+    var monthsShortWithDots =
+            'jan._feb._mrt._apr._mei_jun._jul._aug._sep._okt._nov._dec.'.split('_'),
+        monthsShortWithoutDots =
+            'jan_feb_mrt_apr_mei_jun_jul_aug_sep_okt_nov_dec'.split('_'),
         monthsParse = [
             /^jan/i,
             /^feb/i,
@@ -49951,7 +50313,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             /^nov/i,
             /^dec/i,
         ],
-        monthsRegex = /^(januari|februari|maart|april|mei|ju[nl]i|augustus|september|oktober|november|december|jan\.?|feb\.?|mrt\.?|apr\.?|ju[nl]\.?|aug\.?|sep\.?|okt\.?|nov\.?|dec\.?)/i;
+        monthsRegex =
+            /^(januari|februari|maart|april|mei|ju[nl]i|augustus|september|oktober|november|december|jan\.?|feb\.?|mrt\.?|apr\.?|ju[nl]\.?|aug\.?|sep\.?|okt\.?|nov\.?|dec\.?)/i;
 
     var nlBe = moment.defineLocale('nl-be', {
         months: 'januari_februari_maart_april_mei_juni_juli_augustus_september_oktober_november_december'.split(
@@ -49969,16 +50332,17 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
         monthsRegex: monthsRegex,
         monthsShortRegex: monthsRegex,
-        monthsStrictRegex: /^(januari|februari|maart|april|mei|ju[nl]i|augustus|september|oktober|november|december)/i,
-        monthsShortStrictRegex: /^(jan\.?|feb\.?|mrt\.?|apr\.?|mei|ju[nl]\.?|aug\.?|sep\.?|okt\.?|nov\.?|dec\.?)/i,
+        monthsStrictRegex:
+            /^(januari|februari|maart|april|mei|ju[nl]i|augustus|september|oktober|november|december)/i,
+        monthsShortStrictRegex:
+            /^(jan\.?|feb\.?|mrt\.?|apr\.?|mei|ju[nl]\.?|aug\.?|sep\.?|okt\.?|nov\.?|dec\.?)/i,
 
         monthsParse: monthsParse,
         longMonthsParse: monthsParse,
         shortMonthsParse: monthsParse,
 
-        weekdays: 'zondag_maandag_dinsdag_woensdag_donderdag_vrijdag_zaterdag'.split(
-            '_'
-        ),
+        weekdays:
+            'zondag_maandag_dinsdag_woensdag_donderdag_vrijdag_zaterdag'.split('_'),
         weekdaysShort: 'zo._ma._di._wo._do._vr._za.'.split('_'),
         weekdaysMin: 'zo_ma_di_wo_do_vr_za'.split('_'),
         weekdaysParseExact: true,
@@ -50053,12 +50417,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var monthsShortWithDots = 'jan._feb._mrt._apr._mei_jun._jul._aug._sep._okt._nov._dec.'.split(
-            '_'
-        ),
-        monthsShortWithoutDots = 'jan_feb_mrt_apr_mei_jun_jul_aug_sep_okt_nov_dec'.split(
-            '_'
-        ),
+    var monthsShortWithDots =
+            'jan._feb._mrt._apr._mei_jun._jul._aug._sep._okt._nov._dec.'.split('_'),
+        monthsShortWithoutDots =
+            'jan_feb_mrt_apr_mei_jun_jul_aug_sep_okt_nov_dec'.split('_'),
         monthsParse = [
             /^jan/i,
             /^feb/i,
@@ -50073,7 +50435,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             /^nov/i,
             /^dec/i,
         ],
-        monthsRegex = /^(januari|februari|maart|april|mei|ju[nl]i|augustus|september|oktober|november|december|jan\.?|feb\.?|mrt\.?|apr\.?|ju[nl]\.?|aug\.?|sep\.?|okt\.?|nov\.?|dec\.?)/i;
+        monthsRegex =
+            /^(januari|februari|maart|april|mei|ju[nl]i|augustus|september|oktober|november|december|jan\.?|feb\.?|mrt\.?|apr\.?|ju[nl]\.?|aug\.?|sep\.?|okt\.?|nov\.?|dec\.?)/i;
 
     var nl = moment.defineLocale('nl', {
         months: 'januari_februari_maart_april_mei_juni_juli_augustus_september_oktober_november_december'.split(
@@ -50091,16 +50454,17 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
         monthsRegex: monthsRegex,
         monthsShortRegex: monthsRegex,
-        monthsStrictRegex: /^(januari|februari|maart|april|mei|ju[nl]i|augustus|september|oktober|november|december)/i,
-        monthsShortStrictRegex: /^(jan\.?|feb\.?|mrt\.?|apr\.?|mei|ju[nl]\.?|aug\.?|sep\.?|okt\.?|nov\.?|dec\.?)/i,
+        monthsStrictRegex:
+            /^(januari|februari|maart|april|mei|ju[nl]i|augustus|september|oktober|november|december)/i,
+        monthsShortStrictRegex:
+            /^(jan\.?|feb\.?|mrt\.?|apr\.?|mei|ju[nl]\.?|aug\.?|sep\.?|okt\.?|nov\.?|dec\.?)/i,
 
         monthsParse: monthsParse,
         longMonthsParse: monthsParse,
         shortMonthsParse: monthsParse,
 
-        weekdays: 'zondag_maandag_dinsdag_woensdag_donderdag_vrijdag_zaterdag'.split(
-            '_'
-        ),
+        weekdays:
+            'zondag_maandag_dinsdag_woensdag_donderdag_vrijdag_zaterdag'.split('_'),
         weekdaysShort: 'zo._ma._di._wo._do._vr._za.'.split('_'),
         weekdaysMin: 'zo_ma_di_wo_do_vr_za'.split('_'),
         weekdaysParseExact: true,
@@ -50181,9 +50545,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'januar_februar_mars_april_mai_juni_juli_august_september_oktober_november_desember'.split(
             '_'
         ),
-        monthsShort: 'jan._feb._mars_apr._mai_juni_juli_aug._sep._okt._nov._des.'.split(
-            '_'
-        ),
+        monthsShort:
+            'jan._feb._mars_apr._mai_juni_juli_aug._sep._okt._nov._des.'.split('_'),
         monthsParseExact: true,
         weekdays: 'sundag_måndag_tysdag_onsdag_torsdag_fredag_laurdag'.split('_'),
         weekdaysShort: 'su._må._ty._on._to._fr._lau.'.split('_'),
@@ -50258,17 +50621,19 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     var ocLnc = moment.defineLocale('oc-lnc', {
         months: {
-            standalone: 'genièr_febrièr_març_abril_mai_junh_julhet_agost_setembre_octòbre_novembre_decembre'.split(
-                '_'
-            ),
+            standalone:
+                'genièr_febrièr_març_abril_mai_junh_julhet_agost_setembre_octòbre_novembre_decembre'.split(
+                    '_'
+                ),
             format: "de genièr_de febrièr_de març_d'abril_de mai_de junh_de julhet_d'agost_de setembre_d'octòbre_de novembre_de decembre".split(
                 '_'
             ),
             isFormat: /D[oD]?(\s)+MMMM/,
         },
-        monthsShort: 'gen._febr._març_abr._mai_junh_julh._ago._set._oct._nov._dec.'.split(
-            '_'
-        ),
+        monthsShort:
+            'gen._febr._març_abr._mai_junh_julh._ago._set._oct._nov._dec.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'dimenge_diluns_dimars_dimècres_dijòus_divendres_dissabte'.split(
             '_'
@@ -50389,9 +50754,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ਜਨਵਰੀ_ਫ਼ਰਵਰੀ_ਮਾਰਚ_ਅਪ੍ਰੈਲ_ਮਈ_ਜੂਨ_ਜੁਲਾਈ_ਅਗਸਤ_ਸਤੰਬਰ_ਅਕਤੂਬਰ_ਨਵੰਬਰ_ਦਸੰਬਰ'.split(
             '_'
         ),
-        monthsShort: 'ਜਨਵਰੀ_ਫ਼ਰਵਰੀ_ਮਾਰਚ_ਅਪ੍ਰੈਲ_ਮਈ_ਜੂਨ_ਜੁਲਾਈ_ਅਗਸਤ_ਸਤੰਬਰ_ਅਕਤੂਬਰ_ਨਵੰਬਰ_ਦਸੰਬਰ'.split(
-            '_'
-        ),
+        monthsShort:
+            'ਜਨਵਰੀ_ਫ਼ਰਵਰੀ_ਮਾਰਚ_ਅਪ੍ਰੈਲ_ਮਈ_ਜੂਨ_ਜੁਲਾਈ_ਅਗਸਤ_ਸਤੰਬਰ_ਅਕਤੂਬਰ_ਨਵੰਬਰ_ਦਸੰਬਰ'.split(
+                '_'
+            ),
         weekdays: 'ਐਤਵਾਰ_ਸੋਮਵਾਰ_ਮੰਗਲਵਾਰ_ਬੁਧਵਾਰ_ਵੀਰਵਾਰ_ਸ਼ੁੱਕਰਵਾਰ_ਸ਼ਨੀਚਰਵਾਰ'.split(
             '_'
         ),
@@ -50500,12 +50866,14 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var monthsNominative = 'styczeń_luty_marzec_kwiecień_maj_czerwiec_lipiec_sierpień_wrzesień_październik_listopad_grudzień'.split(
-            '_'
-        ),
-        monthsSubjective = 'stycznia_lutego_marca_kwietnia_maja_czerwca_lipca_sierpnia_września_października_listopada_grudnia'.split(
-            '_'
-        ),
+    var monthsNominative =
+            'styczeń_luty_marzec_kwiecień_maj_czerwiec_lipiec_sierpień_wrzesień_październik_listopad_grudzień'.split(
+                '_'
+            ),
+        monthsSubjective =
+            'stycznia_lutego_marca_kwietnia_maja_czerwca_lipca_sierpnia_września_października_listopada_grudnia'.split(
+                '_'
+            ),
         monthsParse = [
             /^sty/i,
             /^lut/i,
@@ -50559,9 +50927,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         monthsParse: monthsParse,
         longMonthsParse: monthsParse,
         shortMonthsParse: monthsParse,
-        weekdays: 'niedziela_poniedziałek_wtorek_środa_czwartek_piątek_sobota'.split(
-            '_'
-        ),
+        weekdays:
+            'niedziela_poniedziałek_wtorek_środa_czwartek_piątek_sobota'.split('_'),
         weekdaysShort: 'ndz_pon_wt_śr_czw_pt_sob'.split('_'),
         weekdaysMin: 'Nd_Pn_Wt_Śr_Cz_Pt_So'.split('_'),
         longDateFormat: {
@@ -50664,9 +51031,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'jan_fev_mar_abr_mai_jun_jul_ago_set_out_nov_dez'.split('_'),
-        weekdays: 'domingo_segunda-feira_terça-feira_quarta-feira_quinta-feira_sexta-feira_sábado'.split(
-            '_'
-        ),
+        weekdays:
+            'domingo_segunda-feira_terça-feira_quarta-feira_quinta-feira_sexta-feira_sábado'.split(
+                '_'
+            ),
         weekdaysShort: 'dom_seg_ter_qua_qui_sex_sáb'.split('_'),
         weekdaysMin: 'do_2ª_3ª_4ª_5ª_6ª_sá'.split('_'),
         weekdaysParseExact: true,
@@ -50741,9 +51109,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'jan_fev_mar_abr_mai_jun_jul_ago_set_out_nov_dez'.split('_'),
-        weekdays: 'Domingo_Segunda-feira_Terça-feira_Quarta-feira_Quinta-feira_Sexta-feira_Sábado'.split(
-            '_'
-        ),
+        weekdays:
+            'Domingo_Segunda-feira_Terça-feira_Quarta-feira_Quinta-feira_Sexta-feira_Sábado'.split(
+                '_'
+            ),
         weekdaysShort: 'Dom_Seg_Ter_Qua_Qui_Sex_Sáb'.split('_'),
         weekdaysMin: 'Do_2ª_3ª_4ª_5ª_6ª_Sá'.split('_'),
         weekdaysParseExact: true,
@@ -50841,9 +51210,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ianuarie_februarie_martie_aprilie_mai_iunie_iulie_august_septembrie_octombrie_noiembrie_decembrie'.split(
             '_'
         ),
-        monthsShort: 'ian._feb._mart._apr._mai_iun._iul._aug._sept._oct._nov._dec.'.split(
-            '_'
-        ),
+        monthsShort:
+            'ian._feb._mart._apr._mai_iun._iul._aug._sept._oct._nov._dec.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'duminică_luni_marți_miercuri_joi_vineri_sâmbătă'.split('_'),
         weekdaysShort: 'Dum_Lun_Mar_Mie_Joi_Vin_Sâm'.split('_'),
@@ -50962,23 +51332,26 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             format: 'января_февраля_марта_апреля_мая_июня_июля_августа_сентября_октября_ноября_декабря'.split(
                 '_'
             ),
-            standalone: 'январь_февраль_март_апрель_май_июнь_июль_август_сентябрь_октябрь_ноябрь_декабрь'.split(
-                '_'
-            ),
+            standalone:
+                'январь_февраль_март_апрель_май_июнь_июль_август_сентябрь_октябрь_ноябрь_декабрь'.split(
+                    '_'
+                ),
         },
         monthsShort: {
             // по CLDR именно "июл." и "июн.", но какой смысл менять букву на точку?
             format: 'янв._февр._мар._апр._мая_июня_июля_авг._сент._окт._нояб._дек.'.split(
                 '_'
             ),
-            standalone: 'янв._февр._март_апр._май_июнь_июль_авг._сент._окт._нояб._дек.'.split(
-                '_'
-            ),
+            standalone:
+                'янв._февр._март_апр._май_июнь_июль_авг._сент._окт._нояб._дек.'.split(
+                    '_'
+                ),
         },
         weekdays: {
-            standalone: 'воскресенье_понедельник_вторник_среда_четверг_пятница_суббота'.split(
-                '_'
-            ),
+            standalone:
+                'воскресенье_понедельник_вторник_среда_четверг_пятница_суббота'.split(
+                    '_'
+                ),
             format: 'воскресенье_понедельник_вторник_среду_четверг_пятницу_субботу'.split(
                 '_'
             ),
@@ -50991,16 +51364,20 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         shortMonthsParse: monthsParse,
 
         // полные названия с падежами, по три буквы, для некоторых, по 4 буквы, сокращения с точкой и без точки
-        monthsRegex: /^(январ[ья]|янв\.?|феврал[ья]|февр?\.?|марта?|мар\.?|апрел[ья]|апр\.?|ма[йя]|июн[ья]|июн\.?|июл[ья]|июл\.?|августа?|авг\.?|сентябр[ья]|сент?\.?|октябр[ья]|окт\.?|ноябр[ья]|нояб?\.?|декабр[ья]|дек\.?)/i,
+        monthsRegex:
+            /^(январ[ья]|янв\.?|феврал[ья]|февр?\.?|марта?|мар\.?|апрел[ья]|апр\.?|ма[йя]|июн[ья]|июн\.?|июл[ья]|июл\.?|августа?|авг\.?|сентябр[ья]|сент?\.?|октябр[ья]|окт\.?|ноябр[ья]|нояб?\.?|декабр[ья]|дек\.?)/i,
 
         // копия предыдущего
-        monthsShortRegex: /^(январ[ья]|янв\.?|феврал[ья]|февр?\.?|марта?|мар\.?|апрел[ья]|апр\.?|ма[йя]|июн[ья]|июн\.?|июл[ья]|июл\.?|августа?|авг\.?|сентябр[ья]|сент?\.?|октябр[ья]|окт\.?|ноябр[ья]|нояб?\.?|декабр[ья]|дек\.?)/i,
+        monthsShortRegex:
+            /^(январ[ья]|янв\.?|феврал[ья]|февр?\.?|марта?|мар\.?|апрел[ья]|апр\.?|ма[йя]|июн[ья]|июн\.?|июл[ья]|июл\.?|августа?|авг\.?|сентябр[ья]|сент?\.?|октябр[ья]|окт\.?|ноябр[ья]|нояб?\.?|декабр[ья]|дек\.?)/i,
 
         // полные названия с падежами
-        monthsStrictRegex: /^(январ[яь]|феврал[яь]|марта?|апрел[яь]|ма[яй]|июн[яь]|июл[яь]|августа?|сентябр[яь]|октябр[яь]|ноябр[яь]|декабр[яь])/i,
+        monthsStrictRegex:
+            /^(январ[яь]|феврал[яь]|марта?|апрел[яь]|ма[яй]|июн[яь]|июл[яь]|августа?|сентябр[яь]|октябр[яь]|ноябр[яь]|декабр[яь])/i,
 
         // Выражение, которое соответствует только сокращённым формам
-        monthsShortStrictRegex: /^(янв\.|февр?\.|мар[т.]|апр\.|ма[яй]|июн[ья.]|июл[ья.]|авг\.|сент?\.|окт\.|нояб?\.|дек\.)/i,
+        monthsShortStrictRegex:
+            /^(янв\.|февр?\.|мар[т.]|апр\.|ма[яй]|июн[ья.]|июл[ья.]|авг\.|сент?\.|окт\.|нояб?\.|дек\.)/i,
         longDateFormat: {
             LT: 'H:mm',
             LTS: 'H:mm:ss',
@@ -51244,12 +51621,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ođđajagemánnu_guovvamánnu_njukčamánnu_cuoŋománnu_miessemánnu_geassemánnu_suoidnemánnu_borgemánnu_čakčamánnu_golggotmánnu_skábmamánnu_juovlamánnu'.split(
             '_'
         ),
-        monthsShort: 'ođđj_guov_njuk_cuo_mies_geas_suoi_borg_čakč_golg_skáb_juov'.split(
-            '_'
-        ),
-        weekdays: 'sotnabeaivi_vuossárga_maŋŋebárga_gaskavahkku_duorastat_bearjadat_lávvardat'.split(
-            '_'
-        ),
+        monthsShort:
+            'ođđj_guov_njuk_cuo_mies_geas_suoi_borg_čakč_golg_skáb_juov'.split('_'),
+        weekdays:
+            'sotnabeaivi_vuossárga_maŋŋebárga_gaskavahkku_duorastat_bearjadat_lávvardat'.split(
+                '_'
+            ),
         weekdaysShort: 'sotn_vuos_maŋ_gask_duor_bear_láv'.split('_'),
         weekdaysMin: 's_v_m_g_d_b_L'.split('_'),
         longDateFormat: {
@@ -51325,9 +51702,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         monthsShort: 'ජන_පෙබ_මාර්_අප්_මැයි_ජූනි_ජූලි_අගෝ_සැප්_ඔක්_නොවැ_දෙසැ'.split(
             '_'
         ),
-        weekdays: 'ඉරිදා_සඳුදා_අඟහරුවාදා_බදාදා_බ්‍රහස්පතින්දා_සිකුරාදා_සෙනසුරාදා'.split(
-            '_'
-        ),
+        weekdays:
+            'ඉරිදා_සඳුදා_අඟහරුවාදා_බදාදා_බ්‍රහස්පතින්දා_සිකුරාදා_සෙනසුරාදා'.split(
+                '_'
+            ),
         weekdaysShort: 'ඉරි_සඳු_අඟ_බදා_බ්‍රහ_සිකු_සෙන'.split('_'),
         weekdaysMin: 'ඉ_ස_අ_බ_බ්‍ර_සි_සෙ'.split('_'),
         weekdaysParseExact: true,
@@ -51406,9 +51784,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js locale configuration
 
-    var months = 'január_február_marec_apríl_máj_jún_júl_august_september_október_november_december'.split(
-            '_'
-        ),
+    var months =
+            'január_február_marec_apríl_máj_jún_júl_august_september_október_november_december'.split(
+                '_'
+            ),
         monthsShort = 'jan_feb_mar_apr_máj_jún_júl_aug_sep_okt_nov_dec'.split('_');
     function plural(n) {
         return n > 1 && n < 5;
@@ -51657,9 +52036,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'januar_februar_marec_april_maj_junij_julij_avgust_september_oktober_november_december'.split(
             '_'
         ),
-        monthsShort: 'jan._feb._mar._apr._maj._jun._jul._avg._sep._okt._nov._dec.'.split(
-            '_'
-        ),
+        monthsShort:
+            'jan._feb._mar._apr._maj._jun._jul._avg._sep._okt._nov._dec.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'nedelja_ponedeljek_torek_sreda_četrtek_petek_sobota'.split('_'),
         weekdaysShort: 'ned._pon._tor._sre._čet._pet._sob.'.split('_'),
@@ -51849,32 +52229,44 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         words: {
             //Different grammatical cases
             ss: ['секунда', 'секунде', 'секунди'],
-            m: ['један минут', 'једне минуте'],
-            mm: ['минут', 'минуте', 'минута'],
+            m: ['један минут', 'једног минута'],
+            mm: ['минут', 'минута', 'минута'],
             h: ['један сат', 'једног сата'],
             hh: ['сат', 'сата', 'сати'],
+            d: ['један дан', 'једног дана'],
             dd: ['дан', 'дана', 'дана'],
+            M: ['један месец', 'једног месеца'],
             MM: ['месец', 'месеца', 'месеци'],
-            yy: ['година', 'године', 'година'],
+            y: ['једну годину', 'једне године'],
+            yy: ['годину', 'године', 'година'],
         },
         correctGrammaticalCase: function (number, wordKey) {
-            return number === 1
-                ? wordKey[0]
-                : number >= 2 && number <= 4
-                ? wordKey[1]
-                : wordKey[2];
-        },
-        translate: function (number, withoutSuffix, key) {
-            var wordKey = translator.words[key];
-            if (key.length === 1) {
-                return withoutSuffix ? wordKey[0] : wordKey[1];
-            } else {
-                return (
-                    number +
-                    ' ' +
-                    translator.correctGrammaticalCase(number, wordKey)
-                );
+            if (
+                number % 10 >= 1 &&
+                number % 10 <= 4 &&
+                (number % 100 < 10 || number % 100 >= 20)
+            ) {
+                return number % 10 === 1 ? wordKey[0] : wordKey[1];
             }
+            return wordKey[2];
+        },
+        translate: function (number, withoutSuffix, key, isFuture) {
+            var wordKey = translator.words[key],
+                word;
+
+            if (key.length === 1) {
+                // Nominativ
+                if (key === 'y' && withoutSuffix) return 'једна година';
+                return isFuture || withoutSuffix ? wordKey[0] : wordKey[1];
+            }
+
+            word = translator.correctGrammaticalCase(number, wordKey);
+            // Nominativ
+            if (key === 'yy' && withoutSuffix && word === 'годину') {
+                return number + ' година';
+            }
+
+            return number + ' ' + word;
         },
     };
 
@@ -51882,9 +52274,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'јануар_фебруар_март_април_мај_јун_јул_август_септембар_октобар_новембар_децембар'.split(
             '_'
         ),
-        monthsShort: 'јан._феб._мар._апр._мај_јун_јул_авг._сеп._окт._нов._дец.'.split(
-            '_'
-        ),
+        monthsShort:
+            'јан._феб._мар._апр._мај_јун_јул_авг._сеп._окт._нов._дец.'.split('_'),
         monthsParseExact: true,
         weekdays: 'недеља_понедељак_уторак_среда_четвртак_петак_субота'.split('_'),
         weekdaysShort: 'нед._пон._уто._сре._чет._пет._суб.'.split('_'),
@@ -51940,11 +52331,11 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             mm: translator.translate,
             h: translator.translate,
             hh: translator.translate,
-            d: 'дан',
+            d: translator.translate,
             dd: translator.translate,
-            M: 'месец',
+            M: translator.translate,
             MM: translator.translate,
-            y: 'годину',
+            y: translator.translate,
             yy: translator.translate,
         },
         dayOfMonthOrdinalParse: /\d{1,2}\./,
@@ -51985,32 +52376,44 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         words: {
             //Different grammatical cases
             ss: ['sekunda', 'sekunde', 'sekundi'],
-            m: ['jedan minut', 'jedne minute'],
-            mm: ['minut', 'minute', 'minuta'],
+            m: ['jedan minut', 'jednog minuta'],
+            mm: ['minut', 'minuta', 'minuta'],
             h: ['jedan sat', 'jednog sata'],
             hh: ['sat', 'sata', 'sati'],
+            d: ['jedan dan', 'jednog dana'],
             dd: ['dan', 'dana', 'dana'],
+            M: ['jedan mesec', 'jednog meseca'],
             MM: ['mesec', 'meseca', 'meseci'],
-            yy: ['godina', 'godine', 'godina'],
+            y: ['jednu godinu', 'jedne godine'],
+            yy: ['godinu', 'godine', 'godina'],
         },
         correctGrammaticalCase: function (number, wordKey) {
-            return number === 1
-                ? wordKey[0]
-                : number >= 2 && number <= 4
-                ? wordKey[1]
-                : wordKey[2];
-        },
-        translate: function (number, withoutSuffix, key) {
-            var wordKey = translator.words[key];
-            if (key.length === 1) {
-                return withoutSuffix ? wordKey[0] : wordKey[1];
-            } else {
-                return (
-                    number +
-                    ' ' +
-                    translator.correctGrammaticalCase(number, wordKey)
-                );
+            if (
+                number % 10 >= 1 &&
+                number % 10 <= 4 &&
+                (number % 100 < 10 || number % 100 >= 20)
+            ) {
+                return number % 10 === 1 ? wordKey[0] : wordKey[1];
             }
+            return wordKey[2];
+        },
+        translate: function (number, withoutSuffix, key, isFuture) {
+            var wordKey = translator.words[key],
+                word;
+
+            if (key.length === 1) {
+                // Nominativ
+                if (key === 'y' && withoutSuffix) return 'jedna godina';
+                return isFuture || withoutSuffix ? wordKey[0] : wordKey[1];
+            }
+
+            word = translator.correctGrammaticalCase(number, wordKey);
+            // Nominativ
+            if (key === 'yy' && withoutSuffix && word === 'godinu') {
+                return number + ' godina';
+            }
+
+            return number + ' ' + word;
         },
     };
 
@@ -52018,9 +52421,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'januar_februar_mart_april_maj_jun_jul_avgust_septembar_oktobar_novembar_decembar'.split(
             '_'
         ),
-        monthsShort: 'jan._feb._mar._apr._maj_jun_jul_avg._sep._okt._nov._dec.'.split(
-            '_'
-        ),
+        monthsShort:
+            'jan._feb._mar._apr._maj_jun_jul_avg._sep._okt._nov._dec.'.split('_'),
         monthsParseExact: true,
         weekdays: 'nedelja_ponedeljak_utorak_sreda_četvrtak_petak_subota'.split(
             '_'
@@ -52078,11 +52480,11 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             mm: translator.translate,
             h: translator.translate,
             hh: translator.translate,
-            d: 'dan',
+            d: translator.translate,
             dd: translator.translate,
-            M: 'mesec',
+            M: translator.translate,
             MM: translator.translate,
-            y: 'godinu',
+            y: translator.translate,
             yy: translator.translate,
         },
         dayOfMonthOrdinalParse: /\d{1,2}\./,
@@ -52123,9 +52525,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'Bhi_Ina_Inu_Mab_Ink_Inh_Kho_Igc_Iny_Imp_Lwe_Igo'.split('_'),
-        weekdays: 'Lisontfo_Umsombuluko_Lesibili_Lesitsatfu_Lesine_Lesihlanu_Umgcibelo'.split(
-            '_'
-        ),
+        weekdays:
+            'Lisontfo_Umsombuluko_Lesibili_Lesitsatfu_Lesine_Lesihlanu_Umgcibelo'.split(
+                '_'
+            ),
         weekdaysShort: 'Lis_Umb_Lsb_Les_Lsi_Lsh_Umg'.split('_'),
         weekdaysMin: 'Li_Us_Lb_Lt_Ls_Lh_Ug'.split('_'),
         weekdaysParseExact: true,
@@ -52314,9 +52717,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'Jan_Feb_Mac_Apr_Mei_Jun_Jul_Ago_Sep_Okt_Nov_Des'.split('_'),
-        weekdays: 'Jumapili_Jumatatu_Jumanne_Jumatano_Alhamisi_Ijumaa_Jumamosi'.split(
-            '_'
-        ),
+        weekdays:
+            'Jumapili_Jumatatu_Jumanne_Jumatano_Alhamisi_Ijumaa_Jumamosi'.split(
+                '_'
+            ),
         weekdaysShort: 'Jpl_Jtat_Jnne_Jtan_Alh_Ijm_Jmos'.split('_'),
         weekdaysMin: 'J2_J3_J4_J5_Al_Ij_J1'.split('_'),
         weekdaysParseExact: true,
@@ -52412,12 +52816,14 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ஜனவரி_பிப்ரவரி_மார்ச்_ஏப்ரல்_மே_ஜூன்_ஜூலை_ஆகஸ்ட்_செப்டெம்பர்_அக்டோபர்_நவம்பர்_டிசம்பர்'.split(
             '_'
         ),
-        monthsShort: 'ஜனவரி_பிப்ரவரி_மார்ச்_ஏப்ரல்_மே_ஜூன்_ஜூலை_ஆகஸ்ட்_செப்டெம்பர்_அக்டோபர்_நவம்பர்_டிசம்பர்'.split(
-            '_'
-        ),
-        weekdays: 'ஞாயிற்றுக்கிழமை_திங்கட்கிழமை_செவ்வாய்கிழமை_புதன்கிழமை_வியாழக்கிழமை_வெள்ளிக்கிழமை_சனிக்கிழமை'.split(
-            '_'
-        ),
+        monthsShort:
+            'ஜனவரி_பிப்ரவரி_மார்ச்_ஏப்ரல்_மே_ஜூன்_ஜூலை_ஆகஸ்ட்_செப்டெம்பர்_அக்டோபர்_நவம்பர்_டிசம்பர்'.split(
+                '_'
+            ),
+        weekdays:
+            'ஞாயிற்றுக்கிழமை_திங்கட்கிழமை_செவ்வாய்கிழமை_புதன்கிழமை_வியாழக்கிழமை_வெள்ளிக்கிழமை_சனிக்கிழமை'.split(
+                '_'
+            ),
         weekdaysShort: 'ஞாயிறு_திங்கள்_செவ்வாய்_புதன்_வியாழன்_வெள்ளி_சனி'.split(
             '_'
         ),
@@ -52536,13 +52942,15 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'జనవరి_ఫిబ్రవరి_మార్చి_ఏప్రిల్_మే_జూన్_జులై_ఆగస్టు_సెప్టెంబర్_అక్టోబర్_నవంబర్_డిసెంబర్'.split(
             '_'
         ),
-        monthsShort: 'జన._ఫిబ్ర._మార్చి_ఏప్రి._మే_జూన్_జులై_ఆగ._సెప్._అక్టో._నవ._డిసె.'.split(
-            '_'
-        ),
+        monthsShort:
+            'జన._ఫిబ్ర._మార్చి_ఏప్రి._మే_జూన్_జులై_ఆగ._సెప్._అక్టో._నవ._డిసె.'.split(
+                '_'
+            ),
         monthsParseExact: true,
-        weekdays: 'ఆదివారం_సోమవారం_మంగళవారం_బుధవారం_గురువారం_శుక్రవారం_శనివారం'.split(
-            '_'
-        ),
+        weekdays:
+            'ఆదివారం_సోమవారం_మంగళవారం_బుధవారం_గురువారం_శుక్రవారం_శనివారం'.split(
+                '_'
+            ),
         weekdaysShort: 'ఆది_సోమ_మంగళ_బుధ_గురు_శుక్ర_శని'.split('_'),
         weekdaysMin: 'ఆ_సో_మం_బు_గు_శు_శ'.split('_'),
         longDateFormat: {
@@ -52756,9 +53164,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             format: 'январи_феврали_марти_апрели_майи_июни_июли_августи_сентябри_октябри_ноябри_декабри'.split(
                 '_'
             ),
-            standalone: 'январ_феврал_март_апрел_май_июн_июл_август_сентябр_октябр_ноябр_декабр'.split(
-                '_'
-            ),
+            standalone:
+                'январ_феврал_март_апрел_май_июн_июл_август_сентябр_октябр_ноябр_декабр'.split(
+                    '_'
+                ),
         },
         monthsShort: 'янв_фев_мар_апр_май_июн_июл_авг_сен_окт_ноя_дек'.split('_'),
         weekdays: 'якшанбе_душанбе_сешанбе_чоршанбе_панҷшанбе_ҷумъа_шанбе'.split(
@@ -52866,9 +53275,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'มกราคม_กุมภาพันธ์_มีนาคม_เมษายน_พฤษภาคม_มิถุนายน_กรกฎาคม_สิงหาคม_กันยายน_ตุลาคม_พฤศจิกายน_ธันวาคม'.split(
             '_'
         ),
-        monthsShort: 'ม.ค._ก.พ._มี.ค._เม.ย._พ.ค._มิ.ย._ก.ค._ส.ค._ก.ย._ต.ค._พ.ย._ธ.ค.'.split(
-            '_'
-        ),
+        monthsShort:
+            'ม.ค._ก.พ._มี.ค._เม.ย._พ.ค._มิ.ย._ก.ค._ส.ค._ก.ย._ต.ค._พ.ย._ธ.ค.'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'อาทิตย์_จันทร์_อังคาร_พุธ_พฤหัสบดี_ศุกร์_เสาร์'.split('_'),
         weekdaysShort: 'อาทิตย์_จันทร์_อังคาร_พุธ_พฤหัส_ศุกร์_เสาร์'.split('_'), // yes, three characters difference
@@ -53201,19 +53611,18 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'tera’ jar wa’_tera’ jar cha’_tera’ jar wej_tera’ jar loS_tera’ jar vagh_tera’ jar jav_tera’ jar Soch_tera’ jar chorgh_tera’ jar Hut_tera’ jar wa’maH_tera’ jar wa’maH wa’_tera’ jar wa’maH cha’'.split(
             '_'
         ),
-        monthsShort: 'jar wa’_jar cha’_jar wej_jar loS_jar vagh_jar jav_jar Soch_jar chorgh_jar Hut_jar wa’maH_jar wa’maH wa’_jar wa’maH cha’'.split(
-            '_'
-        ),
+        monthsShort:
+            'jar wa’_jar cha’_jar wej_jar loS_jar vagh_jar jav_jar Soch_jar chorgh_jar Hut_jar wa’maH_jar wa’maH wa’_jar wa’maH cha’'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'lojmItjaj_DaSjaj_povjaj_ghItlhjaj_loghjaj_buqjaj_ghInjaj'.split(
             '_'
         ),
-        weekdaysShort: 'lojmItjaj_DaSjaj_povjaj_ghItlhjaj_loghjaj_buqjaj_ghInjaj'.split(
-            '_'
-        ),
-        weekdaysMin: 'lojmItjaj_DaSjaj_povjaj_ghItlhjaj_loghjaj_buqjaj_ghInjaj'.split(
-            '_'
-        ),
+        weekdaysShort:
+            'lojmItjaj_DaSjaj_povjaj_ghItlhjaj_loghjaj_buqjaj_ghInjaj'.split('_'),
+        weekdaysMin:
+            'lojmItjaj_DaSjaj_povjaj_ghItlhjaj_loghjaj_buqjaj_ghInjaj'.split('_'),
         longDateFormat: {
             LT: 'HH:mm',
             LTS: 'HH:mm:ss',
@@ -53309,7 +53718,7 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         weekdays: 'Pazar_Pazartesi_Salı_Çarşamba_Perşembe_Cuma_Cumartesi'.split(
             '_'
         ),
-        weekdaysShort: 'Paz_Pts_Sal_Çar_Per_Cum_Cts'.split('_'),
+        weekdaysShort: 'Paz_Pzt_Sal_Çar_Per_Cum_Cmt'.split('_'),
         weekdaysMin: 'Pz_Pt_Sa_Ça_Pe_Cu_Ct'.split('_'),
         meridiem: function (hours, minutes, isLower) {
             if (hours < 12) {
@@ -53518,9 +53927,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'innayr_brˤayrˤ_marˤsˤ_ibrir_mayyw_ywnyw_ywlywz_ɣwšt_šwtanbir_ktˤwbrˤ_nwwanbir_dwjnbir'.split(
             '_'
         ),
-        monthsShort: 'innayr_brˤayrˤ_marˤsˤ_ibrir_mayyw_ywnyw_ywlywz_ɣwšt_šwtanbir_ktˤwbrˤ_nwwanbir_dwjnbir'.split(
-            '_'
-        ),
+        monthsShort:
+            'innayr_brˤayrˤ_marˤsˤ_ibrir_mayyw_ywnyw_ywlywz_ɣwšt_šwtanbir_ktˤwbrˤ_nwwanbir_dwjnbir'.split(
+                '_'
+            ),
         weekdays: 'asamas_aynas_asinas_akras_akwas_asimwas_asiḍyas'.split('_'),
         weekdaysShort: 'asamas_aynas_asinas_akras_akwas_asimwas_asiḍyas'.split('_'),
         weekdaysMin: 'asamas_aynas_asinas_akras_akwas_asimwas_asiḍyas'.split('_'),
@@ -53591,9 +54001,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'ⵉⵏⵏⴰⵢⵔ_ⴱⵕⴰⵢⵕ_ⵎⴰⵕⵚ_ⵉⴱⵔⵉⵔ_ⵎⴰⵢⵢⵓ_ⵢⵓⵏⵢⵓ_ⵢⵓⵍⵢⵓⵣ_ⵖⵓⵛⵜ_ⵛⵓⵜⴰⵏⴱⵉⵔ_ⴽⵟⵓⴱⵕ_ⵏⵓⵡⴰⵏⴱⵉⵔ_ⴷⵓⵊⵏⴱⵉⵔ'.split(
             '_'
         ),
-        monthsShort: 'ⵉⵏⵏⴰⵢⵔ_ⴱⵕⴰⵢⵕ_ⵎⴰⵕⵚ_ⵉⴱⵔⵉⵔ_ⵎⴰⵢⵢⵓ_ⵢⵓⵏⵢⵓ_ⵢⵓⵍⵢⵓⵣ_ⵖⵓⵛⵜ_ⵛⵓⵜⴰⵏⴱⵉⵔ_ⴽⵟⵓⴱⵕ_ⵏⵓⵡⴰⵏⴱⵉⵔ_ⴷⵓⵊⵏⴱⵉⵔ'.split(
-            '_'
-        ),
+        monthsShort:
+            'ⵉⵏⵏⴰⵢⵔ_ⴱⵕⴰⵢⵕ_ⵎⴰⵕⵚ_ⵉⴱⵔⵉⵔ_ⵎⴰⵢⵢⵓ_ⵢⵓⵏⵢⵓ_ⵢⵓⵍⵢⵓⵣ_ⵖⵓⵛⵜ_ⵛⵓⵜⴰⵏⴱⵉⵔ_ⴽⵟⵓⴱⵕ_ⵏⵓⵡⴰⵏⴱⵉⵔ_ⴷⵓⵊⵏⴱⵉⵔ'.split(
+                '_'
+            ),
         weekdays: 'ⴰⵙⴰⵎⴰⵙ_ⴰⵢⵏⴰⵙ_ⴰⵙⵉⵏⴰⵙ_ⴰⴽⵔⴰⵙ_ⴰⴽⵡⴰⵙ_ⴰⵙⵉⵎⵡⴰⵙ_ⴰⵙⵉⴹⵢⴰⵙ'.split('_'),
         weekdaysShort: 'ⴰⵙⴰⵎⴰⵙ_ⴰⵢⵏⴰⵙ_ⴰⵙⵉⵏⴰⵙ_ⴰⴽⵔⴰⵙ_ⴰⴽⵡⴰⵙ_ⴰⵙⵉⵎⵡⴰⵙ_ⴰⵙⵉⴹⵢⴰⵙ'.split('_'),
         weekdaysMin: 'ⴰⵙⴰⵎⴰⵙ_ⴰⵢⵏⴰⵙ_ⴰⵙⵉⵏⴰⵙ_ⴰⴽⵔⴰⵙ_ⴰⴽⵡⴰⵙ_ⴰⵙⵉⵎⵡⴰⵙ_ⴰⵙⵉⴹⵢⴰⵙ'.split('_'),
@@ -53664,9 +54075,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'يانۋار_فېۋرال_مارت_ئاپرېل_ماي_ئىيۇن_ئىيۇل_ئاۋغۇست_سېنتەبىر_ئۆكتەبىر_نويابىر_دېكابىر'.split(
             '_'
         ),
-        monthsShort: 'يانۋار_فېۋرال_مارت_ئاپرېل_ماي_ئىيۇن_ئىيۇل_ئاۋغۇست_سېنتەبىر_ئۆكتەبىر_نويابىر_دېكابىر'.split(
-            '_'
-        ),
+        monthsShort:
+            'يانۋار_فېۋرال_مارت_ئاپرېل_ماي_ئىيۇن_ئىيۇل_ئاۋغۇست_سېنتەبىر_ئۆكتەبىر_نويابىر_دېكابىر'.split(
+                '_'
+            ),
         weekdays: 'يەكشەنبە_دۈشەنبە_سەيشەنبە_چارشەنبە_پەيشەنبە_جۈمە_شەنبە'.split(
             '_'
         ),
@@ -53818,15 +54230,18 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
     }
     function weekdaysCaseReplace(m, format) {
         var weekdays = {
-                nominative: 'неділя_понеділок_вівторок_середа_четвер_п’ятниця_субота'.split(
-                    '_'
-                ),
-                accusative: 'неділю_понеділок_вівторок_середу_четвер_п’ятницю_суботу'.split(
-                    '_'
-                ),
-                genitive: 'неділі_понеділка_вівторка_середи_четверга_п’ятниці_суботи'.split(
-                    '_'
-                ),
+                nominative:
+                    'неділя_понеділок_вівторок_середа_четвер_п’ятниця_субота'.split(
+                        '_'
+                    ),
+                accusative:
+                    'неділю_понеділок_вівторок_середу_четвер_п’ятницю_суботу'.split(
+                        '_'
+                    ),
+                genitive:
+                    'неділі_понеділка_вівторка_середи_четверга_п’ятниці_суботи'.split(
+                        '_'
+                    ),
             },
             nounCase;
 
@@ -53857,9 +54272,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             format: 'січня_лютого_березня_квітня_травня_червня_липня_серпня_вересня_жовтня_листопада_грудня'.split(
                 '_'
             ),
-            standalone: 'січень_лютий_березень_квітень_травень_червень_липень_серпень_вересень_жовтень_листопад_грудень'.split(
-                '_'
-            ),
+            standalone:
+                'січень_лютий_березень_квітень_травень_червень_липень_серпень_вересень_жовтень_листопад_грудень'.split(
+                    '_'
+                ),
         },
         monthsShort: 'січ_лют_бер_квіт_трав_черв_лип_серп_вер_жовт_лист_груд'.split(
             '_'
@@ -54080,9 +54496,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             '_'
         ),
         monthsShort: 'Yan_Fev_Mar_Apr_May_Iyun_Iyul_Avg_Sen_Okt_Noy_Dek'.split('_'),
-        weekdays: 'Yakshanba_Dushanba_Seshanba_Chorshanba_Payshanba_Juma_Shanba'.split(
-            '_'
-        ),
+        weekdays:
+            'Yakshanba_Dushanba_Seshanba_Chorshanba_Payshanba_Juma_Shanba'.split(
+                '_'
+            ),
         weekdaysShort: 'Yak_Dush_Sesh_Chor_Pay_Jum_Shan'.split('_'),
         weekdaysMin: 'Ya_Du_Se_Cho_Pa_Ju_Sha'.split('_'),
         longDateFormat: {
@@ -54224,9 +54641,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'tháng 1_tháng 2_tháng 3_tháng 4_tháng 5_tháng 6_tháng 7_tháng 8_tháng 9_tháng 10_tháng 11_tháng 12'.split(
             '_'
         ),
-        monthsShort: 'Thg 01_Thg 02_Thg 03_Thg 04_Thg 05_Thg 06_Thg 07_Thg 08_Thg 09_Thg 10_Thg 11_Thg 12'.split(
-            '_'
-        ),
+        monthsShort:
+            'Thg 01_Thg 02_Thg 03_Thg 04_Thg 05_Thg 06_Thg 07_Thg 08_Thg 09_Thg 10_Thg 11_Thg 12'.split(
+                '_'
+            ),
         monthsParseExact: true,
         weekdays: 'chủ nhật_thứ hai_thứ ba_thứ tư_thứ năm_thứ sáu_thứ bảy'.split(
             '_'
@@ -54322,13 +54740,15 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         months: 'J~áñúá~rý_F~ébrú~árý_~Márc~h_Áp~ríl_~Máý_~Júñé~_Júl~ý_Áú~gúst~_Sép~témb~ér_Ó~ctób~ér_Ñ~óvém~bér_~Décé~mbér'.split(
             '_'
         ),
-        monthsShort: 'J~áñ_~Féb_~Már_~Ápr_~Máý_~Júñ_~Júl_~Áúg_~Sép_~Óct_~Ñóv_~Déc'.split(
-            '_'
-        ),
+        monthsShort:
+            'J~áñ_~Féb_~Már_~Ápr_~Máý_~Júñ_~Júl_~Áúg_~Sép_~Óct_~Ñóv_~Déc'.split(
+                '_'
+            ),
         monthsParseExact: true,
-        weekdays: 'S~úñdá~ý_Mó~ñdáý~_Túé~sdáý~_Wéd~ñésd~áý_T~húrs~dáý_~Fríd~áý_S~átúr~dáý'.split(
-            '_'
-        ),
+        weekdays:
+            'S~úñdá~ý_Mó~ñdáý~_Túé~sdáý~_Wéd~ñésd~áý_T~húrs~dáý_~Fríd~áý_S~átúr~dáý'.split(
+                '_'
+            ),
         weekdaysShort: 'S~úñ_~Móñ_~Túé_~Wéd_~Thú_~Frí_~Sát'.split('_'),
         weekdaysMin: 'S~ú_Mó~_Tú_~Wé_T~h_Fr~_Sá'.split('_'),
         weekdaysParseExact: true,
@@ -54972,7 +55392,7 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(module) {var require;//! moment.js
-//! version : 2.29.1
+//! version : 2.29.4
 //! authors : Tim Wood, Iskren Chernev, Moment.js contributors
 //! license : MIT
 //! momentjs.com
@@ -55048,8 +55468,9 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     function map(arr, fn) {
         var res = [],
-            i;
-        for (i = 0; i < arr.length; ++i) {
+            i,
+            arrLen = arr.length;
+        for (i = 0; i < arrLen; ++i) {
             res.push(fn(arr[i], i));
         }
         return res;
@@ -55178,7 +55599,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         updateInProgress = false;
 
     function copyConfig(to, from) {
-        var i, prop, val;
+        var i,
+            prop,
+            val,
+            momentPropertiesLen = momentProperties.length;
 
         if (!isUndefined(from._isAMomentObject)) {
             to._isAMomentObject = from._isAMomentObject;
@@ -55211,8 +55635,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             to._locale = from._locale;
         }
 
-        if (momentProperties.length > 0) {
-            for (i = 0; i < momentProperties.length; i++) {
+        if (momentPropertiesLen > 0) {
+            for (i = 0; i < momentPropertiesLen; i++) {
                 prop = momentProperties[i];
                 val = from[prop];
                 if (!isUndefined(val)) {
@@ -55267,8 +55691,9 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
                 var args = [],
                     arg,
                     i,
-                    key;
-                for (i = 0; i < arguments.length; i++) {
+                    key,
+                    argLen = arguments.length;
+                for (i = 0; i < argLen; i++) {
                     arg = '';
                     if (typeof arguments[i] === 'object') {
                         arg += '\n[' + i + '] ';
@@ -55418,7 +55843,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         );
     }
 
-    var formattingTokens = /(\[[^\[]*\])|(\\)?([Hh]mm(ss)?|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|Qo?|N{1,5}|YYYYYY|YYYYY|YYYY|YY|y{2,4}|yo?|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|kk?|mm?|ss?|S{1,9}|x|X|zz?|ZZ?|.)/g,
+    var formattingTokens =
+            /(\[[^\[]*\])|(\\)?([Hh]mm(ss)?|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|Qo?|N{1,5}|YYYYYY|YYYYY|YYYY|YY|y{2,4}|yo?|gg(ggg?)?|GG(GGG?)?|e|E|a|A|hh?|HH?|kk?|mm?|ss?|S{1,9}|x|X|zz?|ZZ?|.)/g,
         localFormattingTokens = /(\[[^\[]*\])|(\\)?(LTS|LT|LL?L?L?|l{1,4})/g,
         formatFunctions = {},
         formatTokenFunctions = {};
@@ -55722,8 +56148,9 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         if (typeof units === 'object') {
             units = normalizeObjectUnits(units);
             var prioritized = getPrioritizedUnits(units),
-                i;
-            for (i = 0; i < prioritized.length; i++) {
+                i,
+                prioritizedLen = prioritized.length;
+            for (i = 0; i < prioritizedLen; i++) {
                 this[prioritized[i].unit](units[prioritized[i].unit]);
             }
         } else {
@@ -55753,7 +56180,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         matchTimestamp = /[+-]?\d+(\.\d{1,3})?/, // 123456789 123456789.123
         // any word (or two) characters or numbers including two/three word month in arabic.
         // includes scottish gaelic two word and hyphenated months
-        matchWord = /[0-9]{0,256}['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFF07\uFF10-\uFFEF]{1,256}|[\u0600-\u06FF\/]{1,256}(\s*?[\u0600-\u06FF]{1,256}){1,2}/i,
+        matchWord =
+            /[0-9]{0,256}['a-z\u00A0-\u05FF\u0700-\uD7FF\uF900-\uFDCF\uFDF0-\uFF07\uFF10-\uFFEF]{1,256}|[\u0600-\u06FF\/]{1,256}(\s*?[\u0600-\u06FF]{1,256}){1,2}/i,
         regexes;
 
     regexes = {};
@@ -55779,15 +56207,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         return regexEscape(
             s
                 .replace('\\', '')
-                .replace(/\\(\[)|\\(\])|\[([^\]\[]*)\]|\\(.)/g, function (
-                    matched,
-                    p1,
-                    p2,
-                    p3,
-                    p4
-                ) {
-                    return p1 || p2 || p3 || p4;
-                })
+                .replace(
+                    /\\(\[)|\\(\])|\[([^\]\[]*)\]|\\(.)/g,
+                    function (matched, p1, p2, p3, p4) {
+                        return p1 || p2 || p3 || p4;
+                    }
+                )
         );
     }
 
@@ -55799,7 +56224,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     function addParseToken(token, callback) {
         var i,
-            func = callback;
+            func = callback,
+            tokenLen;
         if (typeof token === 'string') {
             token = [token];
         }
@@ -55808,7 +56234,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
                 array[callback] = toInt(input);
             };
         }
-        for (i = 0; i < token.length; i++) {
+        tokenLen = token.length;
+        for (i = 0; i < tokenLen; i++) {
             tokens[token[i]] = func;
         }
     }
@@ -55919,12 +56346,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     // LOCALES
 
-    var defaultLocaleMonths = 'January_February_March_April_May_June_July_August_September_October_November_December'.split(
-            '_'
-        ),
-        defaultLocaleMonthsShort = 'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split(
-            '_'
-        ),
+    var defaultLocaleMonths =
+            'January_February_March_April_May_June_July_August_September_October_November_December'.split(
+                '_'
+            ),
+        defaultLocaleMonthsShort =
+            'Jan_Feb_Mar_Apr_May_Jun_Jul_Aug_Sep_Oct_Nov_Dec'.split('_'),
         MONTHS_IN_FORMAT = /D[oD]?(\[[^\[\]]*\]|\s)+MMMM?/,
         defaultMonthsShortRegex = matchWord,
         defaultMonthsRegex = matchWord;
@@ -56366,14 +56793,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
     addRegexToken('W', match1to2);
     addRegexToken('WW', match1to2, match2);
 
-    addWeekParseToken(['w', 'ww', 'W', 'WW'], function (
-        input,
-        week,
-        config,
-        token
-    ) {
-        week[token.substr(0, 1)] = toInt(input);
-    });
+    addWeekParseToken(
+        ['w', 'ww', 'W', 'WW'],
+        function (input, week, config, token) {
+            week[token.substr(0, 1)] = toInt(input);
+        }
+    );
 
     // HELPERS
 
@@ -56498,9 +56923,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         return ws.slice(n, 7).concat(ws.slice(0, n));
     }
 
-    var defaultLocaleWeekdays = 'Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday'.split(
-            '_'
-        ),
+    var defaultLocaleWeekdays =
+            'Sunday_Monday_Tuesday_Wednesday_Thursday_Friday_Saturday'.split('_'),
         defaultLocaleWeekdaysShort = 'Sun_Mon_Tue_Wed_Thu_Fri_Sat'.split('_'),
         defaultLocaleWeekdaysMin = 'Su_Mo_Tu_We_Th_Fr_Sa'.split('_'),
         defaultWeekdaysRegex = matchWord,
@@ -57048,6 +57472,11 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         return globalLocale;
     }
 
+    function isLocaleNameSane(name) {
+        // Prevent names that look like filesystem paths, i.e contain '/' or '\'
+        return name.match('^[^/\\\\]*$') != null;
+    }
+
     function loadLocale(name) {
         var oldLocale = null,
             aliasedRequire;
@@ -57056,7 +57485,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             locales[name] === undefined &&
             typeof module !== 'undefined' &&
             module &&
-            module.exports
+            module.exports &&
+            isLocaleNameSane(name)
         ) {
             try {
                 oldLocale = globalLocale._abbr;
@@ -57273,8 +57703,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     // iso 8601 regex
     // 0000-00-00 0000-W00 or 0000-W00-0 + T + 00 or 00:00 or 00:00:00 or 00:00:00.000 + +00:00 or +0000 or +00)
-    var extendedIsoRegex = /^\s*((?:[+-]\d{6}|\d{4})-(?:\d\d-\d\d|W\d\d-\d|W\d\d|\d\d\d|\d\d))(?:(T| )(\d\d(?::\d\d(?::\d\d(?:[.,]\d+)?)?)?)([+-]\d\d(?::?\d\d)?|\s*Z)?)?$/,
-        basicIsoRegex = /^\s*((?:[+-]\d{6}|\d{4})(?:\d\d\d\d|W\d\d\d|W\d\d|\d\d\d|\d\d|))(?:(T| )(\d\d(?:\d\d(?:\d\d(?:[.,]\d+)?)?)?)([+-]\d\d(?::?\d\d)?|\s*Z)?)?$/,
+    var extendedIsoRegex =
+            /^\s*((?:[+-]\d{6}|\d{4})-(?:\d\d-\d\d|W\d\d-\d|W\d\d|\d\d\d|\d\d))(?:(T| )(\d\d(?::\d\d(?::\d\d(?:[.,]\d+)?)?)?)([+-]\d\d(?::?\d\d)?|\s*Z)?)?$/,
+        basicIsoRegex =
+            /^\s*((?:[+-]\d{6}|\d{4})(?:\d\d\d\d|W\d\d\d|W\d\d|\d\d\d|\d\d|))(?:(T| )(\d\d(?:\d\d(?:\d\d(?:[.,]\d+)?)?)?)([+-]\d\d(?::?\d\d)?|\s*Z)?)?$/,
         tzRegex = /Z|[+-]\d\d(?::?\d\d)?/,
         isoDates = [
             ['YYYYYY-MM-DD', /[+-]\d{6}-\d\d-\d\d/],
@@ -57305,7 +57737,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         ],
         aspNetJsonRegex = /^\/?Date\((-?\d+)/i,
         // RFC 2822 regex: For details see https://tools.ietf.org/html/rfc2822#section-3.3
-        rfc2822 = /^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s)?(\d{1,2})\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(\d{2,4})\s(\d\d):(\d\d)(?::(\d\d))?\s(?:(UT|GMT|[ECMP][SD]T)|([Zz])|([+-]\d{4}))$/,
+        rfc2822 =
+            /^(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s)?(\d{1,2})\s(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s(\d{2,4})\s(\d\d):(\d\d)(?::(\d\d))?\s(?:(UT|GMT|[ECMP][SD]T)|([Zz])|([+-]\d{4}))$/,
         obsOffsets = {
             UT: 0,
             GMT: 0,
@@ -57328,12 +57761,13 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             allowTime,
             dateFormat,
             timeFormat,
-            tzFormat;
+            tzFormat,
+            isoDatesLen = isoDates.length,
+            isoTimesLen = isoTimes.length;
 
         if (match) {
             getParsingFlags(config).iso = true;
-
-            for (i = 0, l = isoDates.length; i < l; i++) {
+            for (i = 0, l = isoDatesLen; i < l; i++) {
                 if (isoDates[i][1].exec(match[1])) {
                     dateFormat = isoDates[i][0];
                     allowTime = isoDates[i][2] !== false;
@@ -57345,7 +57779,7 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
                 return;
             }
             if (match[3]) {
-                for (i = 0, l = isoTimes.length; i < l; i++) {
+                for (i = 0, l = isoTimesLen; i < l; i++) {
                     if (isoTimes[i][1].exec(match[3])) {
                         // match[2] should be 'T' or space
                         timeFormat = (match[2] || ' ') + isoTimes[i][0];
@@ -57412,7 +57846,7 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
     function preprocessRFC2822(s) {
         // Remove comments and folding whitespace and replace multiple-spaces with a single space
         return s
-            .replace(/\([^)]*\)|[\n\t]/g, ' ')
+            .replace(/\([^()]*\)|[\n\t]/g, ' ')
             .replace(/(\s\s+)/g, ' ')
             .replace(/^\s\s*/, '')
             .replace(/\s\s*$/, '');
@@ -57725,12 +58159,13 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             skipped,
             stringLength = string.length,
             totalParsedInputLength = 0,
-            era;
+            era,
+            tokenLen;
 
         tokens =
             expandFormat(config._f, config._locale).match(formattingTokens) || [];
-
-        for (i = 0; i < tokens.length; i++) {
+        tokenLen = tokens.length;
+        for (i = 0; i < tokenLen; i++) {
             token = tokens[i];
             parsedInput = (string.match(getParseRegexForToken(token, config)) ||
                 [])[0];
@@ -57825,15 +58260,16 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             i,
             currentScore,
             validFormatFound,
-            bestFormatIsValid = false;
+            bestFormatIsValid = false,
+            configfLen = config._f.length;
 
-        if (config._f.length === 0) {
+        if (configfLen === 0) {
             getParsingFlags(config).invalidFormat = true;
             config._d = new Date(NaN);
             return;
         }
 
-        for (i = 0; i < config._f.length; i++) {
+        for (i = 0; i < configfLen; i++) {
             currentScore = 0;
             validFormatFound = false;
             tempConfig = copyConfig({}, config);
@@ -58074,7 +58510,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
     function isDurationValid(m) {
         var key,
             unitHasDecimal = false,
-            i;
+            i,
+            orderLen = ordering.length;
         for (key in m) {
             if (
                 hasOwnProp(m, key) &&
@@ -58087,7 +58524,7 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
             }
         }
 
-        for (i = 0; i < ordering.length; ++i) {
+        for (i = 0; i < orderLen; ++i) {
             if (m[ordering[i]]) {
                 if (unitHasDecimal) {
                     return false; // only allow non-integers for smallest unit
@@ -58412,7 +58849,8 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
         // from http://docs.closure-library.googlecode.com/git/closure_goog_date_date.js.source.html
         // somewhat more in line with 4.4.3.2 2004 spec, but allows decimal anywhere
         // and further modified to allow for strings containing both week and day
-        isoRegex = /^(-|\+)?P(?:([-+]?[0-9,.]*)Y)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)W)?(?:([-+]?[0-9,.]*)D)?(?:T(?:([-+]?[0-9,.]*)H)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)S)?)?$/;
+        isoRegex =
+            /^(-|\+)?P(?:([-+]?[0-9,.]*)Y)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)W)?(?:([-+]?[0-9,.]*)D)?(?:T(?:([-+]?[0-9,.]*)H)?(?:([-+]?[0-9,.]*)M)?(?:([-+]?[0-9,.]*)S)?)?$/;
 
     function createDuration(input, key) {
         var duration = input,
@@ -58633,9 +59071,10 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
                 'ms',
             ],
             i,
-            property;
+            property,
+            propertyLen = properties.length;
 
-        for (i = 0; i < properties.length; i += 1) {
+        for (i = 0; i < propertyLen; i += 1) {
             property = properties[i];
             propertyTest = propertyTest || hasOwnProp(input, property);
         }
@@ -59258,19 +59697,17 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
     addRegexToken('NNNN', matchEraName);
     addRegexToken('NNNNN', matchEraNarrow);
 
-    addParseToken(['N', 'NN', 'NNN', 'NNNN', 'NNNNN'], function (
-        input,
-        array,
-        config,
-        token
-    ) {
-        var era = config._locale.erasParse(input, token, config._strict);
-        if (era) {
-            getParsingFlags(config).era = era;
-        } else {
-            getParsingFlags(config).invalidEra = input;
+    addParseToken(
+        ['N', 'NN', 'NNN', 'NNNN', 'NNNNN'],
+        function (input, array, config, token) {
+            var era = config._locale.erasParse(input, token, config._strict);
+            if (era) {
+                getParsingFlags(config).era = era;
+            } else {
+                getParsingFlags(config).invalidEra = input;
+            }
         }
-    });
+    );
 
     addRegexToken('y', matchUnsigned);
     addRegexToken('yy', matchUnsigned);
@@ -59562,14 +59999,12 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
     addRegexToken('GGGGG', match1to6, match6);
     addRegexToken('ggggg', match1to6, match6);
 
-    addWeekParseToken(['gggg', 'ggggg', 'GGGG', 'GGGGG'], function (
-        input,
-        week,
-        config,
-        token
-    ) {
-        week[token.substr(0, 2)] = toInt(input);
-    });
+    addWeekParseToken(
+        ['gggg', 'ggggg', 'GGGG', 'GGGGG'],
+        function (input, week, config, token) {
+            week[token.substr(0, 2)] = toInt(input);
+        }
+    );
 
     addWeekParseToken(['gg', 'GG'], function (input, week, config, token) {
         week[token] = hooks.parseTwoDigitYear(input);
@@ -60592,7 +61027,7 @@ webpackContext.id = "./node_modules/moment/locale sync recursive ^\\.\\/.*$";
 
     //! moment.js
 
-    hooks.version = '2.29.1';
+    hooks.version = '2.29.4';
 
     setHookCallback(createLocal);
 
@@ -63478,7 +63913,7 @@ process.umask = function() { return 0; };
 /***/ (function(module, exports, __webpack_require__) {
 
 
-var content = __webpack_require__(/*! !../../../css-loader??ref--6-1!../../../postcss-loader/src??ref--6-2!./select2.min.css */ "./node_modules/css-loader/index.js?!./node_modules/postcss-loader/src/index.js?!./node_modules/select2/dist/css/select2.min.css");
+var content = __webpack_require__(/*! !../../../css-loader??ref--7-1!../../../postcss-loader/src??ref--7-2!./select2.min.css */ "./node_modules/css-loader/index.js?!./node_modules/postcss-loader/src/index.js?!./node_modules/select2/dist/css/select2.min.css");
 
 if(typeof content === 'string') content = [[module.i, content, '']];
 
@@ -69609,7 +70044,7 @@ S2.define('jquery.select2',[
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-!function(e,t){ true?module.exports=t():undefined}(window,function(){return s={},n.m=i=[function(e,t,i){"use strict";function s(e,t){t=t||{bubbles:!1,cancelable:!1,detail:void 0};var i=document.createEvent("CustomEvent");return i.initCustomEvent(e,t.bubbles,t.cancelable,t.detail),i}var n;t.__esModule=!0,t.hasClassInTree=function(e,t){function s(e,t){return t&&e&&e.classList&&e.classList.contains(t)?e:null}return s(e,t)||function e(t,i){return t&&t!==document?s(t,i)?t:e(t.parentNode,i):null}(e,t)},t.ensureElementInView=function(e,t){var i=e.scrollTop+e.offsetTop,s=i+e.clientHeight,n=t.offsetTop,a=n+t.clientHeight;n<i?e.scrollTop-=i-n:s<a&&(e.scrollTop+=a-s)},t.putContent=function(e,t,i){var s=e.offsetHeight,n=e.getBoundingClientRect(),a=i?n.top:n.top-s,o=i?n.bottom:n.bottom+s;return a<=0?"below":o>=window.innerHeight?"above":i?t:"below"},t.debounce=function(n,a,o){var l;return void 0===a&&(a=100),void 0===o&&(o=!1),function(){for(var e=[],t=0;t<arguments.length;t++)e[t]=arguments[t];var i=self,s=o&&!l;clearTimeout(l),l=setTimeout(function(){l=null,o||n.apply(i,e)},a),s&&n.apply(i,e)}},t.isValueInArrayOfObjects=function(e,t,i){if(!Array.isArray(e))return e[t]===i;for(var s=0,n=e;s<n.length;s++){var a=n[s];if(a&&a[t]&&a[t]===i)return!0}return!1},t.highlight=function(e,t,i){var s=e,n=new RegExp("("+t.trim()+")(?![^<]*>[^<>]*</)","i");if(!e.match(n))return e;var a=e.match(n).index,o=a+e.match(n)[0].toString().length,l=e.substring(a,o);return s=s.replace(n,'<mark class="'+i+'">'+l+"</mark>")},t.kebabCase=function(e){var t=e.replace(/[A-Z\u00C0-\u00D6\u00D8-\u00DE]/g,function(e){return"-"+e.toLowerCase()});return e[0]===e[0].toUpperCase()?t.substring(1):t},"function"!=typeof(n=window).CustomEvent&&(s.prototype=n.Event.prototype,n.CustomEvent=s)},function(e,t,i){"use strict";t.__esModule=!0;var s=(n.prototype.newOption=function(e){return{id:e.id?e.id:String(Math.floor(1e8*Math.random())),value:e.value?e.value:"",text:e.text?e.text:"",innerHTML:e.innerHTML?e.innerHTML:"",selected:!!e.selected&&e.selected,display:void 0===e.display||e.display,disabled:!!e.disabled&&e.disabled,placeholder:!!e.placeholder&&e.placeholder,class:e.class?e.class:void 0,data:e.data?e.data:{},mandatory:!!e.mandatory&&e.mandatory}},n.prototype.add=function(e){this.data.push({id:String(Math.floor(1e8*Math.random())),value:e.value,text:e.text,innerHTML:"",selected:!1,display:!0,disabled:!1,placeholder:!1,class:void 0,mandatory:e.mandatory,data:{}})},n.prototype.parseSelectData=function(){this.data=[];for(var e=0,t=this.main.select.element.childNodes;e<t.length;e++){var i=t[e];if("OPTGROUP"===i.nodeName){for(var s={label:i.label,options:[]},n=0,a=i.childNodes;n<a.length;n++){var o=a[n];if("OPTION"===o.nodeName){var l=this.pullOptionData(o);s.options.push(l),l.placeholder&&""!==l.text.trim()&&(this.main.config.placeholderText=l.text)}}this.data.push(s)}else"OPTION"===i.nodeName&&(l=this.pullOptionData(i),this.data.push(l),l.placeholder&&""!==l.text.trim()&&(this.main.config.placeholderText=l.text))}},n.prototype.pullOptionData=function(e){return{id:!!e.dataset&&e.dataset.id||String(Math.floor(1e8*Math.random())),value:e.value,text:e.text,innerHTML:e.innerHTML,selected:e.selected,disabled:e.disabled,placeholder:"true"===e.dataset.placeholder,class:e.className,style:e.style.cssText,data:e.dataset,mandatory:!!e.dataset&&"true"===e.dataset.mandatory}},n.prototype.setSelectedFromSelect=function(){if(this.main.config.isMultiple){for(var e=[],t=0,i=this.main.select.element.options;t<i.length;t++){var s=i[t];if(s.selected){var n=this.getObjectFromData(s.value,"value");n&&n.id&&e.push(n.id)}}this.setSelected(e,"id")}else{var a=this.main.select.element;if(-1!==a.selectedIndex){var o=a.options[a.selectedIndex].value;this.setSelected(o,"value")}}},n.prototype.setSelected=function(e,t){void 0===t&&(t="id");for(var i=0,s=this.data;i<s.length;i++){var n=s[i];if(n.hasOwnProperty("label")){if(n.hasOwnProperty("options")){var a=n.options;if(a)for(var o=0,l=a;o<l.length;o++){var r=l[o];r.placeholder||(r.selected=this.shouldBeSelected(r,e,t))}}}else n.selected=this.shouldBeSelected(n,e,t)}},n.prototype.shouldBeSelected=function(e,t,i){if(void 0===i&&(i="id"),Array.isArray(t))for(var s=0,n=t;s<n.length;s++){var a=n[s];if(i in e&&String(e[i])===String(a))return!0}else if(i in e&&String(e[i])===String(t))return!0;return!1},n.prototype.getSelected=function(){for(var e={text:"",placeholder:this.main.config.placeholderText},t=[],i=0,s=this.data;i<s.length;i++){var n=s[i];if(n.hasOwnProperty("label")){if(n.hasOwnProperty("options")){var a=n.options;if(a)for(var o=0,l=a;o<l.length;o++){var r=l[o];r.selected&&(this.main.config.isMultiple?t.push(r):e=r)}}}else n.selected&&(this.main.config.isMultiple?t.push(n):e=n)}return this.main.config.isMultiple?t:e},n.prototype.addToSelected=function(e,t){if(void 0===t&&(t="id"),this.main.config.isMultiple){var i=[],s=this.getSelected();if(Array.isArray(s))for(var n=0,a=s;n<a.length;n++){var o=a[n];i.push(o[t])}i.push(e),this.setSelected(i,t)}},n.prototype.removeFromSelected=function(e,t){if(void 0===t&&(t="id"),this.main.config.isMultiple){for(var i=[],s=0,n=this.getSelected();s<n.length;s++){var a=n[s];String(a[t])!==String(e)&&i.push(a[t])}this.setSelected(i,t)}},n.prototype.onDataChange=function(){this.main.onChange&&this.isOnChangeEnabled&&this.main.onChange(JSON.parse(JSON.stringify(this.getSelected())))},n.prototype.getObjectFromData=function(e,t){void 0===t&&(t="id");for(var i=0,s=this.data;i<s.length;i++){var n=s[i];if(t in n&&String(n[t])===String(e))return n;if(n.hasOwnProperty("options")&&n.options)for(var a=0,o=n.options;a<o.length;a++){var l=o[a];if(String(l[t])===String(e))return l}}return null},n.prototype.search=function(n){if(""!==(this.searchValue=n).trim()){var a=this.main.config.searchFilter,e=this.data.slice(0);n=n.trim();var t=e.map(function(e){if(e.hasOwnProperty("options")){var t=e,i=[];if(t.options&&(i=t.options.filter(function(e){return a(e,n)})),0!==i.length){var s=Object.assign({},t);return s.options=i,s}}return e.hasOwnProperty("text")&&a(e,n)?e:null});this.filtered=t.filter(function(e){return e})}else this.filtered=null},n);function n(e){this.contentOpen=!1,this.contentPosition="below",this.isOnChangeEnabled=!0,this.main=e.main,this.searchValue="",this.data=[],this.filtered=null,this.parseSelectData(),this.setSelectedFromSelect()}function r(e){return void 0!==e.text||(console.error("Data object option must have at least have a text value. Check object: "+JSON.stringify(e)),!1)}t.Data=s,t.validateData=function(e){if(!e)return console.error("Data must be an array of objects"),!1;for(var t=0,i=0,s=e;i<s.length;i++){var n=s[i];if(n.hasOwnProperty("label")){if(n.hasOwnProperty("options")){var a=n.options;if(a)for(var o=0,l=a;o<l.length;o++){r(l[o])||t++}}}else r(n)||t++}return 0===t},t.validateOption=r},function(e,t,i){"use strict";t.__esModule=!0;var s=i(3),n=i(4),a=i(5),r=i(1),o=i(0),l=(c.prototype.validate=function(e){var t="string"==typeof e.select?document.querySelector(e.select):e.select;if(!t)throw new Error("Could not find select element");if("SELECT"!==t.tagName)throw new Error("Element isnt of type select");return t},c.prototype.selected=function(){if(this.config.isMultiple){for(var e=[],t=0,i=n=this.data.getSelected();t<i.length;t++){var s=i[t];e.push(s.value)}return e}var n;return(n=this.data.getSelected())?n.value:""},c.prototype.set=function(e,t,i,s){void 0===t&&(t="value"),void 0===i&&(i=!0),void 0===s&&(s=!0),this.config.isMultiple&&!Array.isArray(e)?this.data.addToSelected(e,t):this.data.setSelected(e,t),this.select.setValue(),this.data.onDataChange(),this.render(),i&&this.close()},c.prototype.setSelected=function(e,t,i,s){void 0===t&&(t="value"),void 0===i&&(i=!0),void 0===s&&(s=!0),this.set(e,t,i,s)},c.prototype.setData=function(e){if(r.validateData(e)){for(var t=JSON.parse(JSON.stringify(e)),i=this.data.getSelected(),s=0;s<t.length;s++)t[s].value||t[s].placeholder||(t[s].value=t[s].text);if(this.config.isAjax&&i)if(this.config.isMultiple)for(var n=0,a=i.reverse();n<a.length;n++){var o=a[n];t.unshift(o)}else{for(t.unshift(i),s=0;s<t.length;s++)t[s].placeholder||t[s].value!==i.value||t[s].text!==i.text||delete t[s];var l=!1;for(s=0;s<t.length;s++)t[s].placeholder&&(l=!0);l||t.unshift({text:"",placeholder:!0})}this.select.create(t),this.data.parseSelectData(),this.data.setSelectedFromSelect()}else console.error("Validation problem on: #"+this.select.element.id)},c.prototype.addData=function(e){r.validateData([e])?(this.data.add(this.data.newOption(e)),this.select.create(this.data.data),this.data.parseSelectData(),this.data.setSelectedFromSelect(),this.render()):console.error("Validation problem on: #"+this.select.element.id)},c.prototype.open=function(){var e=this;if(this.config.isEnabled&&!this.data.contentOpen){if(this.beforeOpen&&this.beforeOpen(),this.config.isMultiple&&this.slim.multiSelected?this.slim.multiSelected.plus.classList.add("ss-cross"):this.slim.singleSelected&&(this.slim.singleSelected.arrowIcon.arrow.classList.remove("arrow-down"),this.slim.singleSelected.arrowIcon.arrow.classList.add("arrow-up")),this.slim[this.config.isMultiple?"multiSelected":"singleSelected"].container.classList.add("above"===this.data.contentPosition?this.config.openAbove:this.config.openBelow),this.config.addToBody){var t=this.slim.container.getBoundingClientRect();this.slim.content.style.top=t.top+t.height+window.scrollY+"px",this.slim.content.style.left=t.left+window.scrollX+"px",this.slim.content.style.width=t.width+"px"}if(this.slim.content.classList.add(this.config.open),"up"===this.config.showContent.toLowerCase()||"down"!==this.config.showContent.toLowerCase()&&"above"===o.putContent(this.slim.content,this.data.contentPosition,this.data.contentOpen)?this.moveContentAbove():this.moveContentBelow(),!this.config.isMultiple){var i=this.data.getSelected();if(i){var s=i.id,n=this.slim.list.querySelector('[data-id="'+s+'"]');n&&o.ensureElementInView(this.slim.list,n)}}setTimeout(function(){e.data.contentOpen=!0,e.config.searchFocus&&e.slim.search.input.focus(),e.afterOpen&&e.afterOpen()},this.config.timeoutDelay)}},c.prototype.close=function(){var e=this;this.data.contentOpen&&(this.beforeClose&&this.beforeClose(),this.config.isMultiple&&this.slim.multiSelected?(this.slim.multiSelected.container.classList.remove(this.config.openAbove),this.slim.multiSelected.container.classList.remove(this.config.openBelow),this.slim.multiSelected.plus.classList.remove("ss-cross")):this.slim.singleSelected&&(this.slim.singleSelected.container.classList.remove(this.config.openAbove),this.slim.singleSelected.container.classList.remove(this.config.openBelow),this.slim.singleSelected.arrowIcon.arrow.classList.add("arrow-down"),this.slim.singleSelected.arrowIcon.arrow.classList.remove("arrow-up")),this.slim.content.classList.remove(this.config.open),this.data.contentOpen=!1,this.search(""),setTimeout(function(){e.slim.content.removeAttribute("style"),e.data.contentPosition="below",e.config.isMultiple&&e.slim.multiSelected?(e.slim.multiSelected.container.classList.remove(e.config.openAbove),e.slim.multiSelected.container.classList.remove(e.config.openBelow)):e.slim.singleSelected&&(e.slim.singleSelected.container.classList.remove(e.config.openAbove),e.slim.singleSelected.container.classList.remove(e.config.openBelow)),e.slim.search.input.blur(),e.afterClose&&e.afterClose()},this.config.timeoutDelay))},c.prototype.moveContentAbove=function(){var e=0;this.config.isMultiple&&this.slim.multiSelected?e=this.slim.multiSelected.container.offsetHeight:this.slim.singleSelected&&(e=this.slim.singleSelected.container.offsetHeight);var t=e+this.slim.content.offsetHeight-1;this.slim.content.style.margin="-"+t+"px 0 0 0",this.slim.content.style.height=t-e+1+"px",this.slim.content.style.transformOrigin="center bottom",this.data.contentPosition="above",this.config.isMultiple&&this.slim.multiSelected?(this.slim.multiSelected.container.classList.remove(this.config.openBelow),this.slim.multiSelected.container.classList.add(this.config.openAbove)):this.slim.singleSelected&&(this.slim.singleSelected.container.classList.remove(this.config.openBelow),this.slim.singleSelected.container.classList.add(this.config.openAbove))},c.prototype.moveContentBelow=function(){this.data.contentPosition="below",this.config.isMultiple&&this.slim.multiSelected?(this.slim.multiSelected.container.classList.remove(this.config.openAbove),this.slim.multiSelected.container.classList.add(this.config.openBelow)):this.slim.singleSelected&&(this.slim.singleSelected.container.classList.remove(this.config.openAbove),this.slim.singleSelected.container.classList.add(this.config.openBelow))},c.prototype.enable=function(){this.config.isEnabled=!0,this.config.isMultiple&&this.slim.multiSelected?this.slim.multiSelected.container.classList.remove(this.config.disabled):this.slim.singleSelected&&this.slim.singleSelected.container.classList.remove(this.config.disabled),this.select.triggerMutationObserver=!1,this.select.element.disabled=!1,this.slim.search.input.disabled=!1,this.select.triggerMutationObserver=!0},c.prototype.disable=function(){this.config.isEnabled=!1,this.config.isMultiple&&this.slim.multiSelected?this.slim.multiSelected.container.classList.add(this.config.disabled):this.slim.singleSelected&&this.slim.singleSelected.container.classList.add(this.config.disabled),this.select.triggerMutationObserver=!1,this.select.element.disabled=!0,this.slim.search.input.disabled=!0,this.select.triggerMutationObserver=!0},c.prototype.search=function(t){if(this.data.searchValue!==t)if(this.slim.search.input.value=t,this.config.isAjax){var i=this;this.config.isSearching=!0,this.render(),this.ajax&&this.ajax(t,function(e){i.config.isSearching=!1,Array.isArray(e)?(e.unshift({text:"",placeholder:!0}),i.setData(e),i.data.search(t),i.render()):"string"==typeof e?i.slim.options(e):i.render()})}else this.data.search(t),this.render()},c.prototype.setSearchText=function(e){this.config.searchText=e},c.prototype.render=function(){this.config.isMultiple?this.slim.values():(this.slim.placeholder(),this.slim.deselect()),this.slim.options()},c.prototype.destroy=function(e){void 0===e&&(e=null);var t=e?document.querySelector("."+e+".ss-main"):this.slim.container,i=e?document.querySelector("[data-ssid="+e+"]"):this.select.element;if(t&&i&&(document.removeEventListener("click",this.documentClick),"auto"===this.config.showContent&&window.removeEventListener("scroll",this.windowScroll,!1),i.style.display="",delete i.dataset.ssid,i.slim=null,t.parentElement&&t.parentElement.removeChild(t),this.config.addToBody)){var s=e?document.querySelector("."+e+".ss-content"):this.slim.content;if(!s)return;document.body.removeChild(s)}},c);function c(e){var t=this;this.ajax=null,this.addable=null,this.beforeOnChange=null,this.onChange=null,this.beforeOpen=null,this.afterOpen=null,this.beforeClose=null,this.afterClose=null,this.windowScroll=o.debounce(function(e){t.data.contentOpen&&("above"===o.putContent(t.slim.content,t.data.contentPosition,t.data.contentOpen)?t.moveContentAbove():t.moveContentBelow())}),this.documentClick=function(e){e.target&&!o.hasClassInTree(e.target,t.config.id)&&t.close()};var i=this.validate(e);i.dataset.ssid&&this.destroy(i.dataset.ssid),e.ajax&&(this.ajax=e.ajax),e.addable&&(this.addable=e.addable),this.config=new s.Config({select:i,isAjax:!!e.ajax,showSearch:e.showSearch,searchPlaceholder:e.searchPlaceholder,searchText:e.searchText,searchingText:e.searchingText,searchFocus:e.searchFocus,searchHighlight:e.searchHighlight,searchFilter:e.searchFilter,closeOnSelect:e.closeOnSelect,showContent:e.showContent,placeholderText:e.placeholder,allowDeselect:e.allowDeselect,allowDeselectOption:e.allowDeselectOption,hideSelectedOption:e.hideSelectedOption,deselectLabel:e.deselectLabel,isEnabled:e.isEnabled,valuesUseText:e.valuesUseText,showOptionTooltips:e.showOptionTooltips,selectByGroup:e.selectByGroup,limit:e.limit,timeoutDelay:e.timeoutDelay,addToBody:e.addToBody}),this.select=new n.Select({select:i,main:this}),this.data=new r.Data({main:this}),this.slim=new a.Slim({main:this}),this.select.element.parentNode&&this.select.element.parentNode.insertBefore(this.slim.container,this.select.element.nextSibling),e.data?this.setData(e.data):this.render(),document.addEventListener("click",this.documentClick),"auto"===this.config.showContent&&window.addEventListener("scroll",this.windowScroll,!1),e.beforeOnChange&&(this.beforeOnChange=e.beforeOnChange),e.onChange&&(this.onChange=e.onChange),e.beforeOpen&&(this.beforeOpen=e.beforeOpen),e.afterOpen&&(this.afterOpen=e.afterOpen),e.beforeClose&&(this.beforeClose=e.beforeClose),e.afterClose&&(this.afterClose=e.afterClose),this.config.isEnabled||this.disable()}t.default=l},function(e,t,i){"use strict";t.__esModule=!0;var s=(n.prototype.searchFilter=function(e,t){return-1!==e.text.toLowerCase().indexOf(t.toLowerCase())},n);function n(e){this.id="",this.isMultiple=!1,this.isAjax=!1,this.isSearching=!1,this.showSearch=!0,this.searchFocus=!0,this.searchHighlight=!1,this.closeOnSelect=!0,this.showContent="auto",this.searchPlaceholder="Search",this.searchText="No Results",this.searchingText="Searching...",this.placeholderText="Select Value",this.allowDeselect=!1,this.allowDeselectOption=!1,this.hideSelectedOption=!1,this.deselectLabel="x",this.isEnabled=!0,this.valuesUseText=!1,this.showOptionTooltips=!1,this.selectByGroup=!1,this.limit=0,this.timeoutDelay=200,this.addToBody=!1,this.main="ss-main",this.singleSelected="ss-single-selected",this.arrow="ss-arrow",this.multiSelected="ss-multi-selected",this.add="ss-add",this.plus="ss-plus",this.values="ss-values",this.value="ss-value",this.valueText="ss-value-text",this.valueDelete="ss-value-delete",this.content="ss-content",this.open="ss-open",this.openAbove="ss-open-above",this.openBelow="ss-open-below",this.search="ss-search",this.searchHighlighter="ss-search-highlight",this.addable="ss-addable",this.list="ss-list",this.optgroup="ss-optgroup",this.optgroupLabel="ss-optgroup-label",this.optgroupLabelSelectable="ss-optgroup-label-selectable",this.option="ss-option",this.optionSelected="ss-option-selected",this.highlighted="ss-highlighted",this.disabled="ss-disabled",this.hide="ss-hide",this.id="ss-"+Math.floor(1e5*Math.random()),this.style=e.select.style.cssText,this.class=e.select.className.split(" "),this.isMultiple=e.select.multiple,this.isAjax=e.isAjax,this.showSearch=!1!==e.showSearch,this.searchFocus=!1!==e.searchFocus,this.searchHighlight=!0===e.searchHighlight,this.closeOnSelect=!1!==e.closeOnSelect,e.showContent&&(this.showContent=e.showContent),this.isEnabled=!1!==e.isEnabled,e.searchPlaceholder&&(this.searchPlaceholder=e.searchPlaceholder),e.searchText&&(this.searchText=e.searchText),e.searchingText&&(this.searchingText=e.searchingText),e.placeholderText&&(this.placeholderText=e.placeholderText),this.allowDeselect=!0===e.allowDeselect,this.allowDeselectOption=!0===e.allowDeselectOption,this.hideSelectedOption=!0===e.hideSelectedOption,e.deselectLabel&&(this.deselectLabel=e.deselectLabel),e.valuesUseText&&(this.valuesUseText=e.valuesUseText),e.showOptionTooltips&&(this.showOptionTooltips=e.showOptionTooltips),e.selectByGroup&&(this.selectByGroup=e.selectByGroup),e.limit&&(this.limit=e.limit),e.searchFilter&&(this.searchFilter=e.searchFilter),null!=e.timeoutDelay&&(this.timeoutDelay=e.timeoutDelay),this.addToBody=!0===e.addToBody}t.Config=s},function(e,t,i){"use strict";t.__esModule=!0;var s=i(0),n=(a.prototype.setValue=function(){if(this.main.data.getSelected()){if(this.main.config.isMultiple)for(var e=this.main.data.getSelected(),t=0,i=this.element.options;t<i.length;t++){var s=i[t];s.selected=!1;for(var n=0,a=e;n<a.length;n++)a[n].value===s.value&&(s.selected=!0)}else e=this.main.data.getSelected(),this.element.value=e?e.value:"";this.main.data.isOnChangeEnabled=!1,this.element.dispatchEvent(new CustomEvent("change",{bubbles:!0})),this.main.data.isOnChangeEnabled=!0}},a.prototype.addAttributes=function(){this.element.tabIndex=-1,this.element.style.display="none",this.element.dataset.ssid=this.main.config.id},a.prototype.addEventListeners=function(){var t=this;this.element.addEventListener("change",function(e){t.main.data.setSelectedFromSelect(),t.main.render()})},a.prototype.addMutationObserver=function(){var t=this;this.main.config.isAjax||(this.mutationObserver=new MutationObserver(function(e){t.triggerMutationObserver&&(t.main.data.parseSelectData(),t.main.data.setSelectedFromSelect(),t.main.render(),e.forEach(function(e){"class"===e.attributeName&&t.main.slim.updateContainerDivClass(t.main.slim.container)}))}),this.observeMutationObserver())},a.prototype.observeMutationObserver=function(){this.mutationObserver&&this.mutationObserver.observe(this.element,{attributes:!0,childList:!0,characterData:!0})},a.prototype.disconnectMutationObserver=function(){this.mutationObserver&&this.mutationObserver.disconnect()},a.prototype.create=function(e){this.element.innerHTML="";for(var t=0,i=e;t<i.length;t++){var s=i[t];if(s.hasOwnProperty("options")){var n=s,a=document.createElement("optgroup");if(a.label=n.label,n.options)for(var o=0,l=n.options;o<l.length;o++){var r=l[o];a.appendChild(this.createOption(r))}this.element.appendChild(a)}else this.element.appendChild(this.createOption(s))}},a.prototype.createOption=function(t){var i=document.createElement("option");return i.value=""!==t.value?t.value:t.text,i.innerHTML=t.innerHTML||t.text,t.selected&&(i.selected=t.selected),!1===t.display&&(i.style.display="none"),t.disabled&&(i.disabled=!0),t.placeholder&&i.setAttribute("data-placeholder","true"),t.mandatory&&i.setAttribute("data-mandatory","true"),t.class&&t.class.split(" ").forEach(function(e){i.classList.add(e)}),t.data&&"object"==typeof t.data&&Object.keys(t.data).forEach(function(e){i.setAttribute("data-"+s.kebabCase(e),t.data[e])}),i},a);function a(e){this.triggerMutationObserver=!0,this.element=e.select,this.main=e.main,this.element.disabled&&(this.main.config.isEnabled=!1),this.addAttributes(),this.addEventListeners(),this.mutationObserver=null,this.addMutationObserver(),this.element.slim=e.main}t.Select=n},function(e,t,i){"use strict";t.__esModule=!0;var a=i(0),o=i(1),s=(n.prototype.containerDiv=function(){var e=document.createElement("div");return e.style.cssText=this.main.config.style,this.updateContainerDivClass(e),e},n.prototype.updateContainerDivClass=function(e){this.main.config.class=this.main.select.element.className.split(" "),e.className="",e.classList.add(this.main.config.id),e.classList.add(this.main.config.main);for(var t=0,i=this.main.config.class;t<i.length;t++){var s=i[t];""!==s.trim()&&e.classList.add(s)}},n.prototype.singleSelectedDiv=function(){var t=this,e=document.createElement("div");e.classList.add(this.main.config.singleSelected);var i=document.createElement("span");i.classList.add("placeholder"),e.appendChild(i);var s=document.createElement("span");s.innerHTML=this.main.config.deselectLabel,s.classList.add("ss-deselect"),s.onclick=function(e){e.stopPropagation(),t.main.config.isEnabled&&t.main.set("")},e.appendChild(s);var n=document.createElement("span");n.classList.add(this.main.config.arrow);var a=document.createElement("span");return a.classList.add("arrow-down"),n.appendChild(a),e.appendChild(n),e.onclick=function(){t.main.config.isEnabled&&(t.main.data.contentOpen?t.main.close():t.main.open())},{container:e,placeholder:i,deselect:s,arrowIcon:{container:n,arrow:a}}},n.prototype.placeholder=function(){var e=this.main.data.getSelected();if(null===e||e&&e.placeholder){var t=document.createElement("span");t.classList.add(this.main.config.disabled),t.innerHTML=this.main.config.placeholderText,this.singleSelected&&(this.singleSelected.placeholder.innerHTML=t.outerHTML)}else{var i="";e&&(i=e.innerHTML&&!0!==this.main.config.valuesUseText?e.innerHTML:e.text),this.singleSelected&&(this.singleSelected.placeholder.innerHTML=e?i:"")}},n.prototype.deselect=function(){if(this.singleSelected){if(!this.main.config.allowDeselect)return void this.singleSelected.deselect.classList.add("ss-hide");""===this.main.selected()?this.singleSelected.deselect.classList.add("ss-hide"):this.singleSelected.deselect.classList.remove("ss-hide")}},n.prototype.multiSelectedDiv=function(){var t=this,e=document.createElement("div");e.classList.add(this.main.config.multiSelected);var i=document.createElement("div");i.classList.add(this.main.config.values),e.appendChild(i);var s=document.createElement("div");s.classList.add(this.main.config.add);var n=document.createElement("span");return n.classList.add(this.main.config.plus),n.onclick=function(e){t.main.data.contentOpen&&(t.main.close(),e.stopPropagation())},s.appendChild(n),e.appendChild(s),e.onclick=function(e){t.main.config.isEnabled&&(e.target.classList.contains(t.main.config.valueDelete)||(t.main.data.contentOpen?t.main.close():t.main.open()))},{container:e,values:i,add:s,plus:n}},n.prototype.values=function(){if(this.multiSelected){for(var e,t=this.multiSelected.values.childNodes,i=this.main.data.getSelected(),s=[],n=0,a=t;n<a.length;n++){var o=a[n];e=!0;for(var l=0,r=i;l<r.length;l++){var c=r[l];String(c.id)===String(o.dataset.id)&&(e=!1)}e&&s.push(o)}for(var d=0,h=s;d<h.length;d++){var u=h[d];u.classList.add("ss-out"),this.multiSelected.values.removeChild(u)}for(t=this.multiSelected.values.childNodes,c=0;c<i.length;c++){e=!1;for(var p=0,m=t;p<m.length;p++)o=m[p],String(i[c].id)===String(o.dataset.id)&&(e=!0);e||(0!==t.length&&HTMLElement.prototype.insertAdjacentElement?0===c?this.multiSelected.values.insertBefore(this.valueDiv(i[c]),t[c]):t[c-1].insertAdjacentElement("afterend",this.valueDiv(i[c])):this.multiSelected.values.appendChild(this.valueDiv(i[c])))}if(0===i.length){var f=document.createElement("span");f.classList.add(this.main.config.disabled),f.innerHTML=this.main.config.placeholderText,this.multiSelected.values.innerHTML=f.outerHTML}}},n.prototype.valueDiv=function(a){var o=this,e=document.createElement("div");e.classList.add(this.main.config.value),e.dataset.id=a.id;var t=document.createElement("span");if(t.classList.add(this.main.config.valueText),t.innerHTML=a.innerHTML&&!0!==this.main.config.valuesUseText?a.innerHTML:a.text,e.appendChild(t),!a.mandatory){var i=document.createElement("span");i.classList.add(this.main.config.valueDelete),i.innerHTML=this.main.config.deselectLabel,i.onclick=function(e){e.preventDefault(),e.stopPropagation();var t=!1;if(o.main.beforeOnChange||(t=!0),o.main.beforeOnChange){for(var i=o.main.data.getSelected(),s=JSON.parse(JSON.stringify(i)),n=0;n<s.length;n++)s[n].id===a.id&&s.splice(n,1);!1!==o.main.beforeOnChange(s)&&(t=!0)}t&&(o.main.data.removeFromSelected(a.id,"id"),o.main.render(),o.main.select.setValue(),o.main.data.onDataChange())},e.appendChild(i)}return e},n.prototype.contentDiv=function(){var e=document.createElement("div");return e.classList.add(this.main.config.content),e},n.prototype.searchDiv=function(){var n=this,e=document.createElement("div"),s=document.createElement("input"),a=document.createElement("div");e.classList.add(this.main.config.search);var t={container:e,input:s};return this.main.config.showSearch||(e.classList.add(this.main.config.hide),s.readOnly=!0),s.type="search",s.placeholder=this.main.config.searchPlaceholder,s.tabIndex=0,s.setAttribute("aria-label",this.main.config.searchPlaceholder),s.setAttribute("autocapitalize","off"),s.setAttribute("autocomplete","off"),s.setAttribute("autocorrect","off"),s.onclick=function(e){setTimeout(function(){""===e.target.value&&n.main.search("")},10)},s.onkeydown=function(e){"ArrowUp"===e.key?(n.main.open(),n.highlightUp(),e.preventDefault()):"ArrowDown"===e.key?(n.main.open(),n.highlightDown(),e.preventDefault()):"Tab"===e.key?n.main.data.contentOpen?n.main.close():setTimeout(function(){n.main.close()},n.main.config.timeoutDelay):"Enter"===e.key&&e.preventDefault()},s.onkeyup=function(e){var t=e.target;if("Enter"===e.key){if(n.main.addable&&e.ctrlKey)return a.click(),e.preventDefault(),void e.stopPropagation();var i=n.list.querySelector("."+n.main.config.highlighted);i&&i.click()}else"ArrowUp"===e.key||"ArrowDown"===e.key||("Escape"===e.key?n.main.close():n.main.config.showSearch&&n.main.data.contentOpen?n.main.search(t.value):s.value="");e.preventDefault(),e.stopPropagation()},s.onfocus=function(){n.main.open()},e.appendChild(s),this.main.addable&&(a.classList.add(this.main.config.addable),a.innerHTML="+",a.onclick=function(e){if(n.main.addable){e.preventDefault(),e.stopPropagation();var t=n.search.input.value;if(""===t.trim())return void n.search.input.focus();var i=n.main.addable(t),s="";if(!i)return;"object"==typeof i?o.validateOption(i)&&(n.main.addData(i),s=i.value?i.value:i.text):(n.main.addData(n.main.data.newOption({text:i,value:i})),s=i),n.main.search(""),setTimeout(function(){n.main.set(s,"value",!1,!1)},100),n.main.config.closeOnSelect&&setTimeout(function(){n.main.close()},100)}},e.appendChild(a),t.addable=a),t},n.prototype.highlightUp=function(){var e=this.list.querySelector("."+this.main.config.highlighted),t=null;if(e)for(t=e.previousSibling;null!==t&&t.classList.contains(this.main.config.disabled);)t=t.previousSibling;else{var i=this.list.querySelectorAll("."+this.main.config.option+":not(."+this.main.config.disabled+")");t=i[i.length-1]}if(t&&t.classList.contains(this.main.config.optgroupLabel)&&(t=null),null===t){var s=e.parentNode;if(s.classList.contains(this.main.config.optgroup)&&s.previousSibling){var n=s.previousSibling.querySelectorAll("."+this.main.config.option+":not(."+this.main.config.disabled+")");n.length&&(t=n[n.length-1])}}t&&(e&&e.classList.remove(this.main.config.highlighted),t.classList.add(this.main.config.highlighted),a.ensureElementInView(this.list,t))},n.prototype.highlightDown=function(){var e=this.list.querySelector("."+this.main.config.highlighted),t=null;if(e)for(t=e.nextSibling;null!==t&&t.classList.contains(this.main.config.disabled);)t=t.nextSibling;else t=this.list.querySelector("."+this.main.config.option+":not(."+this.main.config.disabled+")");if(null===t&&null!==e){var i=e.parentNode;i.classList.contains(this.main.config.optgroup)&&i.nextSibling&&(t=i.nextSibling.querySelector("."+this.main.config.option+":not(."+this.main.config.disabled+")"))}t&&(e&&e.classList.remove(this.main.config.highlighted),t.classList.add(this.main.config.highlighted),a.ensureElementInView(this.list,t))},n.prototype.listDiv=function(){var e=document.createElement("div");return e.classList.add(this.main.config.list),e},n.prototype.options=function(e){void 0===e&&(e="");var t,i=this.main.data.filtered||this.main.data.data;if((this.list.innerHTML="")!==e)return(t=document.createElement("div")).classList.add(this.main.config.option),t.classList.add(this.main.config.disabled),t.innerHTML=e,void this.list.appendChild(t);if(this.main.config.isAjax&&this.main.config.isSearching)return(t=document.createElement("div")).classList.add(this.main.config.option),t.classList.add(this.main.config.disabled),t.innerHTML=this.main.config.searchingText,void this.list.appendChild(t);if(0===i.length){var s=document.createElement("div");return s.classList.add(this.main.config.option),s.classList.add(this.main.config.disabled),s.innerHTML=this.main.config.searchText,void this.list.appendChild(s)}for(var n=function(e){if(e.hasOwnProperty("label")){var t=e,n=document.createElement("div");n.classList.add(c.main.config.optgroup);var i=document.createElement("div");i.classList.add(c.main.config.optgroupLabel),c.main.config.selectByGroup&&c.main.config.isMultiple&&i.classList.add(c.main.config.optgroupLabelSelectable),i.innerHTML=t.label,n.appendChild(i);var s=t.options;if(s){for(var a=0,o=s;a<o.length;a++){var l=o[a];n.appendChild(c.option(l))}if(c.main.config.selectByGroup&&c.main.config.isMultiple){var r=c;i.addEventListener("click",function(e){e.preventDefault(),e.stopPropagation();for(var t=0,i=n.children;t<i.length;t++){var s=i[t];-1!==s.className.indexOf(r.main.config.option)&&s.click()}})}}c.list.appendChild(n)}else c.list.appendChild(c.option(e))},c=this,a=0,o=i;a<o.length;a++)n(o[a])},n.prototype.option=function(r){if(r.placeholder){var e=document.createElement("div");return e.classList.add(this.main.config.option),e.classList.add(this.main.config.hide),e}var t=document.createElement("div");t.classList.add(this.main.config.option),r.class&&r.class.split(" ").forEach(function(e){t.classList.add(e)}),r.style&&(t.style.cssText=r.style);var c=this.main.data.getSelected();t.dataset.id=r.id,this.main.config.searchHighlight&&this.main.slim&&r.innerHTML&&""!==this.main.slim.search.input.value.trim()?t.innerHTML=a.highlight(r.innerHTML,this.main.slim.search.input.value,this.main.config.searchHighlighter):r.innerHTML&&(t.innerHTML=r.innerHTML),this.main.config.showOptionTooltips&&t.textContent&&t.setAttribute("title",t.textContent);var d=this;t.addEventListener("click",function(e){e.preventDefault(),e.stopPropagation();var t=this.dataset.id;if(!0===r.selected&&d.main.config.allowDeselectOption){var i=!1;if(d.main.beforeOnChange&&d.main.config.isMultiple||(i=!0),d.main.beforeOnChange&&d.main.config.isMultiple){for(var s=d.main.data.getSelected(),n=JSON.parse(JSON.stringify(s)),a=0;a<n.length;a++)n[a].id===t&&n.splice(a,1);!1!==d.main.beforeOnChange(n)&&(i=!0)}i&&(d.main.config.isMultiple?(d.main.data.removeFromSelected(t,"id"),d.main.render(),d.main.select.setValue(),d.main.data.onDataChange()):d.main.set(""))}else{if(r.disabled||r.selected)return;if(d.main.config.limit&&Array.isArray(c)&&d.main.config.limit<=c.length)return;if(d.main.beforeOnChange){var o=void 0,l=JSON.parse(JSON.stringify(d.main.data.getObjectFromData(t)));l.selected=!0,d.main.config.isMultiple?(o=JSON.parse(JSON.stringify(c))).push(l):o=JSON.parse(JSON.stringify(l)),!1!==d.main.beforeOnChange(o)&&d.main.set(t,"id",d.main.config.closeOnSelect)}else d.main.set(t,"id",d.main.config.closeOnSelect)}});var i=c&&a.isValueInArrayOfObjects(c,"id",r.id);return(r.disabled||i)&&(t.onclick=null,d.main.config.allowDeselectOption||t.classList.add(this.main.config.disabled),d.main.config.hideSelectedOption&&t.classList.add(this.main.config.hide)),i?t.classList.add(this.main.config.optionSelected):t.classList.remove(this.main.config.optionSelected),t},n);function n(e){this.main=e.main,this.container=this.containerDiv(),this.content=this.contentDiv(),this.search=this.searchDiv(),this.list=this.listDiv(),this.options(),this.singleSelected=null,this.multiSelected=null,this.main.config.isMultiple?(this.multiSelected=this.multiSelectedDiv(),this.multiSelected&&this.container.appendChild(this.multiSelected.container)):(this.singleSelected=this.singleSelectedDiv(),this.container.appendChild(this.singleSelected.container)),this.main.config.addToBody?(this.content.classList.add(this.main.config.id),document.body.appendChild(this.content)):this.container.appendChild(this.content),this.content.appendChild(this.search.container),this.content.appendChild(this.list)}t.Slim=s}],n.c=s,n.d=function(e,t,i){n.o(e,t)||Object.defineProperty(e,t,{enumerable:!0,get:i})},n.r=function(e){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(e,"__esModule",{value:!0})},n.t=function(t,e){if(1&e&&(t=n(t)),8&e)return t;if(4&e&&"object"==typeof t&&t&&t.__esModule)return t;var i=Object.create(null);if(n.r(i),Object.defineProperty(i,"default",{enumerable:!0,value:t}),2&e&&"string"!=typeof t)for(var s in t)n.d(i,s,function(e){return t[e]}.bind(null,s));return i},n.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return n.d(t,"a",t),t},n.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},n.p="",n(n.s=2).default;function n(e){if(s[e])return s[e].exports;var t=s[e]={i:e,l:!1,exports:{}};return i[e].call(t.exports,t,t.exports,n),t.l=!0,t.exports}var i,s});
+!function(e,t){ true?module.exports=t():undefined}(window,function(){return n={},s.m=i=[function(e,t,i){"use strict";function n(e,t){t=t||{bubbles:!1,cancelable:!1,detail:void 0};var i=document.createEvent("CustomEvent");return i.initCustomEvent(e,t.bubbles,t.cancelable,t.detail),i}t.__esModule=!0,t.kebabCase=t.highlight=t.isValueInArrayOfObjects=t.debounce=t.putContent=t.ensureElementInView=t.hasClassInTree=void 0,t.hasClassInTree=function(e,t){function n(e,t){return t&&e&&e.classList&&e.classList.contains(t)?e:null}return n(e,t)||function e(t,i){return t&&t!==document?n(t,i)?t:e(t.parentNode,i):null}(e,t)},t.ensureElementInView=function(e,t){var i=e.scrollTop+e.offsetTop,n=i+e.clientHeight,s=t.offsetTop,t=s+t.clientHeight;s<i?e.scrollTop-=i-s:n<t&&(e.scrollTop+=t-n)},t.putContent=function(e,t,i){var n=e.offsetHeight,s=e.getBoundingClientRect(),e=i?s.top:s.top-n,n=i?s.bottom:s.bottom+n;return e<=0?"below":n>=window.innerHeight?"above":i?t:"below"},t.debounce=function(s,a,o){var l;return void 0===a&&(a=100),void 0===o&&(o=!1),function(){for(var e=[],t=0;t<arguments.length;t++)e[t]=arguments[t];var i=self,n=o&&!l;clearTimeout(l),l=setTimeout(function(){l=null,o||s.apply(i,e)},a),n&&s.apply(i,e)}},t.isValueInArrayOfObjects=function(e,t,i){if(!Array.isArray(e))return e[t]===i;for(var n=0,s=e;n<s.length;n++){var a=s[n];if(a&&a[t]&&a[t]===i)return!0}return!1},t.highlight=function(e,t,i){var n=e,s=new RegExp("("+t.trim()+")(?![^<]*>[^<>]*</)","i");if(!e.match(s))return e;var a=e.match(s).index,t=a+e.match(s)[0].toString().length,t=e.substring(a,t);return n=n.replace(s,'<mark class="'.concat(i,'">').concat(t,"</mark>"))},t.kebabCase=function(e){var t=e.replace(/[A-Z\u00C0-\u00D6\u00D8-\u00DE]/g,function(e){return"-"+e.toLowerCase()});return e[0]===e[0].toUpperCase()?t.substring(1):t},"function"!=typeof(t=window).CustomEvent&&(n.prototype=t.Event.prototype,t.CustomEvent=n)},function(e,t,i){"use strict";t.__esModule=!0,t.validateOption=t.validateData=t.Data=void 0;var n=(s.prototype.newOption=function(e){return{id:e.id||String(Math.floor(1e8*Math.random())),value:e.value||"",text:e.text||"",innerHTML:e.innerHTML||"",selected:e.selected||!1,display:void 0===e.display||e.display,disabled:e.disabled||!1,placeholder:e.placeholder||!1,class:e.class||void 0,data:e.data||{},mandatory:e.mandatory||!1}},s.prototype.add=function(e){this.data.push({id:String(Math.floor(1e8*Math.random())),value:e.value,text:e.text,innerHTML:"",selected:!1,display:!0,disabled:!1,placeholder:!1,class:void 0,mandatory:e.mandatory,data:{}})},s.prototype.parseSelectData=function(){this.data=[];for(var e=0,t=this.main.select.element.childNodes;e<t.length;e++){var i=t[e];if("OPTGROUP"===i.nodeName){for(var n={label:i.label,options:[]},s=0,a=i.childNodes;s<a.length;s++){var o,l=a[s];"OPTION"===l.nodeName&&(o=this.pullOptionData(l),n.options.push(o),o.placeholder&&""!==o.text.trim()&&(this.main.config.placeholderText=o.text))}this.data.push(n)}else"OPTION"===i.nodeName&&(o=this.pullOptionData(i),this.data.push(o),o.placeholder&&""!==o.text.trim()&&(this.main.config.placeholderText=o.text))}},s.prototype.pullOptionData=function(e){return{id:!!e.dataset&&e.dataset.id||String(Math.floor(1e8*Math.random())),value:e.value,text:e.text,innerHTML:e.innerHTML,selected:e.selected,disabled:e.disabled,placeholder:"true"===e.dataset.placeholder,class:e.className,style:e.style.cssText,data:e.dataset,mandatory:!!e.dataset&&"true"===e.dataset.mandatory}},s.prototype.setSelectedFromSelect=function(){if(this.main.config.isMultiple){for(var e=[],t=0,i=this.main.select.element.options;t<i.length;t++){var n=i[t];!n.selected||(n=this.getObjectFromData(n.value,"value"))&&n.id&&e.push(n.id)}this.setSelected(e,"id")}else{var s=this.main.select.element;-1!==s.selectedIndex&&(s=s.options[s.selectedIndex].value,this.setSelected(s,"value"))}},s.prototype.setSelected=function(e,t){void 0===t&&(t="id");for(var i=0,n=this.data;i<n.length;i++){var s=n[i];if(s.hasOwnProperty("label")){if(s.hasOwnProperty("options")){var a=s.options;if(a)for(var o=0,l=a;o<l.length;o++){var r=l[o];r.placeholder||(r.selected=this.shouldBeSelected(r,e,t))}}}else s.selected=this.shouldBeSelected(s,e,t)}},s.prototype.shouldBeSelected=function(e,t,i){if(void 0===i&&(i="id"),Array.isArray(t))for(var n=0,s=t;n<s.length;n++){var a=s[n];if(i in e&&String(e[i])===String(a))return!0}else if(i in e&&String(e[i])===String(t))return!0;return!1},s.prototype.getSelected=function(){for(var e={text:"",placeholder:this.main.config.placeholderText},t=[],i=0,n=this.data;i<n.length;i++){var s=n[i];if(s.hasOwnProperty("label")){if(s.hasOwnProperty("options")){var a=s.options;if(a)for(var o=0,l=a;o<l.length;o++){var r=l[o];r.selected&&(this.main.config.isMultiple?t.push(r):e=r)}}}else s.selected&&(this.main.config.isMultiple?t.push(s):e=s)}return this.main.config.isMultiple?t:e},s.prototype.addToSelected=function(e,t){if(void 0===t&&(t="id"),this.main.config.isMultiple){var i=[],n=this.getSelected();if(Array.isArray(n))for(var s=0,a=n;s<a.length;s++){var o=a[s];i.push(o[t])}i.push(e),this.setSelected(i,t)}},s.prototype.removeFromSelected=function(e,t){if(void 0===t&&(t="id"),this.main.config.isMultiple){for(var i=[],n=0,s=this.getSelected();n<s.length;n++){var a=s[n];String(a[t])!==String(e)&&i.push(a[t])}this.setSelected(i,t)}},s.prototype.onDataChange=function(){this.main.onChange&&this.isOnChangeEnabled&&this.main.onChange(JSON.parse(JSON.stringify(this.getSelected())))},s.prototype.getObjectFromData=function(e,t){void 0===t&&(t="id");for(var i=0,n=this.data;i<n.length;i++){var s=n[i];if(t in s&&String(s[t])===String(e))return s;if(s.hasOwnProperty("options"))if(s.options)for(var a=0,o=s.options;a<o.length;a++){var l=o[a];if(String(l[t])===String(e))return l}}return null},s.prototype.search=function(n){var s,e;""!==(this.searchValue=n).trim()?(s=this.main.config.searchFilter,e=this.data.slice(0),n=n.trim(),e=e.map(function(e){if(e.hasOwnProperty("options")){var t=e,i=[];if(0!==(i=t.options?t.options.filter(function(e){return s(e,n)}):i).length){t=Object.assign({},t);return t.options=i,t}}if(e.hasOwnProperty("text")&&s(e,n))return e;return null}),this.filtered=e.filter(function(e){return e})):this.filtered=null},s);function s(e){this.contentOpen=!1,this.contentPosition="below",this.isOnChangeEnabled=!0,this.main=e.main,this.searchValue="",this.data=[],this.filtered=null,this.parseSelectData(),this.setSelectedFromSelect()}function r(e){return void 0!==e.text||(console.error("Data object option must have at least have a text value. Check object: "+JSON.stringify(e)),!1)}t.Data=n,t.validateData=function(e){if(!e)return console.error("Data must be an array of objects"),!1;for(var t=0,i=0,n=e;i<n.length;i++){var s=n[i];if(s.hasOwnProperty("label")){if(s.hasOwnProperty("options")){var a=s.options;if(a)for(var o=0,l=a;o<l.length;o++)r(l[o])||t++}}else r(s)||t++}return 0===t},t.validateOption=r},function(e,t,i){"use strict";t.__esModule=!0;var n=i(3),s=i(4),a=i(5),r=i(1),o=i(0),i=(l.prototype.validate=function(e){e="string"==typeof e.select?document.querySelector(e.select):e.select;if(!e)throw new Error("Could not find select element");if("SELECT"!==e.tagName)throw new Error("Element isnt of type select");return e},l.prototype.selected=function(){if(this.config.isMultiple){for(var e=[],t=0,i=s=this.data.getSelected();t<i.length;t++){var n=i[t];e.push(n.value)}return e}var s;return(s=this.data.getSelected())?s.value:""},l.prototype.set=function(e,t,i,n){void 0===t&&(t="value"),void 0===i&&(i=!0),void 0===n&&(n=!0),this.config.isMultiple&&!Array.isArray(e)?this.data.addToSelected(e,t):this.data.setSelected(e,t),this.select.setValue(),this.data.onDataChange(),this.render(),(i=this.config.hideSelectedOption&&this.config.isMultiple&&this.data.getSelected().length===this.data.data.length?!0:i)&&this.close()},l.prototype.setSelected=function(e,t,i,n){this.set(e,t=void 0===t?"value":t,i=void 0===i?!0:i,n=void 0===n?!0:n)},l.prototype.setData=function(e){if((0,r.validateData)(e)){for(var t=JSON.parse(JSON.stringify(e)),i=this.data.getSelected(),n=0;n<t.length;n++)t[n].value||t[n].placeholder||(t[n].value=t[n].text);if(this.config.isAjax&&i)if(this.config.isMultiple)for(var s=0,a=i.reverse();s<a.length;s++){var o=a[s];t.unshift(o)}else{t.unshift(i);for(n=0;n<t.length;n++)t[n].placeholder||t[n].value!==i.value||t[n].text!==i.text||t.splice(n,1);for(var l=!1,n=0;n<t.length;n++)t[n].placeholder&&(l=!0);l||t.unshift({text:"",placeholder:!0})}this.select.create(t),this.data.parseSelectData(),this.data.setSelectedFromSelect()}else console.error("Validation problem on: #"+this.select.element.id)},l.prototype.addData=function(e){(0,r.validateData)([e])?(this.data.add(this.data.newOption(e)),this.select.create(this.data.data),this.data.parseSelectData(),this.data.setSelectedFromSelect(),this.render()):console.error("Validation problem on: #"+this.select.element.id)},l.prototype.open=function(){var e,t=this;this.config.isEnabled&&(this.data.contentOpen||this.config.hideSelectedOption&&this.config.isMultiple&&this.data.getSelected().length===this.data.data.length||(this.beforeOpen&&this.beforeOpen(),this.config.isMultiple&&this.slim.multiSelected?this.slim.multiSelected.plus.classList.add("ss-cross"):this.slim.singleSelected&&(this.slim.singleSelected.arrowIcon.arrow.classList.remove("arrow-down"),this.slim.singleSelected.arrowIcon.arrow.classList.add("arrow-up")),this.slim[this.config.isMultiple?"multiSelected":"singleSelected"].container.classList.add("above"===this.data.contentPosition?this.config.openAbove:this.config.openBelow),this.config.addToBody&&(e=this.slim.container.getBoundingClientRect(),this.slim.content.style.top=e.top+e.height+window.scrollY+"px",this.slim.content.style.left=e.left+window.scrollX+"px",this.slim.content.style.width=e.width+"px"),this.slim.content.classList.add(this.config.open),"up"===this.config.showContent.toLowerCase()||"down"!==this.config.showContent.toLowerCase()&&"above"===(0,o.putContent)(this.slim.content,this.data.contentPosition,this.data.contentOpen)?this.moveContentAbove():this.moveContentBelow(),this.config.isMultiple||(e=this.data.getSelected())&&(e=e.id,(e=this.slim.list.querySelector('[data-id="'+e+'"]'))&&(0,o.ensureElementInView)(this.slim.list,e)),setTimeout(function(){t.data.contentOpen=!0,t.config.searchFocus&&t.slim.search.input.focus(),t.afterOpen&&t.afterOpen()},this.config.timeoutDelay)))},l.prototype.close=function(){var e=this;this.data.contentOpen&&(this.beforeClose&&this.beforeClose(),this.config.isMultiple&&this.slim.multiSelected?(this.slim.multiSelected.container.classList.remove(this.config.openAbove),this.slim.multiSelected.container.classList.remove(this.config.openBelow),this.slim.multiSelected.plus.classList.remove("ss-cross")):this.slim.singleSelected&&(this.slim.singleSelected.container.classList.remove(this.config.openAbove),this.slim.singleSelected.container.classList.remove(this.config.openBelow),this.slim.singleSelected.arrowIcon.arrow.classList.add("arrow-down"),this.slim.singleSelected.arrowIcon.arrow.classList.remove("arrow-up")),this.slim.content.classList.remove(this.config.open),this.data.contentOpen=!1,this.search(""),setTimeout(function(){e.slim.content.removeAttribute("style"),e.data.contentPosition="below",e.config.isMultiple&&e.slim.multiSelected?(e.slim.multiSelected.container.classList.remove(e.config.openAbove),e.slim.multiSelected.container.classList.remove(e.config.openBelow)):e.slim.singleSelected&&(e.slim.singleSelected.container.classList.remove(e.config.openAbove),e.slim.singleSelected.container.classList.remove(e.config.openBelow)),e.slim.search.input.blur(),e.afterClose&&e.afterClose()},this.config.timeoutDelay))},l.prototype.moveContentAbove=function(){var e=0;this.config.isMultiple&&this.slim.multiSelected?e=this.slim.multiSelected.container.offsetHeight:this.slim.singleSelected&&(e=this.slim.singleSelected.container.offsetHeight);var t=e+this.slim.content.offsetHeight-1;this.slim.content.style.margin="-"+t+"px 0 0 0",this.slim.content.style.height=t-e+1+"px",this.slim.content.style.transformOrigin="center bottom",this.data.contentPosition="above",this.config.isMultiple&&this.slim.multiSelected?(this.slim.multiSelected.container.classList.remove(this.config.openBelow),this.slim.multiSelected.container.classList.add(this.config.openAbove)):this.slim.singleSelected&&(this.slim.singleSelected.container.classList.remove(this.config.openBelow),this.slim.singleSelected.container.classList.add(this.config.openAbove))},l.prototype.moveContentBelow=function(){this.data.contentPosition="below",this.config.isMultiple&&this.slim.multiSelected?(this.slim.multiSelected.container.classList.remove(this.config.openAbove),this.slim.multiSelected.container.classList.add(this.config.openBelow)):this.slim.singleSelected&&(this.slim.singleSelected.container.classList.remove(this.config.openAbove),this.slim.singleSelected.container.classList.add(this.config.openBelow))},l.prototype.enable=function(){this.config.isEnabled=!0,this.config.isMultiple&&this.slim.multiSelected?this.slim.multiSelected.container.classList.remove(this.config.disabled):this.slim.singleSelected&&this.slim.singleSelected.container.classList.remove(this.config.disabled),this.select.triggerMutationObserver=!1,this.select.element.disabled=!1,this.slim.search.input.disabled=!1,this.select.triggerMutationObserver=!0},l.prototype.disable=function(){this.config.isEnabled=!1,this.config.isMultiple&&this.slim.multiSelected?this.slim.multiSelected.container.classList.add(this.config.disabled):this.slim.singleSelected&&this.slim.singleSelected.container.classList.add(this.config.disabled),this.select.triggerMutationObserver=!1,this.select.element.disabled=!0,this.slim.search.input.disabled=!0,this.select.triggerMutationObserver=!0},l.prototype.search=function(t){var i;this.data.searchValue!==t&&(this.slim.search.input.value=t,this.config.isAjax?((i=this).config.isSearching=!0,this.render(),this.ajax&&this.ajax(t,function(e){i.config.isSearching=!1,Array.isArray(e)?(e.unshift({text:"",placeholder:!0}),i.setData(e),i.data.search(t),i.render()):"string"==typeof e?i.slim.options(e):i.render()})):(this.data.search(t),this.render()))},l.prototype.setSearchText=function(e){this.config.searchText=e},l.prototype.render=function(){this.config.isMultiple?this.slim.values():(this.slim.placeholder(),this.slim.deselect()),this.slim.options()},l.prototype.destroy=function(e){var t=(e=void 0===e?null:e)?document.querySelector("."+e+".ss-main"):this.slim.container,i=e?document.querySelector("[data-ssid=".concat(e,"]")):this.select.element;t&&i&&(document.removeEventListener("click",this.documentClick),"auto"===this.config.showContent&&window.removeEventListener("scroll",this.windowScroll,!1),i.style.display="",delete i.dataset.ssid,i.slim=null,t.parentElement&&t.parentElement.removeChild(t),!this.config.addToBody||(e=e?document.querySelector("."+e+".ss-content"):this.slim.content)&&document.body.removeChild(e))},l);function l(e){var t=this;this.ajax=null,this.addable=null,this.beforeOnChange=null,this.onChange=null,this.beforeOpen=null,this.afterOpen=null,this.beforeClose=null,this.afterClose=null,this.windowScroll=(0,o.debounce)(function(e){t.data.contentOpen&&("above"===(0,o.putContent)(t.slim.content,t.data.contentPosition,t.data.contentOpen)?t.moveContentAbove():t.moveContentBelow())}),this.documentClick=function(e){e.target&&!(0,o.hasClassInTree)(e.target,t.config.id)&&t.close()};var i=this.validate(e);i.dataset.ssid&&this.destroy(i.dataset.ssid),e.ajax&&(this.ajax=e.ajax),e.addable&&(this.addable=e.addable),this.config=new n.Config({select:i,isAjax:!!e.ajax,showSearch:e.showSearch,searchPlaceholder:e.searchPlaceholder,searchText:e.searchText,searchingText:e.searchingText,searchFocus:e.searchFocus,searchHighlight:e.searchHighlight,searchFilter:e.searchFilter,closeOnSelect:e.closeOnSelect,showContent:e.showContent,placeholderText:e.placeholder,allowDeselect:e.allowDeselect,allowDeselectOption:e.allowDeselectOption,hideSelectedOption:e.hideSelectedOption,deselectLabel:e.deselectLabel,isEnabled:e.isEnabled,valuesUseText:e.valuesUseText,showOptionTooltips:e.showOptionTooltips,selectByGroup:e.selectByGroup,limit:e.limit,timeoutDelay:e.timeoutDelay,addToBody:e.addToBody}),this.select=new s.Select({select:i,main:this}),this.data=new r.Data({main:this}),this.slim=new a.Slim({main:this}),this.select.element.parentNode&&this.select.element.parentNode.insertBefore(this.slim.container,this.select.element.nextSibling),e.data?this.setData(e.data):this.render(),document.addEventListener("click",this.documentClick),"auto"===this.config.showContent&&window.addEventListener("scroll",this.windowScroll,!1),e.beforeOnChange&&(this.beforeOnChange=e.beforeOnChange),e.onChange&&(this.onChange=e.onChange),e.beforeOpen&&(this.beforeOpen=e.beforeOpen),e.afterOpen&&(this.afterOpen=e.afterOpen),e.beforeClose&&(this.beforeClose=e.beforeClose),e.afterClose&&(this.afterClose=e.afterClose),this.config.isEnabled||this.disable()}t.default=i},function(e,t,i){"use strict";t.__esModule=!0,t.Config=void 0;var n=(s.prototype.searchFilter=function(e,t){return-1!==e.text.toLowerCase().indexOf(t.toLowerCase())},s);function s(e){this.id="",this.isMultiple=!1,this.isAjax=!1,this.isSearching=!1,this.showSearch=!0,this.searchFocus=!0,this.searchHighlight=!1,this.closeOnSelect=!0,this.showContent="auto",this.searchPlaceholder="Search",this.searchText="No Results",this.searchingText="Searching...",this.placeholderText="Select Value",this.allowDeselect=!1,this.allowDeselectOption=!1,this.hideSelectedOption=!1,this.deselectLabel="x",this.isEnabled=!0,this.valuesUseText=!1,this.showOptionTooltips=!1,this.selectByGroup=!1,this.limit=0,this.timeoutDelay=200,this.addToBody=!1,this.main="ss-main",this.singleSelected="ss-single-selected",this.arrow="ss-arrow",this.multiSelected="ss-multi-selected",this.add="ss-add",this.plus="ss-plus",this.values="ss-values",this.value="ss-value",this.valueText="ss-value-text",this.valueDelete="ss-value-delete",this.content="ss-content",this.open="ss-open",this.openAbove="ss-open-above",this.openBelow="ss-open-below",this.search="ss-search",this.searchHighlighter="ss-search-highlight",this.addable="ss-addable",this.list="ss-list",this.optgroup="ss-optgroup",this.optgroupLabel="ss-optgroup-label",this.optgroupLabelSelectable="ss-optgroup-label-selectable",this.option="ss-option",this.optionSelected="ss-option-selected",this.highlighted="ss-highlighted",this.disabled="ss-disabled",this.hide="ss-hide",this.id="ss-"+Math.floor(1e5*Math.random()),this.style=e.select.style.cssText,this.class=e.select.className.split(" "),this.isMultiple=e.select.multiple,this.isAjax=e.isAjax,this.showSearch=!1!==e.showSearch,this.searchFocus=!1!==e.searchFocus,this.searchHighlight=!0===e.searchHighlight,this.closeOnSelect=!1!==e.closeOnSelect,e.showContent&&(this.showContent=e.showContent),this.isEnabled=!1!==e.isEnabled,e.searchPlaceholder&&(this.searchPlaceholder=e.searchPlaceholder),e.searchText&&(this.searchText=e.searchText),e.searchingText&&(this.searchingText=e.searchingText),e.placeholderText&&(this.placeholderText=e.placeholderText),this.allowDeselect=!0===e.allowDeselect,this.allowDeselectOption=!0===e.allowDeselectOption,this.hideSelectedOption=!0===e.hideSelectedOption,e.deselectLabel&&(this.deselectLabel=e.deselectLabel),e.valuesUseText&&(this.valuesUseText=e.valuesUseText),e.showOptionTooltips&&(this.showOptionTooltips=e.showOptionTooltips),e.selectByGroup&&(this.selectByGroup=e.selectByGroup),e.limit&&(this.limit=e.limit),e.searchFilter&&(this.searchFilter=e.searchFilter),null!=e.timeoutDelay&&(this.timeoutDelay=e.timeoutDelay),this.addToBody=!0===e.addToBody}t.Config=n},function(e,t,i){"use strict";t.__esModule=!0,t.Select=void 0;var n=i(0),i=(s.prototype.setValue=function(){if(this.main.data.getSelected()){if(this.main.config.isMultiple)for(var e=this.main.data.getSelected(),t=0,i=this.element.options;t<i.length;t++){var n=i[t];n.selected=!1;for(var s=0,a=e;s<a.length;s++)a[s].value===n.value&&(n.selected=!0)}else{e=this.main.data.getSelected();this.element.value=e?e.value:""}this.main.data.isOnChangeEnabled=!1,this.element.dispatchEvent(new CustomEvent("change",{bubbles:!0})),this.main.data.isOnChangeEnabled=!0}},s.prototype.addAttributes=function(){this.element.tabIndex=-1,this.element.style.display="none",this.element.dataset.ssid=this.main.config.id,this.element.setAttribute("aria-hidden","true")},s.prototype.addEventListeners=function(){var t=this;this.element.addEventListener("change",function(e){t.main.data.setSelectedFromSelect(),t.main.render()})},s.prototype.addMutationObserver=function(){var t=this;this.main.config.isAjax||(this.mutationObserver=new MutationObserver(function(e){t.triggerMutationObserver&&(t.main.data.parseSelectData(),t.main.data.setSelectedFromSelect(),t.main.render(),e.forEach(function(e){"class"===e.attributeName&&t.main.slim.updateContainerDivClass(t.main.slim.container)}))}),this.observeMutationObserver())},s.prototype.observeMutationObserver=function(){this.mutationObserver&&this.mutationObserver.observe(this.element,{attributes:!0,childList:!0,characterData:!0})},s.prototype.disconnectMutationObserver=function(){this.mutationObserver&&this.mutationObserver.disconnect()},s.prototype.create=function(e){this.element.innerHTML="";for(var t=0,i=e;t<i.length;t++){var n=i[t];if(n.hasOwnProperty("options")){var s=n,a=document.createElement("optgroup");if(a.label=s.label,s.options)for(var o=0,l=s.options;o<l.length;o++){var r=l[o];a.appendChild(this.createOption(r))}this.element.appendChild(a)}else this.element.appendChild(this.createOption(n))}},s.prototype.createOption=function(t){var i=document.createElement("option");return i.value=""!==t.value?t.value:t.text,i.innerHTML=t.innerHTML||t.text,t.selected&&(i.selected=t.selected),!1===t.display&&(i.style.display="none"),t.disabled&&(i.disabled=!0),t.placeholder&&i.setAttribute("data-placeholder","true"),t.mandatory&&i.setAttribute("data-mandatory","true"),t.class&&t.class.split(" ").forEach(function(e){i.classList.add(e)}),t.data&&"object"==typeof t.data&&Object.keys(t.data).forEach(function(e){i.setAttribute("data-"+(0,n.kebabCase)(e),t.data[e])}),i},s);function s(e){this.triggerMutationObserver=!0,this.element=e.select,this.main=e.main,this.element.disabled&&(this.main.config.isEnabled=!1),this.addAttributes(),this.addEventListeners(),this.mutationObserver=null,this.addMutationObserver(),this.element.slim=e.main}t.Select=i},function(e,t,i){"use strict";t.__esModule=!0,t.Slim=void 0;var n=i(0),o=i(1),i=(s.prototype.containerDiv=function(){var e=document.createElement("div");return e.style.cssText=this.main.config.style,this.updateContainerDivClass(e),e},s.prototype.updateContainerDivClass=function(e){this.main.config.class=this.main.select.element.className.split(" "),e.className="",e.classList.add(this.main.config.id),e.classList.add(this.main.config.main);for(var t=0,i=this.main.config.class;t<i.length;t++){var n=i[t];""!==n.trim()&&e.classList.add(n)}},s.prototype.singleSelectedDiv=function(){var t=this,e=document.createElement("div");e.classList.add(this.main.config.singleSelected);var i=document.createElement("span");i.classList.add("placeholder"),e.appendChild(i);var n=document.createElement("span");n.innerHTML=this.main.config.deselectLabel,n.classList.add("ss-deselect"),n.onclick=function(e){e.stopPropagation(),t.main.config.isEnabled&&t.main.set("")},e.appendChild(n);var s=document.createElement("span");s.classList.add(this.main.config.arrow);var a=document.createElement("span");return a.classList.add("arrow-down"),s.appendChild(a),e.appendChild(s),e.onclick=function(){t.main.config.isEnabled&&(t.main.data.contentOpen?t.main.close():t.main.open())},{container:e,placeholder:i,deselect:n,arrowIcon:{container:s,arrow:a}}},s.prototype.placeholder=function(){var e,t=this.main.data.getSelected();null===t||t&&t.placeholder?((e=document.createElement("span")).classList.add(this.main.config.disabled),e.innerHTML=this.main.config.placeholderText,this.singleSelected&&(this.singleSelected.placeholder.innerHTML=e.outerHTML)):(e="",t&&(e=t.innerHTML&&!0!==this.main.config.valuesUseText?t.innerHTML:t.text),this.singleSelected&&(this.singleSelected.placeholder.innerHTML=t?e:""))},s.prototype.deselect=function(){this.singleSelected&&(!this.main.config.allowDeselect||""===this.main.selected()?this.singleSelected.deselect.classList.add("ss-hide"):this.singleSelected.deselect.classList.remove("ss-hide"))},s.prototype.multiSelectedDiv=function(){var t=this,e=document.createElement("div");e.classList.add(this.main.config.multiSelected);var i=document.createElement("div");i.classList.add(this.main.config.values),e.appendChild(i);var n=document.createElement("div");n.classList.add(this.main.config.add);var s=document.createElement("span");return s.classList.add(this.main.config.plus),s.onclick=function(e){t.main.data.contentOpen&&(t.main.close(),e.stopPropagation())},n.appendChild(s),e.appendChild(n),e.onclick=function(e){t.main.config.isEnabled&&(e.target.classList.contains(t.main.config.valueDelete)||(t.main.data.contentOpen?t.main.close():t.main.open()))},{container:e,values:i,add:n,plus:s}},s.prototype.values=function(){if(this.multiSelected){for(var e=this.multiSelected.values.childNodes,t=this.main.data.getSelected(),i=[],n=0,s=e;n<s.length;n++){for(var a=s[n],o=!0,l=0,r=t;l<r.length;l++){var c=r[l];String(c.id)===String(a.dataset.id)&&(o=!1)}o&&i.push(a)}for(var d=0,h=i;d<h.length;d++){var u=h[d];u.classList.add("ss-out"),this.multiSelected.values.removeChild(u)}for(var p,e=this.multiSelected.values.childNodes,c=0;c<t.length;c++){o=!1;for(var m=0,f=e;m<f.length;m++){a=f[m];String(t[c].id)===String(a.dataset.id)&&(o=!0)}o||(0!==e.length&&HTMLElement.prototype.insertAdjacentElement?0===c?this.multiSelected.values.insertBefore(this.valueDiv(t[c]),e[c]):e[c-1].insertAdjacentElement("afterend",this.valueDiv(t[c])):this.multiSelected.values.appendChild(this.valueDiv(t[c])))}0===t.length&&((p=document.createElement("span")).classList.add(this.main.config.disabled),p.innerHTML=this.main.config.placeholderText,this.multiSelected.values.innerHTML=p.outerHTML)}},s.prototype.valueDiv=function(s){var a=this,e=document.createElement("div");e.classList.add(this.main.config.value),e.dataset.id=s.id;var t=document.createElement("span");return t.classList.add(this.main.config.valueText),t.innerHTML=s.innerHTML&&!0!==this.main.config.valuesUseText?s.innerHTML:s.text,e.appendChild(t),s.mandatory||((t=document.createElement("span")).classList.add(this.main.config.valueDelete),t.innerHTML=this.main.config.deselectLabel,t.onclick=function(e){e.preventDefault(),e.stopPropagation();var t=!1;if(a.main.beforeOnChange||(t=!0),a.main.beforeOnChange){for(var e=a.main.data.getSelected(),i=JSON.parse(JSON.stringify(e)),n=0;n<i.length;n++)i[n].id===s.id&&i.splice(n,1);!1!==a.main.beforeOnChange(i)&&(t=!0)}t&&(a.main.data.removeFromSelected(s.id,"id"),a.main.render(),a.main.select.setValue(),a.main.data.onDataChange())},e.appendChild(t)),e},s.prototype.contentDiv=function(){var e=document.createElement("div");return e.classList.add(this.main.config.content),e},s.prototype.searchDiv=function(){var n=this,e=document.createElement("div"),s=document.createElement("input"),a=document.createElement("div");e.classList.add(this.main.config.search);var t={container:e,input:s};return this.main.config.showSearch||(e.classList.add(this.main.config.hide),s.readOnly=!0),s.type="search",s.placeholder=this.main.config.searchPlaceholder,s.tabIndex=0,s.setAttribute("aria-label",this.main.config.searchPlaceholder),s.setAttribute("autocapitalize","off"),s.setAttribute("autocomplete","off"),s.setAttribute("autocorrect","off"),s.onclick=function(e){setTimeout(function(){""===e.target.value&&n.main.search("")},10)},s.onkeydown=function(e){"ArrowUp"===e.key?(n.main.open(),n.highlightUp(),e.preventDefault()):"ArrowDown"===e.key?(n.main.open(),n.highlightDown(),e.preventDefault()):"Tab"===e.key?n.main.data.contentOpen?n.main.close():setTimeout(function(){n.main.close()},n.main.config.timeoutDelay):"Enter"===e.key&&e.preventDefault()},s.onkeyup=function(e){var t=e.target;if("Enter"===e.key){if(n.main.addable&&e.ctrlKey)return a.click(),e.preventDefault(),void e.stopPropagation();var i=n.list.querySelector("."+n.main.config.highlighted);i&&i.click()}else"ArrowUp"===e.key||"ArrowDown"===e.key||("Escape"===e.key?n.main.close():n.main.config.showSearch&&n.main.data.contentOpen?n.main.search(t.value):s.value="");e.preventDefault(),e.stopPropagation()},s.onfocus=function(){n.main.open()},e.appendChild(s),this.main.addable&&(a.classList.add(this.main.config.addable),a.innerHTML="+",a.onclick=function(e){var t;n.main.addable&&(e.preventDefault(),e.stopPropagation(),""!==(e=n.search.input.value).trim()?(e=n.main.addable(e),t="",e&&("object"==typeof e?(0,o.validateOption)(e)&&(n.main.addData(e),t=e.value||e.text):(n.main.addData(n.main.data.newOption({text:e,value:e})),t=e),n.main.search(""),setTimeout(function(){n.main.set(t,"value",!1,!1)},100),n.main.config.closeOnSelect&&setTimeout(function(){n.main.close()},100))):n.search.input.focus())},e.appendChild(a),t.addable=a),t},s.prototype.highlightUp=function(){var e=this.list.querySelector("."+this.main.config.highlighted),t=null;if(e)for(t=e.previousSibling;null!==t&&t.classList.contains(this.main.config.disabled);)t=t.previousSibling;else var i=this.list.querySelectorAll("."+this.main.config.option+":not(."+this.main.config.disabled+")"),t=i[i.length-1];null!==(t=t&&t.classList.contains(this.main.config.optgroupLabel)?null:t)||(i=e.parentNode).classList.contains(this.main.config.optgroup)&&(!i.previousSibling||(i=i.previousSibling.querySelectorAll("."+this.main.config.option+":not(."+this.main.config.disabled+")")).length&&(t=i[i.length-1])),t&&(e&&e.classList.remove(this.main.config.highlighted),t.classList.add(this.main.config.highlighted),(0,n.ensureElementInView)(this.list,t))},s.prototype.highlightDown=function(){var e,t=this.list.querySelector("."+this.main.config.highlighted),i=null;if(t)for(i=t.nextSibling;null!==i&&i.classList.contains(this.main.config.disabled);)i=i.nextSibling;else i=this.list.querySelector("."+this.main.config.option+":not(."+this.main.config.disabled+")");null!==i||null===t||(e=t.parentNode).classList.contains(this.main.config.optgroup)&&e.nextSibling&&(i=e.nextSibling.querySelector("."+this.main.config.option+":not(."+this.main.config.disabled+")")),i&&(t&&t.classList.remove(this.main.config.highlighted),i.classList.add(this.main.config.highlighted),(0,n.ensureElementInView)(this.list,i))},s.prototype.listDiv=function(){var e=document.createElement("div");return e.classList.add(this.main.config.list),e.setAttribute("role","listbox"),e},s.prototype.options=function(e){void 0===e&&(e="");var t=this.main.data.filtered||this.main.data.data;if((this.list.innerHTML="")!==e)return(i=document.createElement("div")).classList.add(this.main.config.option),i.classList.add(this.main.config.disabled),i.innerHTML=e,void this.list.appendChild(i);if(this.main.config.isAjax&&this.main.config.isSearching)return(i=document.createElement("div")).classList.add(this.main.config.option),i.classList.add(this.main.config.disabled),i.innerHTML=this.main.config.searchingText,void this.list.appendChild(i);if(0===t.length){var i=document.createElement("div");return i.classList.add(this.main.config.option),i.classList.add(this.main.config.disabled),i.innerHTML=this.main.config.searchText,void this.list.appendChild(i)}for(var r=this,n=0,s=t;n<s.length;n++)!function(e){if(e.hasOwnProperty("label")){var t=e,s=document.createElement("div");s.classList.add(r.main.config.optgroup);var i=document.createElement("div");i.classList.add(r.main.config.optgroupLabel),r.main.config.selectByGroup&&r.main.config.isMultiple&&i.classList.add(r.main.config.optgroupLabelSelectable),i.innerHTML=t.label,s.appendChild(i);t=t.options;if(t){for(var a,n=0,o=t;n<o.length;n++){var l=o[n];s.appendChild(r.option(l))}r.main.config.selectByGroup&&r.main.config.isMultiple&&(a=r,i.addEventListener("click",function(e){e.preventDefault(),e.stopPropagation();for(var t=0,i=s.children;t<i.length;t++){var n=i[t];-1!==n.className.indexOf(a.main.config.option)&&n.click()}}))}r.list.appendChild(s)}else r.list.appendChild(r.option(e))}(s[n])},s.prototype.option=function(o){if(o.placeholder){var e=document.createElement("div");return e.classList.add(this.main.config.option),e.classList.add(this.main.config.hide),e}var t=document.createElement("div");t.classList.add(this.main.config.option),t.setAttribute("role","option"),o.class&&o.class.split(" ").forEach(function(e){t.classList.add(e)}),o.style&&(t.style.cssText=o.style);var l=this.main.data.getSelected();t.dataset.id=o.id,this.main.config.searchHighlight&&this.main.slim&&o.innerHTML&&""!==this.main.slim.search.input.value.trim()?t.innerHTML=(0,n.highlight)(o.innerHTML,this.main.slim.search.input.value,this.main.config.searchHighlighter):o.innerHTML&&(t.innerHTML=o.innerHTML),this.main.config.showOptionTooltips&&t.textContent&&t.setAttribute("title",t.textContent);var r=this;t.addEventListener("click",function(e){e.preventDefault(),e.stopPropagation();var t=this.dataset.id;if(!0===o.selected&&r.main.config.allowDeselectOption){var i=!1;if(r.main.beforeOnChange&&r.main.config.isMultiple||(i=!0),r.main.beforeOnChange&&r.main.config.isMultiple){for(var n=r.main.data.getSelected(),s=JSON.parse(JSON.stringify(n)),a=0;a<s.length;a++)s[a].id===t&&s.splice(a,1);!1!==r.main.beforeOnChange(s)&&(i=!0)}i&&(r.main.config.isMultiple?(r.main.data.removeFromSelected(t,"id"),r.main.render(),r.main.select.setValue(),r.main.data.onDataChange()):r.main.set(""))}else o.disabled||o.selected||r.main.config.limit&&Array.isArray(l)&&r.main.config.limit<=l.length||(r.main.beforeOnChange?(n=void 0,(i=JSON.parse(JSON.stringify(r.main.data.getObjectFromData(t)))).selected=!0,r.main.config.isMultiple?(n=JSON.parse(JSON.stringify(l))).push(i):n=JSON.parse(JSON.stringify(i)),!1!==r.main.beforeOnChange(n)&&r.main.set(t,"id",r.main.config.closeOnSelect)):r.main.set(t,"id",r.main.config.closeOnSelect))});e=l&&(0,n.isValueInArrayOfObjects)(l,"id",o.id);return(o.disabled||e)&&(t.onclick=null,r.main.config.allowDeselectOption||t.classList.add(this.main.config.disabled),r.main.config.hideSelectedOption&&t.classList.add(this.main.config.hide)),e?t.classList.add(this.main.config.optionSelected):t.classList.remove(this.main.config.optionSelected),t},s);function s(e){this.main=e.main,this.container=this.containerDiv(),this.content=this.contentDiv(),this.search=this.searchDiv(),this.list=this.listDiv(),this.options(),this.singleSelected=null,this.multiSelected=null,this.main.config.isMultiple?(this.multiSelected=this.multiSelectedDiv(),this.multiSelected&&this.container.appendChild(this.multiSelected.container)):(this.singleSelected=this.singleSelectedDiv(),this.container.appendChild(this.singleSelected.container)),this.main.config.addToBody?(this.content.classList.add(this.main.config.id),document.body.appendChild(this.content)):this.container.appendChild(this.content),this.content.appendChild(this.search.container),this.content.appendChild(this.list)}t.Slim=i}],s.c=n,s.d=function(e,t,i){s.o(e,t)||Object.defineProperty(e,t,{enumerable:!0,get:i})},s.r=function(e){"undefined"!=typeof Symbol&&Symbol.toStringTag&&Object.defineProperty(e,Symbol.toStringTag,{value:"Module"}),Object.defineProperty(e,"__esModule",{value:!0})},s.t=function(t,e){if(1&e&&(t=s(t)),8&e)return t;if(4&e&&"object"==typeof t&&t&&t.__esModule)return t;var i=Object.create(null);if(s.r(i),Object.defineProperty(i,"default",{enumerable:!0,value:t}),2&e&&"string"!=typeof t)for(var n in t)s.d(i,n,function(e){return t[e]}.bind(null,n));return i},s.n=function(e){var t=e&&e.__esModule?function(){return e.default}:function(){return e};return s.d(t,"a",t),t},s.o=function(e,t){return Object.prototype.hasOwnProperty.call(e,t)},s.p="",s(s.s=2).default;function s(e){if(n[e])return n[e].exports;var t=n[e]={i:e,l:!1,exports:{}};return i[e].call(t.exports,t,t.exports,s),t.l=!0,t.exports}var i,n});
 
 /***/ }),
 
@@ -80870,7 +81305,7 @@ window.omega = __webpack_require__(/*! ./omega/app/omega */ "./resources/js/omeg
 
 window.__ = function (value) {
   return value;
-};
+}; //import './grapes/grapes'
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! jquery */ "./node_modules/jquery/dist/jquery.js")))
 
 /***/ }),
@@ -82881,14 +83316,26 @@ __webpack_require__.r(__webpack_exports__);
 
 /***/ }),
 
+/***/ "./resources/sass/grapes/grapes.scss":
+/*!*******************************************!*\
+  !*** ./resources/sass/grapes/grapes.scss ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+// removed by extract-text-webpack-plugin
+
+/***/ }),
+
 /***/ 0:
-/*!*************************************************************!*\
-  !*** multi ./resources/js/app.js ./resources/sass/app.scss ***!
-  \*************************************************************/
+/*!*************************************************************************************************!*\
+  !*** multi ./resources/js/app.js ./resources/sass/grapes/grapes.scss ./resources/sass/app.scss ***!
+  \*************************************************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(/*! D:\git\omega-core\resources\js\app.js */"./resources/js/app.js");
+__webpack_require__(/*! D:\git\omega-core\resources\sass\grapes\grapes.scss */"./resources/sass/grapes/grapes.scss");
 module.exports = __webpack_require__(/*! D:\git\omega-core\resources\sass\app.scss */"./resources/sass/app.scss");
 
 

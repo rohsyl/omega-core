@@ -1,4 +1,11 @@
 const mix = require('laravel-mix');
+const WebpackShellPlugin = require('webpack-shell-plugin');
+
+/**
+ * For dev purpose.
+ */
+var postBuildPublish = true;
+var postBuildDirectory = '../gsr-website';
 
 /*
  |--------------------------------------------------------------------------
@@ -20,6 +27,11 @@ mix.webpackConfig(webpack => {
                 'window.jQuery': 'jquery',
                 Popper: ['popper.js', 'default'],
                 Swal: 'swal'
+            }),
+            new WebpackShellPlugin({
+                onBuildExit: postBuildPublish ? [
+                    'cd ' + postBuildDirectory + ' && php artisan vendor:publish --provider="rohsyl\\OmegaCore\\ServiceProvider" --tag="public" --force'
+                ] : []
             })
         ],
         resolve: {
@@ -34,6 +46,8 @@ mix.webpackConfig(webpack => {
 
 mix
     .js('resources/js/app.js', 'public/js')
+    .js('resources/js/grapes/grapes.js', 'public/js')
+    .sass('resources/sass/grapes/grapes.scss', 'public/css')
     .sass('resources/sass/app.scss', 'public/css')
     .copy('node_modules/@fortawesome/fontawesome-free/webfonts', 'public/webfonts')
     .copy('node_modules/bs4-summernote/dist/font', 'public/css/font')
