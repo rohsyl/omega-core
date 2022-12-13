@@ -61,7 +61,7 @@
 
                 <div class="card">
                     <div class="card-body">
-                        <livewire:omega_media-fileuploader :media="$media"/>
+                        <livewire:omega_media-fileuploader :media="$directory"/>
                     </div>
                 </div>
 

@@ -1,0 +1,79 @@
+html, body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: Roboto, -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.editor-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex-wrap: nowrap;
+}
+.editor-container .panel__top {
+  padding: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  position: initial;
+  flex-grow: 1;
+}
+.editor-container .editor-row {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  flex-grow: 2;
+  flex-basis: 100%;
+}
+.editor-container .editor-row .editor-canvas {
+  flex-grow: 2;
+  width: 75%;
+}
+.editor-container .editor-row .panel__right {
+  flex-grow: 1;
+}
+.editor-container .blocks {
+  flex-grow: 1;
+}
+
+.gjs-editor-cont .sp-container {
+  width: 100%;
+}
+
+.gjs-pn-panel {
+  position: relative !important;
+}
+
+.gjs-cv-canvas {
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.gjs-block {
+  width: auto;
+  height: auto;
+  min-height: auto;
+}
+
+.panel__basic-actions {
+  position: initial;
+}
+
+.panel__right {
+  flex-basis: 230px;
+  position: relative;
+  overflow-y: auto;
+}
+
+.panel__switcher {
+  position: initial;
+}
+
+.panel__devices {
+  position: initial;
+}
