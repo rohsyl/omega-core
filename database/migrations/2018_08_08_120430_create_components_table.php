@@ -14,7 +14,7 @@ class CreateComponentsTable extends Migration
     public function up()
     {
         Schema::create('components', function (Blueprint $table) {
-            $table->increments('id');
+            $table->id();
             $table->unsignedBigInteger('plugin_form_id');
             $table->unsignedBigInteger('page_id')->nullable();
             $table->string('name');

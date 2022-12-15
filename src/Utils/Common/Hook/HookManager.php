@@ -1,6 +1,8 @@
 <?php
 namespace rohsyl\OmegaCore\Utils\Common\Hook;
 
+use Illuminate\Support\HtmlString;
+
 class HookManager
 {
 
@@ -33,13 +35,22 @@ class HookManager
         return false;
     }
 
-    public function callActions($hook, ...$args) {
+    public function callActions($hook, ?array $args = null, bool $stringify = false, bool $htmlify = true) {
         $priorites = $this->hooks[$hook];
+        $args = isset($args) ? $args : [];
 
         $out = [];
-        foreach($priorites as $callback) {
-            if(is_callable($callback)) {
-                $out[] = call_user_func_array($callback, $args);
+        foreach($priorites as $callbacks) {
+            foreach($callbacks as $callback) {
+                if(is_callable($callback)) {
+                    $out[] = call_user_func_array($callback, $args) ?? null;
+                }
+            }
+        }
+        if($stringify) {
+            $out = join('', $out);
+            if($htmlify) {
+                return new HtmlString($out);
             }
         }
         return $out;

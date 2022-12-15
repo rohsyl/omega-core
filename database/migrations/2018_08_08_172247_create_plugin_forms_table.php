@@ -14,7 +14,7 @@ class CreatePluginFormsTable extends Migration
     public function up()
     {
         Schema::create('plugin_forms', function (Blueprint $table) {
-            $table->increments('id');
+            $table->id();
             $table->unsignedBigInteger('plugin_id');
             $table->string('name')->unique();
             $table->string('title');

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "2ce9896df0b508d59d0401105bd4889d",
+    "content-hash": "f413ded6887ea8187aca99ad6698bfc0",
     "packages": [
         {
             "name": "brick/math",
@@ -679,16 +679,16 @@
         },
         {
             "name": "laravel/framework",
-            "version": "v9.43.0",
+            "version": "v9.44.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/framework.git",
-                "reference": "011f2e1d49a11c22519a7899b46ddf3bc5b0f40b"
+                "reference": "60808a7d9acd53461fd69634c08fc7e0a99fbf98"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/framework/zipball/011f2e1d49a11c22519a7899b46ddf3bc5b0f40b",
-                "reference": "011f2e1d49a11c22519a7899b46ddf3bc5b0f40b",
+                "url": "https://api.github.com/repos/laravel/framework/zipball/60808a7d9acd53461fd69634c08fc7e0a99fbf98",
+                "reference": "60808a7d9acd53461fd69634c08fc7e0a99fbf98",
                 "shasum": ""
             },
             "require": {
@@ -861,7 +861,7 @@
                 "issues": "https://github.com/laravel/framework/issues",
                 "source": "https://github.com/laravel/framework"
             },
-            "time": "2022-12-06T14:26:07+00:00"
+            "time": "2022-12-15T14:56:36+00:00"
         },
         {
             "name": "laravel/serializable-closure",
@@ -3180,6 +3180,57 @@
                 "source": "https://github.com/coucounco/laravel-advanced-query-filter/tree/v2.1.1"
             },
             "time": "2022-12-13T19:06:21+00:00"
+        },
+        {
+            "name": "rohsyl/omega-plugin-blog",
+            "version": "dev-master",
+            "dist": {
+                "type": "path",
+                "url": "../omega-plugin-blog",
+                "reference": "6768f52651470ff419dc1e020de356afb396f2b1"
+            },
+            "require": {
+                "illuminate/contracts": "^9.0",
+                "php": ">=8.0.2",
+                "spatie/laravel-package-tools": "^1.13.0"
+            },
+            "require-dev": {
+                "nunomaduro/collision": "^6.0",
+                "orchestra/testbench": "^7.0",
+                "phpunit/phpunit": "^9"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "rohsyl\\OmegaPlugin\\Blog\\ServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "rohsyl\\OmegaPlugin\\Blog\\": "src",
+                    "rohsyl\\OmegaPlugin\\Blog\\Database\\Factories\\": "database/factories"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "rohsyl\\OmegaPlugin\\Blog\\Tests\\": "tests"
+                }
+            },
+            "license": [
+                "GPL-3.0"
+            ],
+            "authors": [
+                {
+                    "name": "rohsyl",
+                    "email": "syzin12@gmail.com"
+                }
+            ],
+            "description": "OmegaCMS Plugin Blug",
+            "transport-options": {
+                "relative": true
+            }
         },
         {
             "name": "rohsyl/omega-plugins-bundle",
@@ -6798,16 +6849,16 @@
         },
         {
             "name": "phpunit/php-code-coverage",
-            "version": "9.2.20",
+            "version": "9.2.21",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "af7463c955007de36db0c5e26d03e2f933c2e980"
+                "reference": "3f893e19712bb0c8bc86665d1562e9fd509c4ef0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/af7463c955007de36db0c5e26d03e2f933c2e980",
-                "reference": "af7463c955007de36db0c5e26d03e2f933c2e980",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/3f893e19712bb0c8bc86665d1562e9fd509c4ef0",
+                "reference": "3f893e19712bb0c8bc86665d1562e9fd509c4ef0",
                 "shasum": ""
             },
             "require": {
@@ -6863,7 +6914,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sebastianbergmann/php-code-coverage/issues",
-                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/9.2.20"
+                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/9.2.21"
             },
             "funding": [
                 {
@@ -6871,7 +6922,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2022-12-13T07:49:28+00:00"
+            "time": "2022-12-14T13:26:54+00:00"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -9022,7 +9073,8 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "rohsyl/omega-plugins-bundle": 20
+        "rohsyl/omega-plugins-bundle": 20,
+        "rohsyl/omega-plugin-blog": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

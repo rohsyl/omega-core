@@ -14,7 +14,7 @@ class CreateLocalesTable extends Migration
     public function up()
     {
         Schema::create('locales', function (Blueprint $table) {
-            $table->increments('id');
+            $table->id();
             $table->unsignedBigInteger('flag_id')->nullable();
             $table->string('slug', 2)->unique();
             $table->string('name');

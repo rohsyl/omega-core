@@ -14,7 +14,7 @@ class CreateComponentWidgetAreaTable extends Migration
     public function up()
     {
         Schema::create('component_widget_area', function (Blueprint $table) {
-            $table->increments('id');
+            $table->id();
             $table->unsignedBigInteger('widget_area_id');
             $table->unsignedBigInteger('component_id');
             $table->unsignedBigInteger('page_id')->nullable();

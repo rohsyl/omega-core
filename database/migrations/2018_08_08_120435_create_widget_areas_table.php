@@ -14,7 +14,7 @@ class CreateWidgetAreasTable extends Migration
     public function up()
     {
         Schema::create('widget_areas', function (Blueprint $table) {
-            $table->increments('id');
+            $table->id();
             $table->string('name');
             $table->string('theme');
             $table->timestamps();

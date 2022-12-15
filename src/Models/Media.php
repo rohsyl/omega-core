@@ -15,7 +15,6 @@ class Media extends Model
     const TYPE_FILE = 2;
     const TYPE_EXTERNAL_VIDEO = 3;
 
-
     const MT_PICTURE = 'picture';
     const MT_VIDEO = 'video';
     const MT_MUSIC = 'music';

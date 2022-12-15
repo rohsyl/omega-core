@@ -8,12 +8,9 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider as SP;
 use Illuminate\Support\Str;
 use LivewireUI\Modal\LivewireModalServiceProvider;
-use rohsyl\LaravelAcl\ServiceProvider as LaravelAclServiceProvider;
 use rohsyl\LaravelAdvancedQueryFilter\Filters;
 use rohsyl\OmegaCore\Utils\Common\Command\VendorPublishCommand;
 use rohsyl\OmegaCore\Utils\Common\Hook\HookManager;
-use rohsyl\OmegaPlugin\Bundle\ServiceProvider as PluginsBundleServiceProvider;
-use rohsyl\LaravelAdvancedQueryFilter\ServiceProvider as LaravelAqfServiceProvider;
 use rohsyl\OmegaCore\Http\Middleware\AdminLocale;
 use rohsyl\OmegaCore\Http\Middleware\OmegaIsInstalled;
 use rohsyl\OmegaCore\Http\Middleware\OmegaLoadConfiguration;
@@ -139,9 +136,10 @@ class ServiceProvider extends SP
         $this->registerFacades();
 
         $this->app->register(LivewireModalServiceProvider::class);
-        $this->app->register(PluginsBundleServiceProvider::class);
-        $this->app->register(LaravelAclServiceProvider::class);
-        $this->app->register(LaravelAqfServiceProvider::class);
+        $this->app->register(\rohsyl\LaravelAcl\ServiceProvider::class);
+        $this->app->register(\rohsyl\LaravelAdvancedQueryFilter\ServiceProvider::class);
+        $this->app->register(\rohsyl\OmegaPlugin\Bundle\ServiceProvider::class);
+        $this->app->register(\rohsyl\OmegaPlugin\Blog\ServiceProvider::class);
 
     }
 

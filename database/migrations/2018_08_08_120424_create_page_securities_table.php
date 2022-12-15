@@ -14,7 +14,7 @@ class CreatePageSecuritiesTable extends Migration
     public function up()
     {
         Schema::create('page_securities', function (Blueprint $table) {
-            $table->increments('id');
+            $table->id();
             $table->unsignedBigInteger('page_id');
             $table->string('type');
             $table->longText('param')->nullable();

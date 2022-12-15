@@ -14,7 +14,7 @@ class CreateMemberGroupsTable extends Migration
     public function up()
     {
         Schema::create('member_groups', function (Blueprint $table) {
-            $table->increments('id');
+            $table->id();
             $table->string('name')->unique();
             $table->timestamps();
             $table->softDeletes();

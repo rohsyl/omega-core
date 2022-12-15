@@ -14,7 +14,7 @@ class CreatePluginFormEntriesTable extends Migration
     public function up()
     {
         Schema::create('plugin_form_entries', function (Blueprint $table) {
-            $table->increments('id');
+            $table->id();
             $table->unsignedBigInteger('plugin_form_id');
             $table->string('name');
             $table->string('type');

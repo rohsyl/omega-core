@@ -1,61 +1,63 @@
 @php
-    $r = \Route::current()->getAction();
-    $route = (isset($r['as'])) ? $r['as'] : '';
+$r = \Route::current()->getAction();
+$route = (isset($r['as'])) ? $r['as'] : '';
+
+$menuItems = [
+    [
+        'name' => 'dashboard',
+        'icon' => 'fas fa-home',
+        'label' => __('Dashboard'),
+        'route' => route('omega.admin.dashboard'),
+    ],
+    [
+        'name' => 'pages-index',
+        'icon' => 'fas fa-file-alt',
+        'label' => __('Pages'),
+        'route' => route('omega.admin.content.pages.index'),
+    ],
+    [
+        'name' => 'media-library',
+        'icon' => 'fas fa-images',
+        'label' => __('Media library'),
+        'route' => route('omega.admin.content.media.index'),
+    ],
+    [
+        'name' => 'menus-index',
+        'icon' => 'fas fa-bars',
+        'label' => __('Menus'),
+        'route' => route('omega.admin.appearance.menus.index'),
+    ],
+    [
+        'name' => 'users-groups-index',
+        'icon' => 'fas fa-users',
+        'label' => __('Users & Groups'),
+        'route' => route('omega.admin.users.index'),
+    ],
+    [
+        'name' => 'members-index',
+        'icon' => 'fas fa-address-book',
+        'label' => __('Members'),
+        'route' => route('omega.admin.member.members.index'),
+    ],
+    [
+        'name' => 'plugins-index',
+        'icon' => 'fas fa-cubes',
+        'label' => __('Plugins'),
+        'route' => route('omega.admin.plugins.index'),
+    ],
+];
 @endphp
 
-<li class="nav-item mT-30">
-    <a class="sidebar-link {{ request()->is('*/admin/dashboard*') ? 'active' : '' }}" href="{{ route('omega.admin.dashboard') }}">
-        <span class="icon-holder">
-            <i class="c-blue-500 fas fa-home color-gray-dark"></i>
-        </span>
-        <span class="title">{{ __('Dashboard')}}</span>
-    </a>
-</li>
-<li class="nav-item">
-    <a class="sidebar-link {{ request()->is('*/admin/content/pages*') ? 'active' : '' }}" href="{{ route('omega.admin.content.pages.index') }}">
-        <span class="icon-holder">
-            <i class="c-blue-500 fas fa-file-alt color-gray-dark"></i>
-        </span>
-        <span class="title">{{ __('Pages')}}</span>
-    </a>
-</li>
-<li class="nav-item">
-    <a class="sidebar-link {{ request()->is('*/admin/content/media*') ? 'active' : '' }}" href="{{ route('omega.admin.content.media.index') }}">
-        <span class="icon-holder">
-            <i class="c-brown-500 fas fa-images color-gray-dark"></i>
-        </span>
-        <span class="title">{{ __('Media library') }}</span>
-    </a>
-</li>
-<li class="nav-item">
-    <a class="sidebar-link {{ request()->is('*/admin/apparence/menus*') ? 'active' : '' }}" href="{{ route('omega.admin.appearance.menus.index') }}">
-        <span class="icon-holder">
-            <i class="c-blue-500 fas fa-bars color-gray-dark"></i>
-        </span>
-        <span class="title">{{ __('Menus')}}</span>
-    </a>
-</li>
-<li class="nav-item">
-    <a class="sidebar-link {{ request()->is(['*/admin/users*', '*/admin/groups*']) ? 'active' : '' }}" href="{{ route('omega.admin.users.index') }}">
-        <span class="icon-holder">
-            <i class="c-brown-500 fas fa-users color-gray-dark"></i>
-        </span>
-        <span class="title">{{ __('Users & Groups') }}</span>
-    </a>
-</li>
-<li class="nav-item">
-    <a class="sidebar-link {{ request()->is(['*/admin/members*']) ? 'active' : '' }}" href="{{ route('omega.admin.member.members.index') }}">
-        <span class="icon-holder">
-            <i class="c-brown-500 fas fa-address-book color-gray-dark"></i>
-        </span>
-        <span class="title">{{ __('Members') }}</span>
-    </a>
-</li>
-<li class="nav-item">
-    <a class="sidebar-link {{ request()->is('*/admin/plugins*') ? 'active' : '' }}" href="{{ route('omega.admin.plugins.index') }}">
-        <span class="icon-holder">
-            <i class="c-brown-500 fas fa-cubes color-gray-dark"></i>
-        </span>
-        <span class="title">{{ __('Plugins') }}</span>
-    </a>
-</li>
+{{ \rohsyl\OmegaCore\Utils\Common\Facades\Hook::callActions('admin_menu_item', [null, 'before'], true) }}
+
+@foreach($menuItems as $menuItem)
+
+    {{ \rohsyl\OmegaCore\Utils\Common\Facades\Hook::callActions('admin_menu_item', [$menuItem, 'before'], true) }}
+
+    @include('omega::admin.partials.menu-item', $menuItem)
+
+    {{ \rohsyl\OmegaCore\Utils\Common\Facades\Hook::callActions('admin_menu_item', [$menuItem, 'after'], true) }}
+
+@endforeach
+
+{{ \rohsyl\OmegaCore\Utils\Common\Facades\Hook::callActions('admin_menu_item', [null, 'after'], true) }}
