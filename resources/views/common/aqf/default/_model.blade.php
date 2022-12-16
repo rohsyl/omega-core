@@ -1,5 +1,5 @@
 <div class="card">
-    <div class="card-body">
+    <div class="card-body p-15">
         @php
             $selected = request()->has('model') && isset(request()->model[$name]) ? request()->model[$name] : [];
         @endphp

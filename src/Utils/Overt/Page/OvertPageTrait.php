@@ -19,6 +19,16 @@ trait OvertPageTrait
     private $needRedirect = false;
     private $redirectTo = null;
 
+    private $values = [];
+
+    public function set($key, $value) {
+        $this->values[$key] = $value;
+    }
+
+    public function get($key) {
+        return $this->values[$key] ?? null;
+    }
+
     public function render()
     {
         if(!isset($this->content)) {

@@ -16,9 +16,6 @@
             <div class="col-sm-4">
                 <x-aqf-plain />
             </div>
-            <div class="col-sm-4">
-                <x-aqf-model name="test" :list="[]" />
-            </div>
         </div>
 
 

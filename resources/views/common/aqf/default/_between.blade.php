@@ -1,6 +1,6 @@
 @if(!isset($inline) || !$inline)
-<div class="block">
-    <div class="block-content pt-3">
+<div class="card">
+    <div class="card-body p-15">
 @endif
 
     @if(!isset($inline) || !$inline)

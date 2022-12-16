@@ -27,6 +27,7 @@ class MenuManager
 
     private $showMemberMenuInMainMenu = true;
 
+    private $menuBySecurity = null;
 
     public function __construct()
     {
@@ -84,6 +85,10 @@ class MenuManager
      */
     public function getBySecurity() {
 
+        if(isset($this->menuBySecurity)) {
+            return $this->menuBySecurity;
+        }
+
         $menu = null;
         if (isset($this->currentPage) && isset($this->currentPage->idMenu)) {
             $menu = Menu::find($this->currentPage->idMenu);
@@ -95,6 +100,7 @@ class MenuManager
             foreach ($ids as $id) {
 
                 $menu = Menu::query()
+                    ->with('items', 'items.children')
                     ->where('member_group_id', $id)
                     ->where('is_enabled', true)
                     ->where('is_main', true)
@@ -111,7 +117,8 @@ class MenuManager
             return 'No menu';
         }
 
-        return $this->getHtml($menu, $this->menuHtmlStruct, Entity::LocaleSlug());
+        $this->menuBySecurity = $this->getHtml($menu, $this->menuHtmlStruct, Entity::LocaleSlug());
+        return $this->menuBySecurity;
     }
 
     /**

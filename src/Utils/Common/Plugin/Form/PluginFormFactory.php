@@ -50,7 +50,7 @@ class PluginFormFactory
      * This method will create or update an existing PluginForm
      */
     public function make() {
-        // Find the plugin form or instance a new one if already exists
+        // Find the plugin form or instance a new one if not already exists
         $pluginForm = PluginForm::firstOrNew(Arr::only($this->form, ['plugin_id', 'name']));
         $pluginForm->fill(Arr::except($this->form, ['plugin_id', 'name']));
         $pluginForm->save();

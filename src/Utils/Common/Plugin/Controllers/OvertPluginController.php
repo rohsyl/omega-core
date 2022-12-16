@@ -30,12 +30,22 @@ abstract class OvertPluginController extends Controller
 
     protected function view($name, $data = []) {
 
-        $viewName = $this->getViewFileNameFromFullViewName('display');
+        $viewName = $this->getViewFileNameFromFullViewName($name);
+
         if(isset($this->forceView[$viewName])){
             $name = $this->forceView[$viewName];
         }
         else if(isset($this->forceView['default'])) {
-            $name = $this->forceView['default'];
+            if($viewName === 'display') {
+                $name = $this->forceView['default'];
+            }
+            else {
+                $viewSuffix = $this->getViewSuffixFromViewName($viewName);
+                $defaultSuffixedView = $this->forceView['default'] . '-' . $viewSuffix;
+                if(view()->exists($defaultSuffixedView))  {
+                    $name = $defaultSuffixedView;
+                }
+            }
         }
 
         if(!view()->exists($name)) return view('omega::overt.components.template.notfound', compact('name'));
@@ -49,6 +59,11 @@ abstract class OvertPluginController extends Controller
         return substr($name,  $strrpos + 1);
     }
 
+    private function getViewSuffixFromViewName($name) {
+        $strrpos = strrpos($name, '-');
+        if($strrpos === false) return $name;
+        return substr($name,  $strrpos + 1);
+    }
 
     /**
      * Force the view

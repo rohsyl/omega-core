@@ -1,5 +1,5 @@
 <div class="card">
-    <div class="card-body">
+    <div class="card-body p-15">
         @php
             $selected = request()->has('m') && isset(request()->m[$name]) ? request()->m[$name] : [];
             $selectedMonth = $selected['m'] ?? (isset($date) ? $date->month : null) ?? \Illuminate\Support\Carbon::today()->month;

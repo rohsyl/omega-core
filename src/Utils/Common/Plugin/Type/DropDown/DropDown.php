@@ -9,38 +9,55 @@ class DropDown extends TypeEntry {
     {
         $param = $this->getParam();
         $uid = $this->getUniqId();
-        $v = $this->getValue();
-        if(isset($param['model'])){
-            $className = $param['model'];
-            if(!class_exists($className)){
-                return 'DropDown data model "' . $param['model'] . '" not found';
-            }
-            $model = new $className($this);
+        $isMultiple = isset($param['multiple']) && $param['multiple'];
+        $v = $isMultiple ? json_decode($this->getValue(), true) : $this->getValue();
 
-            $modelData = $model->getKeyValueArray();
-
-            $selectedValue = isset($v) ? $v : null;
-            $html = '<select name="'.$uid.'" class="form-control">';
-            foreach($modelData as $value => $title) {
-                $checked = $selectedValue == $value ? 'selected' : '';
-                $html .= '<option '.$checked.' value="'.$value.'">
+        $selectedValue = isset($v) ? $v : $param['default'];
+        $options = $this->getOptions();
+        $html = '<select name="'.$uid.($isMultiple ? '[]' : '').'" '.($isMultiple ? 'multiple' : '').' class="form-control">';
+        foreach($options as $value => $title) {
+            $checked = $this->isSelected($selectedValue, $value) ? 'selected' : '';
+            $html .= '<option '.$checked.' value="'.$value.'">
                               '.$title.'
                           </option>';
-            }
-            $html .= '</select>';
-        }else{
-            $selectedValue = isset($v) ? $v : $param['default'];
-            $options = $param['options'];
-            $html = '<select name="'.$uid.'" class="form-control">';
-            foreach($options as $value => $title) {
-                $checked = $selectedValue == $value ? 'selected' : '';
-                $html .= '<option '.$checked.' value="'.$value.'">
-                              '.$title.'
-                          </option>';
-            }
-            $html .= '</select>';
         }
+        $html .= '</select>';
         return $html;
+    }
+
+    private function isModel()
+    {
+        $param = $this->getParam();
+        return isset($param['model']) && $param['model'];
+    }
+
+    private function getOptions()
+    {
+        if($this->isModel()) {
+            $param = $this->getParam();
+            $className = $param['model'];
+            $model = new $className($this);
+            return $model->getKeyValueArray();
+        }
+        else {
+            return $param['options'] ?? [];
+        }
+    }
+
+    private function isMultiple()
+    {
+        $param = $this->getParam();
+        return isset($param['multiple']) && $param['multiple'];
+    }
+
+    private function isSelected($selectedValue, $value)
+    {
+        if($this->isMultiple()) {
+            return is_array($selectedValue) && in_array($value, $selectedValue);
+        }
+        else {
+            return $selectedValue == $value;
+        }
     }
 
     public function getPostedValue()
@@ -48,20 +65,38 @@ class DropDown extends TypeEntry {
         return $this->getPost($this->getUniqId());
     }
 
-    public  function getObjectValue() {
+    public  function getObjectValue()
+    {
         $param = $this->getParam();
         $v = $this->getValue();
 
-        $default = null;
-        if(!isset($param['model'])){
-            $default = $param['default'];
+        $options = $this->getOptions();
+
+        if($this->isMultiple()) {
+            $selectedValues = json_decode($v, true) ?? [];
+
+            $ret = [];
+            foreach($selectedValues as $selectedValue) {
+                $ret[] = [
+                    'title' => isset($options[$selectedValue]) ? $options[$selectedValue] : '',
+                    'value' => $selectedValue
+                ];
+            }
+            return $ret;
         }
-        $selectedValue = isset($v) ? $v : $default;
-        $ret = array(
-            'title' => isset($param['options'][$selectedValue]) ? $param['options'][$selectedValue] : '',
-            'value' => $selectedValue
-        );
-        return $ret;
+        else {
+            $default = null;
+            if(!isset($param['model'])){
+                $default = $param['default'];
+            }
+            $selectedValue = isset($v) ? $v : $default;
+            $ret = [
+                'title' => isset($options[$selectedValue]) ? $options[$selectedValue] : '',
+                'value' => $selectedValue
+            ];
+            return $ret;
+        }
+
     }
 
     public function getDoc(){
@@ -81,7 +116,8 @@ Exemple hard coded values
 		"6": "50%",
 		"8": "66%",
 		"9": "75%"
-	}
+	},
+    "multiple": false
 }
  */
 
@@ -89,6 +125,7 @@ Exemple hard coded values
 /*
 Exemple database content value
 {
-	"model" : "Omega\\Plugin\\DividedContent\\Model\\DropDownPage"
+	"model" : "Omega\\Plugin\\DividedContent\\Model\\DropDownPage",
+    "multiple": false
 }
  */

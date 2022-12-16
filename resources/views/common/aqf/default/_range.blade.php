@@ -1,6 +1,6 @@
 @if(!isset($inline) || !$inline)
 <div class="card">
-    <div class="card-body">
+    <div class="card-body p-15">
 @endif
         <div class="row gutters-tiny">
             <div class="{{ isset($range_field) ? 'col-lg-6' : 'col-lg-12' }}">

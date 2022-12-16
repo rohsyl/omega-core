@@ -17,6 +17,8 @@ class MediaController extends Controller
             return abort(404);
         }
 
+        // TODO : resize media if picture and if w and h provided in querystring
+
         $force_download = request()->has('download');
 
         $filename = $media->name . '.' . $media->ext;

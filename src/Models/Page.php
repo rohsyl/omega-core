@@ -64,8 +64,7 @@ class Page extends Model
     }
 
     public function scopePublished($query) {
-        // TODO : filter only published page
-        return $query;
+        return $query->whereNotNull('published_at')->where('published_at', '<=', now());
     }
 
     public function getIsPublishedAttribute() {

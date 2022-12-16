@@ -1,5 +1,5 @@
-<div class="block block-rounded mb-2">
-    <div class="block-content">
+<div class="card">
+    <div class="card-body p-15">
         @if(isset($value) && $value() !== null)
             {{ Form::hidden('filter', $value()) }}
         @endif
