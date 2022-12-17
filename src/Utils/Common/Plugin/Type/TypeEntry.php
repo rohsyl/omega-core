@@ -40,7 +40,7 @@ abstract class TypeEntry
      * @param $value
      * @param $idPage
      */
-    public function __construct($uniqId, $param, $value, $idPage)
+    public function __construct($uniqId, $param = null, $value = null, $idPage = null)
     {
         $this->_uniqId = $uniqId;
         $this->_param = $param;

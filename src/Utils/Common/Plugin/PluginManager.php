@@ -5,6 +5,7 @@ namespace rohsyl\OmegaCore\Utils\Common\Plugin;
 
 
 use rohsyl\OmegaCore\Utils\Common\Facades\OmegaUtils;
+use rohsyl\OmegaCore\Utils\Common\Plugin\Type\TypeManager;
 
 class PluginManager
 {
@@ -15,10 +16,13 @@ class PluginManager
 
     private $installedPlugins;
 
+    private TypeManager $typeManager;
+
     public function __construct()
     {
         $this->plugins = [];
         $this->loadInstalledPlugins();
+        $this->typeManager = new TypeManager();
     }
 
     private function loadInstalledPlugins() {
@@ -49,5 +53,9 @@ class PluginManager
             ?? ($force)
                 ? \rohsyl\OmegaCore\Models\Plugin::query()->where('name', $name)->first()
                 : null;
+    }
+
+    public function types() {
+        return $this->typeManager;
     }
 }
