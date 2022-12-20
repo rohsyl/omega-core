@@ -12,7 +12,7 @@ class DropDown extends TypeEntry {
         $isMultiple = isset($param['multiple']) && $param['multiple'];
         $v = $isMultiple ? json_decode($this->getValue(), true) : $this->getValue();
 
-        $selectedValue = isset($v) ? $v : $param['default'];
+        $selectedValue = isset($v) ? $v : $param['default'] ?? null;
         $options = $this->getOptions();
         $html = '<select name="'.$uid.($isMultiple ? '[]' : '').'" '.($isMultiple ? 'multiple' : '').' class="form-control">';
         foreach($options as $value => $title) {
