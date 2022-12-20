@@ -1,5 +1,6 @@
 import 'grapesjs/dist/css/grapes.min.css';
 import grapesjs from 'grapesjs';
+import axios from "axios";
 
 const editor = grapesjs.init({
     container: '#gjs',
@@ -255,14 +256,23 @@ editor.Commands.add('set-device-mobile', {
 
 /// load types
 // ajax query to get all type and register them
-const cm = editor.Components;
-cm.addType('my-cmp', { ... });
 
 // load blocks
-// ajax query to get all block and register them
-const bm = editor.BlockManager;
-bm.add('BLOCK-ID', {
-    // Your block properties...
-    label: 'My block',
-    content: '...',
+axios.get('/admin/content/pages/page-builder/blocks')
+    .then(function (response) {
+        initBlocks(response.data.data)
+    })
+function initBlocks(blocks) {
+    console.log(blocks);
+    const bm = editor.BlockManager;
+
+    for(block of blocks) {
+        bm.add(block.id, block.config);
+    }
+}
+
+
+const cm = editor.Components;
+cm.addType('my-cmp', {
+
 });

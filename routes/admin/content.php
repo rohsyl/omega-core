@@ -10,6 +10,8 @@ Route::prefix('content')->group(function () {
 
     Route::get('pages/{page}/editv2', [PageController::class, 'editv2'])->name('omega.admin.content.pages.editv2');
 
+    Route::get('pages/page-builder/blocks', \rohsyl\OmegaCore\Http\Controllers\Admin\Content\Page\PageBuilder\BlockController::class)->name('omega.admin.content.pages.pagebuilder.blocks');
+
     Route::get('pages/{page}/publish', [PublishController::class, 'publish'])->name('omega.admin.content.pages.publish');
     Route::get('pages/{page}/unpublish', [PublishController::class, 'unpublish'])->name('omega.admin.content.pages.unpublish');
 
