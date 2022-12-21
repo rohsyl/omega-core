@@ -62,7 +62,13 @@ class DropDown extends TypeEntry {
 
     public function getPostedValue()
     {
-        return $this->getPost($this->getUniqId());
+        if($this->isMultiple()) {
+            $value = $this->getPost($this->getUniqId());
+            return is_array($value) ? $value : [$value];
+        }
+        else {
+            return $this->getPost($this->getUniqId());
+        }
     }
 
     public  function getObjectValue()
