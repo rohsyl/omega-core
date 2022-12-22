@@ -16,6 +16,8 @@ class FileUploaderComponent extends LivewireComponent
 
     public $files = [];
 
+    protected $listeners = ['save'];
+
     public function render() {
 
         return view('omega::livewire.admin.content.media.medialibrary.uploader');
@@ -24,7 +26,7 @@ class FileUploaderComponent extends LivewireComponent
     public function save()
     {
         $this->validate([
-            'files.*' => 'file', // 1MB Max
+            'files.*' => 'file',
         ]);
 
         foreach ($this->files as $file) {

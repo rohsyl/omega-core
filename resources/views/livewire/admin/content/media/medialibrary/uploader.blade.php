@@ -1,16 +1,5 @@
 <div>
 
-    <div class="d-flex justify-content-between">
-        <div>
-            <i class="fas fa-upload"></i>
-            {{ __('File upload') }}
-        </div>
-        <a href="#" wire:click="cancel" class="btn btn-link btn-sm p-0 m-0">
-            <i class="fas fa-times"></i>
-        </a>
-    </div>
-    <hr />
-
     <form wire:submit.prevent="save">
         <input type="file" wire:model="files" multiple>
 
@@ -25,7 +14,7 @@
             <table class="table table-hover table-sm  mt-4">
                 @foreach($files as $file)
                     <tr>
-                        <td width="30" class="text-center">
+                        <td style="width:100px;" class="text-center">
                             @if(media_type_by_ext($file->extension()) == \rohsyl\OmegaCore\Models\Media::MT_PICTURE)
                                 <img src="{{ $file->temporaryUrl() }}" alt="{{ $file->getClientOriginalName() }}" class="w-100">
                             @else
@@ -39,15 +28,6 @@
                 @endforeach
             </table>
         @endif
-
-
-        <div class="mt-4">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-upload"></i>
-                {{ __('Upload') }}
-            </button>
-            <button type="button" class="btn btn-outline-secondary" wire:click="cancel">{{ __('Cancel') }}</button>
-        </div>
     </form>
 
 

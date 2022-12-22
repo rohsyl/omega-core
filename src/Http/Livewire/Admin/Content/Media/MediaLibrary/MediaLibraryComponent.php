@@ -9,29 +9,22 @@ use rohsyl\OmegaCore\Models\Media;
 
 class MediaLibraryComponent extends LivewireComponent
 {
-    protected $listeners = ['fileUploaded', 'fileUploadCancelled', 'selectMedia'];
+    protected $listeners = [
+        'fileUploaded',
+        'fileUploadCancelled',
+        'selectMedia',
+        'medialibrary:refresh' => 'refresh',
+    ];
 
     public $directory_id = null;
     public $directory = null;
 
-    /*protected $queryString = [
-        'directory' => ['except' => null]
-    ];*/
-
-    public $media = null;
-
-    public $selectedMedia = null;
-    public $selecteds = [];
-
-
-    protected $rules = [
-        'selectedMedia.name' => 'sometimes|required|string|not_in:ROOT,PUBLIC',
-        'selectedMedia.title' => 'required|string',
-        'selectedMedia.description' => 'nullable|string',
+    protected $queryString = [
+        'directory_id' => ['except' => null]
     ];
 
     public function mount() {
-        $this->loadDirectory();
+        $this->loadDirectory($this->directory_id);
     }
 
     public function init() {
@@ -45,7 +38,6 @@ class MediaLibraryComponent extends LivewireComponent
 
     public function refresh() {
         $this->loadDirectory($this->directory->id);
-        $this->selectMedia(null);
     }
 
     public function back() {
@@ -80,8 +72,7 @@ class MediaLibraryComponent extends LivewireComponent
                 throw new \Exception('Error: No ROOT directory set. TODO.');
             }
         }
-
-        $this->selectedMedia = null;
+        $this->directory_id = $this->directory->id;
     }
 
     public function openMedia($media_id) {
@@ -91,116 +82,16 @@ class MediaLibraryComponent extends LivewireComponent
         }
     }
 
-    public function selectMedia($media_id = null, $ctrlPressed = false) {
-        if(!$ctrlPressed) {
-            $this->selecteds = [];
-        }
-        if(isset($media_id)) {
-            $this->selecteds[$media_id] = isset($this->selecteds[$media_id]) ? !$this->selecteds[$media_id] : true;
-        }
-        if($ctrlPressed) {
-            if(isset($this->selectedMedia) && $this->selectedMedia->id == $media_id) {
-                $this->selectedMedia = null;
-            }
-            return;
-        }
-
-        $this->closeCreateDirectoryForm();
-        $this->closeUploadForm();
-        $this->closeEditForm();
-
-
-        if(!isset($media_id)) {
-            $this->selectedMedia = null;
-        }
-
-        if(isset($media_id) && isset($this->selectedMedia) && $this->selectedMedia->id === $media_id) {
-            $this->selectedMedia = null;
-            unset($this->selecteds[$media_id]);
-        }
-        else {
-            $this->selectedMedia = Media::find($media_id);
-        }
-
-        //$this->dispatchBrowserEvent('omega-media-selected', ['media' => isset($this->selectedMedia) ? $this->selectedMedia->toArray() : null]);
-    }
-
     public function home() {
         $this->loadDirectory(null);
     }
 
-    public $showUploadForm = false;
-    public function showUploadForm() {
-        $this->selectMedia(null);
-        $this->closeCreateDirectoryForm();
-        $this->closeEditForm();
-        $this->showUploadForm = true;
-    }
-    public function closeUploadForm() {
-        $this->showUploadForm = false;
-    }
     public function fileUploaded() {
-        $this->closeUploadForm();
-        $this->refresh();
-    }
-    public function fileUploadCancelled() {
-        $this->closeUploadForm();
-    }
-
-    public function deleteFile() {
-        $this->selectedMedia->delete();
         $this->refresh();
     }
 
-    public $showCreateDirectoryForm = false;
-    public $directory_name;
-    public function showCreateDirectoryForm() {
-        $this->selectMedia(null);
-        $this->closeUploadForm();
-        $this->closeEditForm();
-        $this->showCreateDirectoryForm = true;
-    }
-    public function createDirectory() {
-        $inputs = $this->validate([
-            'directory_name' => 'required|string|not_in:ROOT,PUBLIC',
-        ]);
-
-        Media::create([
-            'parent_id' => $this->directory->id,
-            'owner_id' => auth()->id(),
-            'type' => Media::TYPE_DIRECTORY,
-            'name' => $inputs['directory_name'],
-            'title' => $inputs['directory_name'],
-        ]);
-
-        $this->closeCreateDirectoryForm();
-        $this->directory_name = null;
+    public function deleteFile($selectedMediaId) {
+        Media::find($selectedMediaId)->delete();
         $this->refresh();
-    }
-    public function closeCreateDirectoryForm() {
-        $this->showCreateDirectoryForm = false;
-    }
-
-    public $showEditForm = false;
-    public function showEditForm() {
-        $this->closeUploadForm();
-        $this->closeCreateDirectoryForm();
-        $this->showEditForm = true;
-    }
-    public function editMedia() {
-        $inputs = $this->validate(null, null, [
-            'selectedMedia.name',
-            'selectedMedia.title',
-            'selectedMedia.description',
-        ]);
-
-        $inputs['selectedMedia']['name'] = Str::slug($inputs['selectedMedia']['name'], '_');
-
-        $this->selectedMedia->update($inputs['selectedMedia']);
-        $this->closeEditForm();
-        $this->refresh();
-    }
-    public function closeEditForm() {
-        $this->showEditForm = false;
     }
 }
