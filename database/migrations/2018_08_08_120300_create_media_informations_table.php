@@ -15,7 +15,7 @@ class CreateMediaInformationsTable extends Migration
     {
         Schema::create('media_informations', function (Blueprint $table) {
             $table->id();
-            $table->bigIncrements('media_id')->unsigned();
+            $table->unsignedBigInteger('media_id')->unsigned();
             $table->string('locale')->nullable();
             $table->string('title')->nullable();
             $table->text('description')->nullable();

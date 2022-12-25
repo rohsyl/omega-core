@@ -10,7 +10,7 @@
 
     @preload
     <!-- Styles -->
-    <link href="{{ asset('vendor/omega/css/app.css?1') }}" rel="stylesheet">
+    <link href="{{ asset('vendor/omega/css/app.css?2') }}" rel="stylesheet">
 
     {{-- <link href="{{ mix('/css/rtl.css') }}" rel="stylesheet"> --}}
     
@@ -25,7 +25,7 @@
 
     <!-- Global js content -->
     @livewireScripts()
-    <script src="{{ asset('vendor/omega/js/app.js?4') }}"></script>
+    <script src="{{ asset('vendor/omega/js/app.js?5') }}"></script>
 
     <!-- End of global js content-->
 

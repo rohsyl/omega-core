@@ -50,7 +50,7 @@ mix
     .sass('resources/sass/grapes/grapes.scss', 'public/css')
     .sass('resources/sass/app.scss', 'public/css')
     .copy('node_modules/@fortawesome/fontawesome-free/webfonts', 'public/webfonts')
-    .copy('node_modules/bs4-summernote/dist/font', 'public/css/font')
+    .copy('resources/js/summernote/font', 'public/css/font')
     .copy('resources/sass/static/images','public/images')
     .options({
         processCssUrls: false

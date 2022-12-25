@@ -13,7 +13,8 @@ window.Alpine = Alpine
 
 require('./bootstrap');
 require('./omega/admin/index')
-require('bs4-summernote')
+require('./summernote/summernote-bs4.min');
+require('./summernote/plugins/mediachooser/mediachooser');
 require('daterangepicker/daterangepicker');
 
 import { Sortable, AutoScroll } from 'sortablejs/modular/sortable.core.esm.js';
