@@ -21,8 +21,8 @@
         "livewire/livewire": "^2.4",
         "tightenco/ziggy": "^1.3",
         "rohsyl/laravel-acl": "^2.0",
-        "rohsyl/omega-plugins-bundle": "dev-master",
-        "rohsyl/omega-plugin-blog": "dev-master",
+        "rohsyl/omega-plugins-bundle": "^1.0",
+        "rohsyl/omega-plugin-blog": "^1.0",
         "spatie/laravel-mix-preload": "^1.2",
         "rohsyl/laravel-advanced-query-filter": "^2.0",
         "wire-elements/modal": "^1.0"
