@@ -50,9 +50,7 @@ Route::group(['middleware' => ['web']], function () {
                 require __DIR__ . '/admin/appearance.php';
                 require __DIR__ . '/admin/member.php';
                 require __DIR__ . '/admin/setting.php';
-
-                Route::get('plugins/{plugin}/install', \rohsyl\OmegaCore\Http\Controllers\Admin\Plugin\InstallController::class)->name('omega.admin.plugins.install');
-                Route::resource('plugins', \rohsyl\OmegaCore\Http\Controllers\Admin\Plugin\PluginController::class, ['as' => 'omega.admin'])->only(['index']);
+                require __DIR__ . '/admin/plugin.php';
 
                 require __DIR__ . '/admin/user_management.php';
             });
