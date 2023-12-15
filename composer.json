@@ -25,7 +25,8 @@
         "rohsyl/omega-plugin-blog": "^1.0",
         "spatie/laravel-mix-preload": "^1.2",
         "rohsyl/laravel-advanced-query-filter": "^2.0",
-        "wire-elements/modal": "^1.0"
+        "wire-elements/modal": "^1.0",
+        "doctrine/dbal": "^4.0@RC"
     },
     "require-dev": {
         "orchestra/testbench": "^7.0",
